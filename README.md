@@ -1,5 +1,7 @@
 # Hierarchical Prophet
 
+![](docs/static/logo.webp)
+
 This library was created to make a numpyro-based Prophet model for timeseries forecasting. In addition, it also provides an extension that allows for hierarchical forecasting simultaneously, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
 
 The hierarchical one creates a Prophet-like model for each bottom series, but uses a multivariate normal likelihood based on the hierarchy structure to also consider information of middle-top levels.

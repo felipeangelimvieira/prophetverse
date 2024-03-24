@@ -224,6 +224,7 @@ class Prophet(BaseBayesianForecaster):
         # Must create empty X
         if not self._has_exogenous and self.has_seasonality:
             X = pd.DataFrame(index=y.index)
+            self._has_exogenous = True
 
         if self.has_seasonality:
             self.init_seasonalities(y, X)
@@ -269,10 +270,13 @@ class Prophet(BaseBayesianForecaster):
 
         changepoints_loc = jnp.zeros(len(self._changepoint_t))
 
+        detrender = Detrender()
+        trend = y - detrender.fit_transform(y)
+
         if self.trend == "linear":
 
-            linear_global_rate = (y.values.max() - y.values.min()) / (
-                t_scaled.max() - t_scaled.min()
+            linear_global_rate = (trend.values[-1, 0] - trend.values[0, 0]) / (
+                t_scaled[-1] - t_scaled[0]
             )
             changepoints_loc.at[0].set(linear_global_rate)
 
@@ -283,14 +287,12 @@ class Prophet(BaseBayesianForecaster):
             )
 
             distributions["offset"] = dist.Normal(
-                (y.values.min() - linear_global_rate * t_scaled.min()),
-                0.1,
+                (trend.values[0, 0] - linear_global_rate * t_scaled[0]),
+                0.1*self.y_scale,
             )
 
         if self.trend == "logistic":
 
-            detrender = Detrender()
-            trend = y - detrender.fit_transform(y)
             linear_global_rate, timeoffset = suggest_logistic_rate_and_offset(
                 t_scaled,
                 trend.values.flatten(),
@@ -328,7 +330,7 @@ class Prophet(BaseBayesianForecaster):
             extra_inputs["exogenous_permutation_matrix"] = exogenous_permutation_matrix
         else:
             extra_inputs["exogenous_permutation_matrix"] = None
-            
+
         distributions["std_observation"] = dist.HalfNormal(self.noise_scale)
         extra_inputs["distributions"] = distributions
 
@@ -462,7 +464,7 @@ class Prophet(BaseBayesianForecaster):
             self.model, self.posterior_samples_, return_sites=["obs", *self.site_names]
         )
 
-        if not self._has_exogenous and self.has_seasonality:
+        if X is None and self.has_seasonality:
             X = pd.DataFrame(index=fh_as_index)
 
         if self.has_seasonality:

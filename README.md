@@ -4,6 +4,7 @@
 
 </p>
 
+[![PyPI version](https://badge.fury.io/py/hierarchical-prophet.svg)](https://badge.fury.io/py/hierarchical-prophet)
 
 This library was created to make a numpyro-based Prophet model for timeseries forecasting. In addition, it also provides an extension that allows for hierarchical forecasting simultaneously, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
 

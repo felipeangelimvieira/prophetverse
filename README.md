@@ -10,6 +10,22 @@ This library was created to make a numpyro-based Prophet model for timeseries fo
 The hierarchical one creates a Prophet-like model for each bottom series, but uses a multivariate normal likelihood based on the hierarchy structure to also consider information of middle-top levels.
 
 
+## Installation
+
+To install with pip:
+
+```bash
+pip install hierarchical-prophet
+```
+
+Or with poetry:
+
+```bash
+poetry add hierarchical-prophet
+```
+
+
+
 ## Hierarchical Model
 
 Let $Y_{bottom} \in \mathcal{R}^{b}$ be the random vector of bottom series which follow a normal distribution $\mathcal{N}(y_{bottom}, \Sigma)$, where $\Sigma \in \mathcal{R}^{b \times b}$ is the covariance matrix of the bottom series which we assume is diagonal. In addition, let $ S \in \mathcal{R}^{m \times b}$ be the matrix that define the hierarchical structure of the series, where $m \geq b$ is the total number of series . Then, the random variable $Y$ which define the value of all series is defined as:

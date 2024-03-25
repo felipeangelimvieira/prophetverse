@@ -5,6 +5,19 @@ This library was created to make a numpyro-based Prophet model for timeseries fo
 The idea was not to fully reproduce Prophet, but to provide an extension where the capacity is a random variable, and the hierarchical structure is considered. The hierarchical one creates a Prophet-like model for each bottom series, but uses a multivariate normal likelihood based on the hierarchy structure to also consider information of middle-top levels.
 
 
+## Installation
+
+To install with pip:
+
+```bash
+pip install hierarchical-prophet
+```
+
+Or with poetry:
+
+```bash
+poetry add hierarchical-prophet
+```
 
 ## Hierarchical Model
 

@@ -14,7 +14,7 @@ from collections import OrderedDict
 from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
-from sktime.transformations.compose import TransformerPipeline
+from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
@@ -53,47 +53,24 @@ class HierarchicalProphet(BaseBayesianForecaster):
     """A class that represents a Bayesian hierarchical time series forecasting model based on the Prophet algorithm.
 
     Args:
-        changepoint_interval (int, optional): The frequency of potential changepoints in the time series. Defaults to 25.
-        changepoint_range (float or None, optional): The proportion of the time series to use for changepoint selection. Defaults to None.
-        exogenous_priors (dict, optional): A dictionary of prior distributions for the exogenous variables. Defaults to {}.
-        default_exogenous_prior (tuple, optional): The default prior distribution for the exogenous variables. Defaults to (dist.Normal, 0, 1).
-        changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1.
-        capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. Defaults to 0.2.
-        capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. Defaults to 1.1.
-        y_scales (array-like or None, optional): The scales of the target time series. Defaults to None.
+        changepoint_interval (int, optional): The interval between potential changepoints in the time series. Defaults to 25.
+        changepoint_range (float or None, optional): The index of the last changepoint. If None, default to -changepoint_freq. Note that this is the index in the list of timestamps, and because the timeseries increases in size, it is better to use negative indexes instead of positive. Defaults to None.
+        exogenous_priors (dict, optional): A dictionary of prior distributions for the exogenous variables. The keys are regexes, or the name of an specific column, and the values are tuples of the format (dist.Distribution, *args). The args are passed to dist.Distributions at the moment of sampling. Defaults to {}.
+        default_exogenous_prior (tuple, optional): The default prior distribution for the exogenous variables. Defaults to (dist.Normal, 0, 1), and is applied to columns not included in exogenous_priors above.
+        changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1. Note that this parameter is scaled by the magnitude of the timeseries.
+        capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 1.1, i.e., 110% of the maximum value of the series, or the y_scales if provided.
+        capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 0.2.
+        y_scales (array-like or None, optional): The scales of the target time series. Defaults to None. If not provided, the scales are computed from the data, according to its maximum value.
         noise_scale (float, optional): The scale parameter for the prior distribution of observation noise. Defaults to 0.05.
         trend (str, optional): The type of trend to model. Possible values are "linear" and "logistic". Defaults to "linear".
         seasonality_mode (str, optional): The mode of seasonality to model. Possible values are "multiplicative" and "additive". Defaults to "multiplicative".
-        individual_regressors (list, optional): A list of individual regressors to include in the model. Defaults to [].
+        transformer_pipeline (BaseTransformer): A BaseTransformer or TransformerPipeline from sktime to apply to X and create features internally, such as Fourier series. See sktime's Transformer documentation for more information. Defaults to None.
+        individual_regressors (list, optional): A list of regexes/names of individual regressors to separate by timeseries. If not provided, all regressors are shared. Defaults to [].
         mcmc_samples (int, optional): The number of MCMC samples to draw. Defaults to 2000.
         mcmc_warmup (int, optional): The number of MCMC warmup steps. Defaults to 200.
         mcmc_chains (int, optional): The number of MCMC chains to run in parallel. Defaults to 4.
         rng_key (jax.random.PRNGKey, optional): The random number generator key. Defaults to random.PRNGKey(24).
 
-    Attributes:
-        _aggregator (Aggregator or None): The aggregator used to transform the target time series.
-        _original_y_indexes (pd.Index or None): The original indexes of the target time series.
-        _full_y_indexes (pd.Index or None): The indexes of the target time series after transformation.
-        hierarchy_matrix (jnp.ndarray or None): The hierarchy matrix used for hierarchical forecasting.
-        _has_exogenous_variables (bool or None): Indicates whether the model has exogenous variables.
-        expand_columns_transformer_ (ExpandColumnPerLevel or None): The transformer used to expand the columns of the exogenous variables.
-        _time_scaler (TimeScaler or None): The scaler used to scale the time index.
-        max_y (jnp.ndarray or None): The maximum values of the target time series.
-        min_y (jnp.ndarray or None): The minimum values of the target time series.
-        max_t (jnp.ndarray or None): The maximum values of the scaled time index.
-        min_t (jnp.ndarray or None): The minimum values of the scaled time index.
-        _global_rates (jnp.ndarray or None): The global rates of the trend component.
-        _linear_initial_offsets (jnp.ndarray or None): The initial offsets of the trend component for linear trend.
-        _timeoffset_prior_loc (jnp.ndarray or None): The prior locations of the time offsets for logistic trend.
-        _changepoint_matrix_maker (ChangepointMatrixMaker or None): The matrix maker used to create the changepoint matrix.
-        _exogenous_permutation_matrix (jnp.ndarray or None): The permutation matrix used to reorder the exogenous variables.
-        dists (dict or None): The dictionary of prior distributions for the model parameters.
-        _exogenous_coefficients (jnp.ndarray or None): The coefficients of the exogenous variables.
-        _changepoint_coefficients (jnp.ndarray or None): The coefficients of the changepoints.
-        _linear_offset_param (jnp.ndarray or None): The linear offset parameter.
-        _capacity (jnp.ndarray or None): The capacity parameter.
-        _timeoffset (jnp.ndarray or None): The time offset parameter.
-        _exogenous_dists (dict or None): The dictionary of prior distributions for the exogenous variables.
 
     """
 
@@ -132,7 +109,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
         noise_scale=0.05,
         trend="linear",
         seasonality_mode="multiplicative",
-        transformer_pipeline : TransformerPipeline = None,
+        transformer_pipeline: BaseTransformer = None,
         individual_regressors=[],
         mcmc_samples=2000,
         mcmc_warmup=200,
@@ -143,18 +120,19 @@ class HierarchicalProphet(BaseBayesianForecaster):
         Initialize the HierarchicalProphet forecaster.
 
         Args:
-            changepoint_interval (int, optional): The frequency of potential changepoints in the time series. Defaults to 25.
-            changepoint_range (float or None, optional): The proportion of the time series to use for changepoint selection. Defaults to None.
-            exogenous_priors (dict, optional): A dictionary of prior distributions for the exogenous variables. Defaults to {}.
-            default_exogenous_prior (tuple, optional): The default prior distribution for the exogenous variables. Defaults to (dist.Normal, 0, 1).
-            changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1.
-            capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. Defaults to 0.2.
-            capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. Defaults to 1.1.
-            y_scales (array-like or None, optional): The scales of the target time series. Defaults to None.
+            changepoint_interval (int, optional): The interval between potential changepoints in the time series. Defaults to 25.
+            changepoint_range (float or None, optional): The index of the last changepoint. If None, default to -changepoint_freq. Note that this is the index in the list of timestamps, and because the timeseries increases in size, it is better to use negative indexes instead of positive. Defaults to None.
+            exogenous_priors (dict, optional): A dictionary of prior distributions for the exogenous variables. The keys are regexes, or the name of an specific column, and the values are tuples of the format (dist.Distribution, *args). The args are passed to dist.Distributions at the moment of sampling. Defaults to {}.
+            default_exogenous_prior (tuple, optional): The default prior distribution for the exogenous variables. Defaults to (dist.Normal, 0, 1), and is applied to columns not included in exogenous_priors above.
+            changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1. Note that this parameter is scaled by the magnitude of the timeseries.
+            capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 1.1, i.e., 110% of the maximum value of the series, or the y_scales if provided.
+            capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 0.2.
+            y_scales (array-like or None, optional): The scales of the target time series. Defaults to None. If not provided, the scales are computed from the data, according to its maximum value.
             noise_scale (float, optional): The scale parameter for the prior distribution of observation noise. Defaults to 0.05.
             trend (str, optional): The type of trend to model. Possible values are "linear" and "logistic". Defaults to "linear".
             seasonality_mode (str, optional): The mode of seasonality to model. Possible values are "multiplicative" and "additive". Defaults to "multiplicative".
-            individual_regressors (list, optional): A list of individual regressors to include in the model. Defaults to [].
+            transformer_pipeline (BaseTransformer): A BaseTransformer or TransformerPipeline from sktime to apply to X and create features internally, such as Fourier series. See sktime's Transformer documentation for more information. Defaults to None.
+            individual_regressors (list, optional): A list of regexes/names of individual regressors to separate by timeseries. If not provided, all regressors are shared. Defaults to [].
             mcmc_samples (int, optional): The number of MCMC samples to draw. Defaults to 2000.
             mcmc_warmup (int, optional): The number of MCMC warmup steps. Defaults to 200.
             mcmc_chains (int, optional): The number of MCMC chains to run in parallel. Defaults to 4.
@@ -197,6 +175,37 @@ class HierarchicalProphet(BaseBayesianForecaster):
         self.min_t = None
         self._changepoint_matrix_maker = None
 
+        self._validate_hyperparams()
+
+    def _validate_hyperparams(self, y=None):
+        """
+        Validate the hyperparameters of the HierarchicalProphet forecaster.
+        """
+        if self.changepoint_interval <= 0:
+            raise ValueError("changepoint_interval must be greater than 0.")
+        if self.changepoint_range is not None and (self.changepoint_range <= 0 or self.changepoint_range > 1):
+            raise ValueError("changepoint_range must be in the range (0, 1].")
+        if self.changepoint_prior_scale <= 0:
+            raise ValueError("changepoint_prior_scale must be greater than 0.")
+        if self.noise_scale <= 0:
+            raise ValueError("noise_scale must be greater than 0.")
+        if self.capacity_prior_scale <= 0:
+            raise ValueError("capacity_prior_scale must be greater than 0.")
+        if self.capacity_prior_loc <= 0:
+            raise ValueError("capacity_prior_loc must be greater than 0.")
+        if self.y_scales is not None:
+            if any([scale <= 0 for scale in self.y_scales]):
+                raise ValueError("y_scales must be greater than 0.")
+        if self.seasonality_mode not in ["multiplicative", "additive"]:
+            raise ValueError('seasonality_mode must be either "multiplicative" or "additive".')
+        if self.trend not in ["linear", "logistic"]:
+            raise ValueError('trend must be either "linear" or "logistic".')
+
+        if y is not None:
+            if self.y_scales is not None:
+                if len(self.y_scales) != len(y.columns):
+                    raise ValueError("y_scales must have the same length as the number of columns in y.")
+
     def _get_numpyro_model_data(self, y, X, fh):
         """
         Prepare the data for the NumPyro model.
@@ -209,6 +218,8 @@ class HierarchicalProphet(BaseBayesianForecaster):
         Returns:
             dict: A dictionary containing the model data.
         """
+
+        self._validate_hyperparams(y=y)
         # Handling series without __total indexes
         self.aggregator_ = Aggregator()
         self.original_y_indexes_ = y.index
@@ -494,7 +505,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
             inputs["exogenous_permutation_matrix"] = exogenous_permutation_matrix
         else:
             inputs["exogenous_permutation_matrix"] = None
-            #distributions["exogenous_coefficients"] = None
+            # distributions["exogenous_coefficients"] = None
 
         # Noise
         distributions["std_observation"] = dist.HalfNormal(

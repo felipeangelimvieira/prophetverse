@@ -1,5 +1,10 @@
 # Hierarchical Prophet
 
+<p align="center">
+<img src="static/logo-removebg.png" width="300">
+</p>
+
+
 This library was created to make a numpyro-based Prophet model for timeseries forecasting. In addition, it also provides an extension that allows for hierarchical forecasting simultaneously, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
 
 The idea was not to fully reproduce Prophet, but to provide an extension where the capacity is a random variable, and the hierarchical structure is considered. The hierarchical one creates a Prophet-like model for each bottom series, but uses a multivariate normal likelihood based on the hierarchy structure to also consider information of middle-top levels.
@@ -55,7 +60,7 @@ The main differences with the original Prophet model are:
     where $C$ is the capacity, $k$ is the growth rate and $m$ is the timeoffset. In this implementation, we implement a similar and equivalent model, but with a different parameterization:
 
     $$
-    trend = \frac{C}{1 + \exp(-(kt + m))}
+    trend = \frac{C}{1 + \exp(-(kt + m'))}
     $$
 
     which are equivalent. The priors for those parameters $k$ and $m$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.

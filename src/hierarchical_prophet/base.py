@@ -11,7 +11,8 @@ from numpyro.contrib.control_flow import scan
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from collections import OrderedDict
-from hierarchical_prophet.exogenous_priors import get_exogenous_priors
+from hierarchical_prophet.sktime.utils.exogenous_priors import get_exogenous_priors
+from hierarchical_prophet.univariate.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
 import arviz as az
 
 
@@ -212,20 +213,10 @@ class BaseBayesianForecaster(BaseForecaster):
 
         self.distributions_ = data.get("distributions", {})
 
-        nuts_kernel = NUTS(self.model, dense_mass=True, init_strategy=init_to_mean())
-        self.mcmc_ = MCMC(
-            nuts_kernel,
-            num_samples=self.mcmc_samples,
-            num_warmup=self.mcmc_warmup,
-            num_chains=self.mcmc_chains,
-        )
+        self.inference_engine_ = MCMCInferenceEngine(self.model, num_samples=self.mcmc_samples, num_warmup=self.mcmc_warmup, num_chains=self.mcmc_chains, rng_key=self.rng_key)
+        self.inference_engine_.infer(**data)
 
-        self.mcmc_.run(
-            self.rng_key,
-            **data,
-        )
-
-        self.posterior_samples_ = self.mcmc_.get_samples()
+        self.posterior_samples_ = self.inference_engine_.mcmc_.get_samples()
 
     def periodindex_to_multiindex(self, periodindex: pd.PeriodIndex) -> pd.MultiIndex:
         """

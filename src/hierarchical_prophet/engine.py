@@ -86,13 +86,9 @@ class MCMCInferenceEngine(InferenceEngine):
         return self
 
     def predict(self, **kwargs):
-        predictive = Predictive(
-            self.model, self.posterior_samples_
-        )
+        sites = set(self.posterior_samples_.keys()).union(["obs"])
+        predictive = Predictive(self.model, self.posterior_samples_, return_sites=sites)
 
-        self.samples_predictive_ = predictive(
-            self.rng_key,
-            **kwargs
-        )
+        self.samples_predictive_ = predictive(self.rng_key, **kwargs)
         self.samples_ = self.mcmc_.get_samples()
-        return self.samples_
+        return self.samples_predictive_

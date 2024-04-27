@@ -40,8 +40,7 @@ class LogEffect(AbstractEffect):
 
 class LinearEffect(AbstractEffect):
 
-    def __init__(self, id="", n_features=1, dist = dist.Normal, dist_args=(0, 1), effect_mode="multiplicative"):
-        self.n_features = n_features
+    def __init__(self, id="", dist = dist.Normal, dist_args=(0, 1), effect_mode="multiplicative"):
         self.dist = dist
         self.dist_args = dist_args
         self.effect_mode = effect_mode
@@ -49,10 +48,10 @@ class LinearEffect(AbstractEffect):
 
     def compute_effect(self, trend, data):
 
-
+        n_features = data.shape[-1]
         coefficients = self.sample(
             "coefs",
-            self.dist(*[jnp.array([arg] * self.n_features) for arg in self.dist_args]),
+            self.dist(*[jnp.array([arg] * n_features) for arg in self.dist_args]),
         )
         
         if coefficients.ndim == 1:

@@ -194,12 +194,21 @@ class BaseBayesianForecaster(BaseForecaster):
 
         self.predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
+
+        observation_site = self.predictive_samples_["obs"]
+        observation_site = self._inv_scale_y(observation_site)
         n_samples = self.predictive_samples_["obs"].shape[0]
         return pd.DataFrame(
-            data=self.predictive_samples_["obs"].T.reshape((-1, n_samples)),
+            data=observation_site.T.reshape((-1, n_samples)),
             columns=list(range(n_samples)),
             index=self.periodindex_to_multiindex(fh_as_index),
         ).sort_index()
+        
+    def _scale_y(self, y):
+        return y
+    
+    def _inv_scale_y(self, y):
+        return y
 
     def _predict_quantiles(self, fh, X, alpha):
         """

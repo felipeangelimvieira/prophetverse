@@ -114,6 +114,10 @@ class HierarchicalProphet(BaseBayesianForecaster):
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
+        inference_method="mcmc",
+        optimizer_name="Adam",
+        optimizer_kwargs={},
+        optimizer_steps=100_000,
         rng_key=random.PRNGKey(24),
     ):
         """
@@ -154,10 +158,13 @@ class HierarchicalProphet(BaseBayesianForecaster):
 
         super().__init__(
             rng_key=rng_key,
-            inference_method="mcmc",
+            inference_method=inference_method,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
             mcmc_chains=mcmc_chains,
+            optimizer_name=optimizer_name,
+            optimizer_kwargs=optimizer_kwargs,
+            optimizer_steps=optimizer_steps,
         )
 
         self.model = model

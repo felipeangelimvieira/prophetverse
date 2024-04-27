@@ -14,7 +14,7 @@ from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.series.fourier import FourierFeatures
 from hierarchical_prophet._utils import convert_index_to_days_since_epoch
-from hierarchical_prophet.base import BaseBayesianForecaster, init_params
+from hierarchical_prophet.sktime.base import BaseBayesianForecaster, init_params
 from hierarchical_prophet.exogenous_priors import (
     get_exogenous_priors,
     sample_exogenous_coefficients,
@@ -198,7 +198,7 @@ class Prophet(BaseBayesianForecaster):
     def has_exogenous_or_seasonality(self):
         return self._has_exogenous or self.has_seasonality
 
-    def _get_numpyro_model_data(self, y, X, fh):
+    def _get_fit_data(self, y, X, fh):
         """
         Prepares the data for the Numpyro model.
 

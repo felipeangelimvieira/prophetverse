@@ -11,8 +11,7 @@ from numpyro.contrib.control_flow import scan
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from collections import OrderedDict
-from hierarchical_prophet.sktime.utils.exogenous_priors import get_exogenous_priors
-from hierarchical_prophet.univariate.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
+from hierarchical_prophet.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
 import arviz as az
 
 
@@ -39,10 +38,13 @@ class BaseBayesianForecaster(BaseForecaster):
     def __init__(
         self,
         rng_key=1000,
-        method="mcmc",
+        inference_method="mcmc",
         mcmc_samples=2000,
         mcmc_warmup=100,
         mcmc_chains=1,
+        optimizer_steps=100000,
+        optimizer_name="Adam",
+        optimizer_kwargs={"step_size" : 1e-3},
         prefix="",
         *args,
         **kwargs,
@@ -64,13 +66,21 @@ class BaseBayesianForecaster(BaseForecaster):
         self.mcmc_samples = mcmc_samples
         self.mcmc_warmup = mcmc_warmup
         self.mcmc_chains = mcmc_chains
-        self.method = method
+        self.inference_method = inference_method
         self.prefix = prefix
+        self.optimizer_steps = optimizer_steps
+        self.optimizer_name = optimizer_name
+        self.optimizer_kwargs = optimizer_kwargs
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
         self.predictive_samples_ = None
+        
+        
+    @property
+    def optimizer(self):
+        return getattr(numpyro.optim, self.optimizer_name)(**self.optimizer_kwargs)
 
-    def _get_numpyro_model_data(self, y, X, fh) -> Dict[str, Any]:
+    def _get_fit_data(self, y, X, fh) -> Dict[str, Any]:
         """
         Get the data required for the Numpyro model.
 
@@ -86,7 +96,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
-    def _predict_samples(self, X, fh):
+    def _get_predict_data(self, X, fh):
         """
         Generate samples from the posterior predictive distribution.
 
@@ -129,10 +139,24 @@ class BaseBayesianForecaster(BaseForecaster):
             self: The fitted Bayesian forecaster.
         """
 
-        if self.method == "mcmc":
-            self._fit_mcmc(y, X, fh)
+        data = self._get_fit_data(y, X, fh)
+
+        self.distributions_ = data.get("distributions", {})
+
+        if self.inference_method == "mcmc":
+            self.inference_engine_ = MCMCInferenceEngine(self.model, num_samples=self.mcmc_samples, num_warmup=self.mcmc_warmup, num_chains=self.mcmc_chains, rng_key=self.rng_key)
+        elif self.inference_method == "map":
+            self.inference_engine_ = MAPInferenceEngine(
+                self.model,
+                rng_key=self.rng_key,
+                optimizer=self.optimizer,
+                num_steps=self.optimizer_steps,
+            )
         else:
-            raise ValueError(f"Unknown method {self.method}")
+            raise ValueError(f"Unknown method {self.inference_method}")
+
+        self.inference_engine_.infer(**data)
+        self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
         return self
 
@@ -165,14 +189,17 @@ class BaseBayesianForecaster(BaseForecaster):
             pd.DataFrame: Samples from the posterior predictive distribution.
         """
         fh_as_index = self.fh_to_index(fh)
-        self.predictive_samples_ = self._predict_samples(X, fh)
+
+        predict_data = self._get_predict_data(X, fh)
+
+        self.predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
         n_samples = self.predictive_samples_["obs"].shape[0]
         return pd.DataFrame(
             data=self.predictive_samples_["obs"].T.reshape((-1, n_samples)),
             columns=list(range(n_samples)),
             index=self.periodindex_to_multiindex(fh_as_index),
-        )
+        ).sort_index()
 
     def _predict_quantiles(self, fh, X, alpha):
         """
@@ -199,24 +226,6 @@ class BaseBayesianForecaster(BaseForecaster):
         quantiles.columns = int_idx
 
         return quantiles
-
-    def _fit_mcmc(self, y, X, fh):
-        """
-        Fit the Bayesian forecaster using MCMC.
-
-        Args:
-            y (pd.DataFrame): Target variable.
-            X (pd.DataFrame): Exogenous variables.
-            fh (ForecastingHorizon): Forecasting horizon.
-        """
-        data = self._get_numpyro_model_data(y, X, fh)
-
-        self.distributions_ = data.get("distributions", {})
-
-        self.inference_engine_ = MCMCInferenceEngine(self.model, num_samples=self.mcmc_samples, num_warmup=self.mcmc_warmup, num_chains=self.mcmc_chains, rng_key=self.rng_key)
-        self.inference_engine_.infer(**data)
-
-        self.posterior_samples_ = self.inference_engine_.mcmc_.get_samples()
 
     def periodindex_to_multiindex(self, periodindex: pd.PeriodIndex) -> pd.MultiIndex:
         """
@@ -278,13 +287,13 @@ class BaseBayesianForecaster(BaseForecaster):
             var_names = self.var_names
 
         return az.plot_trace(
-            az.from_numpyro(self.mcmc_),
+            az.from_numpyro(self.inference_engine_.mcmc_),
             var_names=var_names,
             filter_vars="regex",
             compact=compact,
             figsize=figsize,
         )
-        
+
     @property
     def site_names(self) -> list[Any]:
         return list(self.posterior_samples_.keys())

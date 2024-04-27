@@ -1,7 +1,7 @@
 from typing import Callable
 import numpyro
 from numpyro.infer.initialization import init_to_mean
-from numpyro.infer import SVI, TraceEnum_ELBO, init_to_value, Trace_ELBO, MCMC, NUTS
+from numpyro.infer import SVI, TraceEnum_ELBO, init_to_value, Trace_ELBO, MCMC, NUTS, Predictive
 from numpyro.infer.autoguide import AutoDelta
 import jax
 
@@ -40,18 +40,20 @@ class MAPInferenceEngine(InferenceEngine):
         self.run_results_ = self.svi_.run(
             rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
         )
+        self.posterior_samples_ = self.guide_.sample_posterior(self.rng_key, params=self.run_results_.params, **kwargs)
         return self
 
     def predict(self, **kwargs):
         predictive = numpyro.infer.Predictive(
             self.model,
             params=self.run_results_.params,
-            num_samples=1000,
             guide=self.guide_,
+            #posterior_samples=self.posterior_samples_,
+            num_samples=1000,
         )
         self.samples_ = predictive(
-            **{**kwargs, "y": None},
             rng_key=self.rng_key,
+            **kwargs
         )
         return self.samples_
 
@@ -80,8 +82,17 @@ class MCMCInferenceEngine(InferenceEngine):
             num_warmup=self.num_warmup,
         )
         self.mcmc_.run(self.rng_key, **kwargs)
+        self.posterior_samples_ = self.mcmc_.get_samples()
         return self
 
     def predict(self, **kwargs):
+        predictive = Predictive(
+            self.model, self.posterior_samples_
+        )
+
+        self.samples_predictive_ = predictive(
+            self.rng_key,
+            **kwargs
+        )
         self.samples_ = self.mcmc_.get_samples()
         return self.samples_

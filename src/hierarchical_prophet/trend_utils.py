@@ -13,6 +13,12 @@ def get_changepoint_timeindexes(
     t, changepoint_interval: int, changepoint_range: float = 0.90
 ) -> jnp.array:
     
-    max_t = t.max() * changepoint_range
+    if changepoint_range < 1 and changepoint_range > 0:
+        max_t = t.max() * changepoint_range
+    elif changepoint_range >= 1:
+        max_t = changepoint_range
+    else:
+        max_t = t.max() + changepoint_range
+    
     changepoint_t = jnp.arange(0, max_t, changepoint_interval)
     return changepoint_t

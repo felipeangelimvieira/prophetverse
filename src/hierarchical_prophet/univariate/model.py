@@ -7,13 +7,7 @@ from typing import Protocol, TypedDict, Dict
 import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist
-from .effects import EffectFunc, SampleParamsFunc
-
-class ExogenousEffects(TypedDict):
-    data: jnp.ndarray
-    transformation_func: EffectFunc
-    sample_params_func: SampleParamsFunc
-
+from ..effects import AbstractEffect
 
 def model(
     t,
@@ -21,8 +15,9 @@ def model(
     changepoint_matrix,
     init_trend_params,
     trend_mode,
-    exogenous_effects: Dict[str, ExogenousEffects],
-    y_scale: float,
+    data={},
+    exogenous_effects: Dict[str, AbstractEffect]={}
+    
 ):
     """
     Defines the Numpyro model.
@@ -40,27 +35,24 @@ def model(
     capacity = params.get("capacity", None)
 
     trend = (changepoint_matrix) @ changepoint_coefficients.reshape((-1, 1)) + offset
-    trend = trend * y_scale
-    
+    if trend_mode == "logistic":
+        trend = capacity / (1 + jnp.exp(-trend))
+
+
     numpyro.deterministic("trend_", trend)
 
     mean = trend
     # Exogenous effects
     if exogenous_effects is not None:
 
-        for key, exog_effects in exogenous_effects.items():
-            sample_params_func = exog_effects["sample_params_func"]
-            transform_func = exog_effects["transformation_func"]
-            exog_data = exog_effects["data"]
-            # TODO: add y scale as argument
-            coefficients = sample_params_func()
-            effect = transform_func(
-                trend=trend, data=exog_data, coefficients=coefficients
-            )
+        for key, exog_effect in exogenous_effects.items():
+
+            exog_data = data[key]
+            effect = exog_effect(trend=trend, data=exog_data)
             numpyro.deterministic(key, effect)
             mean += effect
 
-    noise_scale = params["std_observation"] * y_scale
+    noise_scale = params["std_observation"] 
 
     with numpyro.plate("data", len(mean), dim=-2) as time_plate:
         numpyro.sample(

@@ -45,6 +45,19 @@ A custom distribution was implemented so that samples are drawn according to tha
 
 
 
+To install with pip:
+
+```bash
+pip install hierarchical-prophet
+```
+
+Or with poetry:
+
+```bash
+poetry add hierarchical-prophet
+```
+
+
 # Remarks
 
 ## Differences between this Prophet and the original one

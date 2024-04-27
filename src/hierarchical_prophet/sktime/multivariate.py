@@ -1,7 +1,7 @@
 import itertools
 import logging
 import re
-from functools import partial
+import functools
 from typing import Dict, List, Tuple, Iterable
 
 import jax
@@ -20,7 +20,9 @@ from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
 from hierarchical_prophet.hierarchical_prophet._time_scaler import TimeScaler
 
-from hierarchical_prophet.hierarchical_prophet._changepoint_matrix import ChangepointMatrix
+from hierarchical_prophet.hierarchical_prophet._changepoint_matrix import (
+    ChangepointMatrix,
+)
 
 from hierarchical_prophet._utils import (
     convert_dataframe_to_tensors,
@@ -45,6 +47,13 @@ from hierarchical_prophet.utils.jax_functions import (
     additive_mean_model,
     multiplicative_mean_model,
 )
+from hierarchical_prophet.trend_utils import (
+    get_changepoint_matrix,
+    get_changepoint_timeindexes,
+)
+
+from hierarchical_prophet.multivariate.model import model
+from hierarchical_prophet.effects import LinearEffect, CustomPriorEffect
 
 logger = logging.getLogger("sktime-numpyro")
 
@@ -114,6 +123,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
+        inference_method="map",
+        optimizer_name="Adam",
+        optimizer_kwargs={"step_size" : 1e-3},
         rng_key=random.PRNGKey(24),
     ):
         """
@@ -154,7 +166,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
 
         super().__init__(
             rng_key=rng_key,
-            inference_method="mcmc",
+            inference_method=inference_method,
+            optimizer_name=optimizer_name,
+            optimizer_kwargs=optimizer_kwargs,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
             mcmc_chains=mcmc_chains,
@@ -183,8 +197,10 @@ class HierarchicalProphet(BaseBayesianForecaster):
         """
         if self.changepoint_interval <= 0:
             raise ValueError("changepoint_interval must be greater than 0.")
-        if self.changepoint_range is not None and (self.changepoint_range <= 0 or self.changepoint_range > 1):
-            raise ValueError("changepoint_range must be in the range (0, 1].")
+        # if self.changepoint_range is not None and (
+        #    self.changepoint_range <= 0 or self.changepoint_range > 1
+        # ):
+        #    raise ValueError("changepoint_range must be in the range (0, 1].")
         if self.changepoint_prior_scale <= 0:
             raise ValueError("changepoint_prior_scale must be greater than 0.")
         if self.noise_scale <= 0:
@@ -197,14 +213,18 @@ class HierarchicalProphet(BaseBayesianForecaster):
             if any([scale <= 0 for scale in self.y_scales]):
                 raise ValueError("y_scales must be greater than 0.")
         if self.seasonality_mode not in ["multiplicative", "additive"]:
-            raise ValueError('seasonality_mode must be either "multiplicative" or "additive".')
+            raise ValueError(
+                'seasonality_mode must be either "multiplicative" or "additive".'
+            )
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 
         if y is not None:
             if self.y_scales is not None:
                 if len(self.y_scales) != len(y.columns):
-                    raise ValueError("y_scales must have the same length as the number of columns in y.")
+                    raise ValueError(
+                        "y_scales must have the same length as the number of columns in y."
+                    )
 
     def _get_fit_data(self, y, X, fh):
         """
@@ -261,12 +281,10 @@ class HierarchicalProphet(BaseBayesianForecaster):
         self._setup_scales(t_arrays, y_bottom_arrays)
 
         t_scaled = self._time_scaler.scale(t_arrays)
-
+        t_scaled = t_scaled[0].reshape((-1, 1))
         # Changepoints
-        self._setup_changepoint_matrix_transformer(t_scaled)
-        changepoints_matrix, changepoints_mask = (
-            self._changepoint_matrix_maker.transform(t=t_scaled)
-        )
+        self._setup_changepoints(t_scaled=t_scaled)
+        changepoint_matrix = self._get_changepoint_matrix(t_scaled)
 
         # Exog variables
         self.exogenous_columns_ = set([])
@@ -278,23 +296,34 @@ class HierarchicalProphet(BaseBayesianForecaster):
             X = X.loc[y.index]
             X = self.expand_columns_transformer_.transform(X)
             exogenous_matrix = self._get_exogenous_matrix_from_X(X)
-            self.exogenous_columns_ = X.columns
+
+            self.exogenous_effects = {
+                "X": CustomPriorEffect(
+                    exogenous_priors=self.exogenous_priors,
+                    default_exogenous_prior=self.default_exogenous_prior,
+                    feature_names=X.columns,
+                    effect_mode=self.seasonality_mode,
+                )
+            }
 
         else:
             exogenous_matrix = jnp.zeros_like(t_scaled)
 
         self.extra_inputs_ = {
-            "s_matrix": self.hierarchy_matrix,
-            "changepoints_matrix": changepoints_matrix,
-            "changepoints_mask": changepoints_mask,
-            "y_scales" : self.y_scales,
-            "seasonality_mode" : self.seasonality_mode,
-            "trend_mode" : self.trend,
-            **self._set_prior_distributions(t_scaled, y_bottom_arrays, X),
+            "changepoint_matrix": changepoint_matrix,
+            "y_scale": self.y_scales,
+            "trend_mode": self.trend,
+            "exogenous_effects": self.exogenous_effects,
+            "init_trend_params": self._get_trend_sample_func(t_arrays=t_scaled, y_arrays=y_bottom_arrays),
         }
 
         return dict(
-            t=t_scaled, y=y_arrays.squeeze().T, X=exogenous_matrix, **self.extra_inputs_
+            t=t_scaled,
+            y=y_bottom_arrays,
+            data={
+                "X": exogenous_matrix,
+            },
+            **self.extra_inputs_,
         )
 
     def _get_exogenous_matrix_from_X(self, X: pd.DataFrame) -> jnp.ndarray:
@@ -358,7 +387,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
             return jnp.array(val)
         return jnp.ones(self.n_series) * val
 
-    def _setup_changepoint_matrix_transformer(self, t_scaled):
+    def _setup_changepoints(self, t_scaled):
         """
         Setup changepoint variables and transformer.
 
@@ -368,13 +397,54 @@ class HierarchicalProphet(BaseBayesianForecaster):
         Returns:
             None
         """
-        self._changepoint_matrix_maker = ChangepointMatrix(
-            to_list_if_scalar(self.changepoint_interval, self.n_series),
-            changepoint_range=to_list_if_scalar(
-                self.changepoint_range or -self.changepoint_interval, self.n_series
-            ),
+        changepoint_intervals = (
+            to_list_if_scalar(self.changepoint_interval, self.n_series)
         )
-        self._changepoint_matrix_maker.fit(t=t_scaled)
+        changepoint_ranges = to_list_if_scalar(
+            self.changepoint_range or -self.changepoint_interval, self.n_series
+        )
+
+        changepoint_ts = []
+        for changepoint_interval, changepoint_range in zip(
+            changepoint_intervals, changepoint_ranges
+        ):
+            changepoint_ts.append(
+                get_changepoint_timeindexes(
+                    t_scaled,
+                    changepoint_interval=changepoint_interval,
+                    changepoint_range=changepoint_range,
+                )
+            )
+
+        self._changepoint_ts = changepoint_ts
+
+    def _get_changepoint_matrix(self, t_scaled):
+        """
+        Get the changepoint matrix.
+
+        Args:
+            t_scaled (ndarray): Transformed time index.
+
+        Returns:
+            ndarray: The changepoint matrix.
+        """
+        changepoint_ts = np.concatenate(self._changepoint_ts)
+        changepoint_design_tensor = []
+        changepoint_mask_tensor = []
+        for i, n_changepoints in enumerate(self.n_changepoint_per_series):
+            A = get_changepoint_matrix(t_scaled, changepoint_ts)
+
+            start_idx = sum(self.n_changepoint_per_series[:i])
+            end_idx = start_idx + n_changepoints
+            mask = np.zeros_like(A)
+            mask[:, start_idx:end_idx] = 1
+
+            changepoint_design_tensor.append(A)
+            changepoint_mask_tensor.append(mask)
+
+        changepoint_design_tensor = np.stack(changepoint_design_tensor, axis=0)
+        changepoint_mask_tensor = np.stack(changepoint_mask_tensor, axis=0)
+        return changepoint_design_tensor * changepoint_mask_tensor
 
     def get_changepoint_prior_vectors(
         self, n_changepoint_per_series, changepoint_prior_scale, n_series, global_rates
@@ -414,6 +484,16 @@ class HierarchicalProphet(BaseBayesianForecaster):
             changepoint_prior_scale_vector
         )
 
+    def _get_trend_sample_func(self, t_arrays, y_arrays):
+
+        distributions = self._get_trend_prior_distributions(t_arrays, y_arrays)
+
+        def trend_sample_func(distributions):
+
+            return init_params(distributions)
+
+        return functools.partial(trend_sample_func, distributions=distributions)
+
     def _get_trend_prior_distributions(self, t_arrays, y_arrays):
 
         distributions = {}
@@ -425,8 +505,8 @@ class HierarchicalProphet(BaseBayesianForecaster):
             offset = (self.min_y - global_rates * self.min_t) / self.y_scales
 
             distributions["offset"] = dist.Normal(
-                offset,                
-                jnp.array(self.changepoint_prior_scale)*10,
+                offset,
+                jnp.array(self.changepoint_prior_scale) * 10,
             )
 
         if self.trend == "logistic":
@@ -463,7 +543,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
             )
         )
 
-        distributions["changepoints_coefficients"] = dist.Laplace(
+        distributions["changepoint_coefficients"] = dist.Laplace(
             changepoint_prior_loc_vector, changepoint_prior_scale_vector
         )
 
@@ -501,7 +581,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
                 )
             )
 
-            distributions["exogenous_coefficients"] = OrderedDict(exogenous_distributions)
+            distributions["exogenous_coefficients"] = OrderedDict(
+                exogenous_distributions
+            )
             inputs["exogenous_permutation_matrix"] = exogenous_permutation_matrix
         else:
             inputs["exogenous_permutation_matrix"] = None
@@ -532,7 +614,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
             samples, self.original_y_indexes_.droplevel(-1).unique()
         )
 
-    def _predict_samples(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
+    def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
         """Generate samples for the given exogenous variables and forecasting horizon.
 
         Args:
@@ -566,10 +648,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
         )
         t_arrays = jnp.tile(t_arrays, (self.n_series, 1, 1))
         t_arrays = self._time_scaler.scale(t_arrays)
+        t_scaled = t_arrays[0]
 
-        changepoints_matrix, changepoints_mask = (
-            self._changepoint_matrix_maker.transform(t=t_arrays)
-        )
+        changepoints_matrix = self._get_changepoint_matrix(t_scaled)
 
         if self._has_exogenous_variables:
             X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
@@ -578,41 +659,48 @@ class HierarchicalProphet(BaseBayesianForecaster):
         else:
             exogenous_matrix = jnp.zeros_like(t_arrays)
 
-        predictive = Predictive(
-            self.model,
-            self.posterior_samples_,
-            return_sites=["obs", *self.site_names],
-        )
-
         extra_inputs_ = self.extra_inputs_.copy()
         extra_inputs_.update(
             {
-                "changepoints_matrix": changepoints_matrix,
-                "changepoints_mask": changepoints_mask,
+                "changepoint_matrix": changepoints_matrix,
             }
         )
 
-        return predictive(
-            self.rng_key, t=t_arrays, y=None, X=exogenous_matrix, **extra_inputs_
-        )
+        return dict(t=t_arrays, y=None, data={"X": exogenous_matrix}, **extra_inputs_)
 
-    def _set_exogenous_priors(self, X):
-        """Set the prior distributions for the exogenous variables.
+    def periodindex_to_multiindex(self, periodindex: pd.PeriodIndex) -> pd.MultiIndex:
+        """
+        Convert a PeriodIndex to a MultiIndex.
 
         Args:
-            X (pd.DataFrame): Exogenous variables.
+            periodindex (pd.PeriodIndex): PeriodIndex to convert.
 
         Returns:
-            self
+            pd.MultiIndex: Converted MultiIndex.
         """
-        # The dict self.exogenous_prior contain a regex as key, and a tuple (distribution, kwargs) as value.
-        # The regex is matched against the column names of X, and the corresponding distribution is used to
+        if self._y.index.nlevels == 1:
+            return periodindex
 
-        (
-            self._exogenous_dists,
-            self._exogenous_permutation_matrix,
-        ) = get_exogenous_priors(X, self.exogenous_priors, self.default_exogenous_prior)
-        return self
+        levels = self._y.index.droplevel(-1).unique().tolist()
+        # import Iterable
+        from collections.abc import Iterable
+
+        # Check if base_levels 0 is a iterable, because, if there are more than
+        # one level, the objects are tuples. If there's only one level, the
+        # objects inside levels list are strings. We do that to make it more "uniform"
+        if not isinstance(levels[0], tuple):
+            levels = [(x,) for x in levels]
+            
+
+        bottom_levels = [idx for idx in levels if idx[-1] != "__total"]
+
+        return pd.Index(
+            map(
+                lambda x: (*x[0], x[1]),
+                itertools.product(bottom_levels, periodindex),
+            ),
+            name=self._y.index.names,
+        )
 
     @property
     def n_changepoint_per_series(self):
@@ -621,7 +709,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
         Returns:
             int: Number of changepoints per series.
         """
-        return self._changepoint_matrix_maker.n_changepoint_per_series
+        return [len(cp) for cp in self._changepoint_ts]
 
     @property
     def n_series(self):
@@ -631,99 +719,6 @@ class HierarchicalProphet(BaseBayesianForecaster):
             int: Number of series.
         """
         return self.hierarchy_matrix.shape[1]
-
-
-def model(
-    y,
-    X,
-    changepoints_matrix,
-    changepoints_mask,
-    s_matrix,
-    exogenous_permutation_matrix,
-    distributions,
-    trend_mode: str,
-    seasonality_mode: str,
-    y_scales: str,
-    *args,
-    **kwargs,
-) -> None:
-    """
-    Define the probabilistic model for Prophet2.
-
-    Args:
-        t (ndarray): Time index.
-        y (ndarray): Target time series.
-        X (ndarray): Exogenous variables.
-        changepoints_matrix (ndarray): Changepoint matrix.
-        s_matrix (ndarray): Reconciliation matrix.
-        args, kwargs: Additional arguments and keyword arguments for the model.
-
-    Returns:
-        None
-    """
-    params = init_params(distributions=distributions)
-
-    # Trend
-
-    changepoints_coefficients = params["changepoints_coefficients"]
-    offset = params["offset"]
-
-    trend = (
-        changepoints_matrix * (changepoints_mask * changepoints_coefficients.flatten())
-    ).sum(axis=-1)
-    trend = jnp.expand_dims(trend, axis=-1) + offset.reshape((-1, 1, 1))
-
-    if trend_mode == "linear":
-        trend *= y_scales.reshape((-1, 1, 1))
-
-    elif trend_mode == "logistic":
-        capacity = params["capacity"]
-        capacity = capacity.reshape((-1, 1, 1)) * y_scales.reshape((-1, 1, 1))
-        trend = capacity / (1 + jnp.exp(-trend))
-
-    numpyro.deterministic("trend_", trend)
-
-    # Exogenous variables
-
-    if params.get("exogenous_coefficients") is not None:
-        exogenous_coefficients = params["exogenous_coefficients"]
-        permuted_exogenous = exogenous_permutation_matrix @ exogenous_coefficients
-
-        exogenous_effect_decomposition = X * permuted_exogenous.reshape((1, -1))
-        numpyro.deterministic(
-            "exogenous_effect_decomposition_", exogenous_effect_decomposition
-        )
-        exogenous_effect = exogenous_effect_decomposition.sum(axis=-1).reshape(
-            (X.shape[0], X.shape[1], 1)
-        )
-        if seasonality_mode == "additive":
-            exogenous_effect = exogenous_effect * y_scales.reshape((-1, 1, 1))
-
-        # Mean
-        if seasonality_mode == "additive":
-            mean = additive_mean_model(trend, exogenous_effect)
-
-        elif seasonality_mode == "multiplicative":
-            mean = multiplicative_mean_model(trend, exogenous_effect, exponent=1)
-        mean = mean.squeeze()
-    else:
-        mean = trend.squeeze()
-
-    numpyro.deterministic("mean_", mean)
-
-    if mean.ndim == 1:
-        mean = mean.reshape((1, -1))
-
-
-    numpyro.sample(
-        "obs",
-        NormalReconciled(
-            mean.T,
-            params["std_observation"],
-            reconc_matrix=s_matrix,
-        ),
-        obs=y,
-    )
 
 
 def enforce_array_if_zero_dim(x):

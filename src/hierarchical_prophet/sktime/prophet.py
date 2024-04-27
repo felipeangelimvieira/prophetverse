@@ -14,24 +14,19 @@ from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.series.fourier import FourierFeatures
 from hierarchical_prophet._utils import convert_index_to_days_since_epoch
-from hierarchical_prophet.base import BaseBayesianForecaster, init_params
-from hierarchical_prophet.sktime.utils.exogenous_priors import (
-    get_exogenous_priors,
-    sample_exogenous_coefficients,
-)
-from hierarchical_prophet.jax_functions import (
-    additive_mean_model,
-    multiplicative_mean_model,
-)
+from hierarchical_prophet.sktime.base import BaseBayesianForecaster, init_params
 
-from hierarchical_prophet.logistic import suggest_logistic_rate_and_offset
+
+from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
 
 from hierarchical_prophet.univariate.model import model
-from hierarchical_prophet.univariate.trend_utils import (
+from hierarchical_prophet.trend_utils import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
 )
+from hierarchical_prophet.effects import CustomPriorEffect
 import functools
+
 
 logger = logging.getLogger("hierarchical-prophet")
 
@@ -108,6 +103,10 @@ class Prophet(BaseBayesianForecaster):
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
+        inference_method="mcmc",
+        optimizer_name="Adam",
+        optimizer_kwargs = {},
+        optimizer_steps=100_000,
         exogenous_priors=None,
         default_exogenous_prior=(dist.Normal, 0, 1),
         rng_key=random.PRNGKey(24),
@@ -149,10 +148,13 @@ class Prophet(BaseBayesianForecaster):
 
         super().__init__(
             rng_key=rng_key,
-            method="mcmc",
+            inference_method=inference_method,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
             mcmc_chains=mcmc_chains,
+            optimizer_name=optimizer_name,
+            optimizer_kwargs=optimizer_kwargs,
+            optimizer_steps=optimizer_steps,
         )
 
         # Define all attributes that are created outside init
@@ -165,8 +167,12 @@ class Prophet(BaseBayesianForecaster):
         self.extra_inputs_ = None
         self.exogenous_columns_ = None
         self.model = model
+        
+        
+    def _scale_y(self, y):
+        return y / self.y_scale
 
-    def _get_numpyro_model_data(self, y, X, fh):
+    def _get_fit_data(self, y, X, fh):
         """
         Prepares the data for the Numpyro model.
 
@@ -184,6 +190,8 @@ class Prophet(BaseBayesianForecaster):
             self._has_exogenous = True
 
         self._set_time_and_y_scales(y)
+        y = self._scale_y(y)
+        
         self._replace_hyperparam_nones_with_defaults(y)
         self._set_changepoints_t(y)
         t = self._index_to_scaled_timearray(y.index)
@@ -205,23 +213,32 @@ class Prophet(BaseBayesianForecaster):
             if self.has_exogenous_or_seasonality
             else None
         )
-        y_array = jnp.array(y.values.flatten())
+        y_array = jnp.array(y.values.flatten()).reshape((-1 , 1))
 
-        self.extra_inputs_ = self._set_prior_distributions(y, X)
-        self.extra_inputs_["trend_mode"] = self.trend
-        self.extra_inputs_["seasonality_mode"] = self.seasonality_mode
-        self.extra_inputs_["y_scale"] = self.y_scale
+        trend_sample_func = self._get_trend_sample_func(y=y, X=X)
+
+        self.extra_inputs_ = {"init_trend_params" : trend_sample_func,
+                              "trend_mode"      : self.trend,
+                              "exogenous_effects" : {
+                                    "X" : CustomPriorEffect(
+                                        feature_names=X.columns,
+                                        exogenous_priors=self.exogenous_priors,
+                                        default_exogenous_prior=self.default_exogenous_prior,
+                                        effect_mode=self.seasonality_mode,
+                                    )
+                              }}
 
         inputs = {
             "t": self._index_to_scaled_timearray(y.index),
-            "X": X_array,
             "y": y_array,
+            "data" : {
+                "X" : X_array,
+            },
             "changepoint_matrix": changepoint_matrix,
             **self.extra_inputs_,
         }
 
         return inputs
-    
 
     def init_seasonalities(self, y: pd.DataFrame, X: pd.DataFrame) -> pd.DataFrame:
         sp_list = []
@@ -264,9 +281,8 @@ class Prophet(BaseBayesianForecaster):
     @property
     def has_exogenous_or_seasonality(self):
         return self._has_exogenous or self.has_seasonality
-    
-    
-    def _get_trend_sample_func(self, y : pd.DataFrame, X: pd.DataFrame):
+
+    def _get_trend_sample_func(self, y: pd.DataFrame, X: pd.DataFrame):
         t_scaled = self._index_to_scaled_timearray(y.index)
         distributions = {}
 
@@ -284,12 +300,12 @@ class Prophet(BaseBayesianForecaster):
             distributions["changepoint_coefficients"] = dist.Laplace(
                 changepoints_loc,
                 jnp.ones(len(self._changepoint_t))
-                * (self.changepoint_prior_scale * self.y_scale),
+                * (self.changepoint_prior_scale),
             )
 
             distributions["offset"] = dist.Normal(
                 (trend.values[0, 0] - linear_global_rate * t_scaled[0]),
-                0.1 * self.y_scale,
+                0.1 ,
             )
 
         if self.trend == "logistic":
@@ -297,7 +313,7 @@ class Prophet(BaseBayesianForecaster):
             linear_global_rate, timeoffset = suggest_logistic_rate_and_offset(
                 t_scaled,
                 trend.values.flatten(),
-                capacities=self.capacity_prior_loc * self.y_scale,
+                capacities=self.capacity_prior_loc,
             )
 
             linear_global_rate = linear_global_rate[0]
@@ -312,103 +328,24 @@ class Prophet(BaseBayesianForecaster):
             distributions["changepoint_coefficients"] = (
                 changepoint_coefficients_distribution
             )
-            distributions["offset"] = dist.Normal(timeoffset, jnp.log(self.y_scale))
+            
+            
+            distributions["offset"] = dist.Normal(timeoffset, jnp.log(2))
 
             distributions["capacity"] = dist.Normal(
                 self.capacity_prior_loc,
                 self.capacity_prior_scale,
             )
-            
-            
-        def init_trend_params(distributions) -> dict:
-            
-            return init_params(distributions)
-        
-        return functools.partial(init_trend_params, distributions=distributions)
-
-    def _set_prior_distributions(self, y: pd.DataFrame, X: pd.DataFrame):
-        """
-        Sets the prior distributions for the model parameters.
-
-        Args:
-            X (pd.DataFrame): Time series exogenous data.
-        """
-
-        # Get prior distributions from self.exogenous_priors and self.default_exogenous_prior
-        # The permutation matrix maps the distributions to the columns of X
-        t_scaled = self._index_to_scaled_timearray(y.index)
-        distributions = {}
-        extra_inputs = {}
-
-        changepoints_loc = jnp.zeros(len(self._changepoint_t))
-
-        detrender = Detrender()
-        trend = y - detrender.fit_transform(y)
-
-        if self.trend == "linear":
-
-            linear_global_rate = (trend.values[-1, 0] - trend.values[0, 0]) / (
-                t_scaled[-1] - t_scaled[0]
-            )
-            changepoints_loc.at[0].set(linear_global_rate)
-
-            distributions["changepoint_coefficients"] = dist.Laplace(
-                changepoints_loc,
-                jnp.ones(len(self._changepoint_t))
-                * (self.changepoint_prior_scale * self.y_scale),
-            )
-
-            distributions["offset"] = dist.Normal(
-                (trend.values[0, 0] - linear_global_rate * t_scaled[0]),
-                0.1 * self.y_scale,
-            )
-
-        if self.trend == "logistic":
-
-            linear_global_rate, timeoffset = suggest_logistic_rate_and_offset(
-                t_scaled,
-                trend.values.flatten(),
-                capacities=self.capacity_prior_loc * self.y_scale,
-            )
-
-            linear_global_rate = linear_global_rate[0]
-            timeoffset = timeoffset[0]
-            changepoints_loc.at[0].set(linear_global_rate)
-
-            changepoint_coefficients_distribution = dist.Laplace(
-                changepoints_loc,
-                jnp.ones(len(self._changepoint_t)) * self.changepoint_prior_scale,
-            )
-
-            distributions["changepoint_coefficients"] = (
-                changepoint_coefficients_distribution
-            )
-            distributions["offset"] = dist.Normal(timeoffset, jnp.log(self.y_scale))
-
-            distributions["capacity"] = dist.Normal(
-                self.capacity_prior_loc,
-                self.capacity_prior_scale,
-            )
-
-        if self._has_exogenous:
-            (
-                exogenous_name_distribution_pairs,
-                exogenous_permutation_matrix,
-            ) = get_exogenous_priors(
-                X, self.exogenous_priors, self.default_exogenous_prior
-            )
-
-            distributions["exogenous_coefficients"] = OrderedDict(
-                exogenous_name_distribution_pairs
-            )
-            extra_inputs["exogenous_permutation_matrix"] = exogenous_permutation_matrix
-        else:
-            extra_inputs["exogenous_permutation_matrix"] = None
 
         distributions["std_observation"] = dist.HalfNormal(self.noise_scale)
-        extra_inputs["distributions"] = distributions
 
-        return extra_inputs
+        def init_trend_params(distributions) -> dict:
+
+            return init_params(distributions)
+
+        return functools.partial(init_trend_params, distributions=distributions)
+
+
 
     def _set_time_and_y_scales(self, y: pd.DataFrame):
         """
@@ -496,7 +433,7 @@ class Prophet(BaseBayesianForecaster):
 
         return get_changepoint_matrix(t, self._changepoint_t)
 
-    def _predict_samples(self, X: pd.DataFrame, fh: ForecastingHorizon) -> pd.DataFrame:
+    def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> pd.DataFrame:
         """
         Generates predictive samples.
 
@@ -513,10 +450,6 @@ class Prophet(BaseBayesianForecaster):
         t = self._index_to_scaled_timearray(fh_as_index)
         changepoint_matrix = self._get_changepoint_matrix(t)
 
-        predictive = Predictive(
-            self.model, self.posterior_samples_, return_sites=["obs", *self.site_names]
-        )
-
         if X is None and self.has_seasonality:
             X = pd.DataFrame(index=fh_as_index)
 
@@ -527,12 +460,13 @@ class Prophet(BaseBayesianForecaster):
             X.loc[fh_as_index].values if self.has_exogenous_or_seasonality else None
         )
 
-        self.samples_predictive_ = predictive(
-            self.rng_key,
+        return dict(
+            t=t.reshape((-1 ,1)),
             y=None,
-            X=X_array,
-            t=t,
+            data={
+                "X" : X_array,
+            },
             changepoint_matrix=changepoint_matrix,
             **self.extra_inputs_
         )
-        return self.samples_predictive_
+        

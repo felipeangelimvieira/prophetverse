@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from hierarchical_prophet.sktime.multivariate import (
+from prophetverse.sktime.multivariate import (
     TimeScaler,
 ) 
 

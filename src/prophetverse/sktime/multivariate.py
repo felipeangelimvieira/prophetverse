@@ -20,15 +20,15 @@ from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
 
-from hierarchical_prophet.utils.frame_to_array import (
+from prophetverse.utils.frame_to_array import (
     convert_index_to_days_since_epoch,
     extract_timetensor_from_dataframe,
     loc_bottom_series,
     series_to_tensor,
 )
-from hierarchical_prophet.utils.multiindex import reindex_time_series
-from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
-from hierarchical_prophet.sktime.base import (
+from prophetverse.utils.multiindex import reindex_time_series
+from prophetverse.utils.logistic import suggest_logistic_rate_and_offset
+from prophetverse.sktime.base import (
     BaseBayesianForecaster,
     ExogenousEffectMixin,
     init_params,
@@ -39,13 +39,13 @@ from ._expand_column_per_level import (
     ExpandColumnPerLevel,
 )
 
-from hierarchical_prophet.changepoint import (
+from prophetverse.changepoint import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
 )
 
-from hierarchical_prophet.multivariate.model import model
-from hierarchical_prophet.effects import LinearEffect, LinearHeterogenousPriorsEffect
+from prophetverse.multivariate.model import model
+from prophetverse.effects import LinearEffect, LinearHeterogenousPriorsEffect
 
 logger = logging.getLogger("sktime-numpyro")
 

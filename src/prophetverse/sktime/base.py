@@ -12,9 +12,9 @@ from numpyro.contrib.control_flow import scan
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from collections import OrderedDict
-from hierarchical_prophet.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
-from hierarchical_prophet.effects import LinearEffect
-from hierarchical_prophet.utils.frame_to_array import series_to_tensor
+from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
+from prophetverse.effects import LinearEffect
+from prophetverse.utils.frame_to_array import series_to_tensor
 import arviz as az
 import re
 import logging

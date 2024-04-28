@@ -6,7 +6,7 @@ from numpyro import distributions as dist
 from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
-from hierarchical_prophet.utils.frame_to_array import (convert_dataframe_to_tensors,
+from prophetverse.utils.frame_to_array import (convert_dataframe_to_tensors,
                                     convert_index_to_days_since_epoch,
                                     get_bottom_series_idx, get_multiindex_loc,
                                     iterate_all_series, loc_bottom_series,

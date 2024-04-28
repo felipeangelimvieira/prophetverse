@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from hierarchical_prophet.sktime._expand_column_per_level import (
+from prophetverse.sktime._expand_column_per_level import (
     ExpandColumnPerLevel,
 ) 
 

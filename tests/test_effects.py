@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import jax.numpy as jnp
 from numpyro import distributions as dist
 import pandas as pd
-from hierarchical_prophet.effects import (
+from prophetverse.effects import (
     LogEffect,
     LinearEffect,
     LinearHeterogenousPriorsEffect,

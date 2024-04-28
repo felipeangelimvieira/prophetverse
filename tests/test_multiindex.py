@@ -1,4 +1,4 @@
-from hierarchical_prophet.utils.multiindex import reindex_time_series
+from prophetverse.utils.multiindex import reindex_time_series
 import pandas as pd
 import numpy as np
 

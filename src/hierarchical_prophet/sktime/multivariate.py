@@ -8,6 +8,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro
+from typing import Callable
 import pandas as pd
 from jax import lax, random
 from collections import OrderedDict
@@ -20,28 +21,24 @@ from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
 
 from hierarchical_prophet.utils.frame_to_array import (
-    convert_dataframe_to_tensors,
     convert_index_to_days_since_epoch,
     extract_timetensor_from_dataframe,
-    get_multiindex_loc,
     loc_bottom_series,
     series_to_tensor,
 )
 from hierarchical_prophet.utils.multiindex import reindex_time_series
 from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
-from hierarchical_prophet.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin, init_params
-from hierarchical_prophet.utils.exogenous_priors import (
-    get_exogenous_priors,
-    sample_exogenous_coefficients,
+from hierarchical_prophet.sktime.base import (
+    BaseBayesianForecaster,
+    ExogenousEffectMixin,
+    init_params,
 )
+
 
 from ._expand_column_per_level import (
     ExpandColumnPerLevel,
 )
-from hierarchical_prophet.utils.jax_functions import (
-    additive_mean_model,
-    multiplicative_mean_model,
-)
+
 from hierarchical_prophet.changepoint import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
@@ -56,26 +53,37 @@ logger = logging.getLogger("sktime-numpyro")
 class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
     """A class that represents a Bayesian hierarchical time series forecasting model based on the Prophet algorithm.
 
+    This class forecasts all series in a hierarchy at once, using a MultivariateNormal as the likelihood function, and
+    LKJ priors for the correlation matrix.
+
+    This class may be interesting if you want to fit shared coefficients across series. By default, all coefficients are
+    obtained exclusively for each series, but this can be changed through the `shared_coefficients` parameter.
+
     Args:
-        changepoint_interval (int, optional): The interval between potential changepoints in the time series. Defaults to 25.
-        changepoint_range (float or None, optional): The index of the last changepoint. If None, default to -changepoint_freq. Note that this is the index in the list of timestamps, and because the timeseries increases in size, it is better to use negative indexes instead of positive. Defaults to None.
-        exogenous_priors (dict, optional): A dictionary of prior distributions for the exogenous variables. The keys are regexes, or the name of an specific column, and the values are tuples of the format (dist.Distribution, *args). The args are passed to dist.Distributions at the moment of sampling. Defaults to {}.
-        default_exogenous_prior (tuple, optional): The default prior distribution for the exogenous variables. Defaults to (dist.Normal, 0, 1), and is applied to columns not included in exogenous_priors above.
-        changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1. Note that this parameter is scaled by the magnitude of the timeseries.
-        capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 1.1, i.e., 110% of the maximum value of the series, or the y_scales if provided.
-        capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 0.2.
-        y_scales (array-like or None, optional): The scales of the target time series. Defaults to None. If not provided, the scales are computed from the data, according to its maximum value.
-        noise_scale (float, optional): The scale parameter for the prior distribution of observation noise. Defaults to 0.05.
-        trend (str, optional): The type of trend to model. Possible values are "linear" and "logistic". Defaults to "linear".
-        seasonality_mode (str, optional): The mode of seasonality to model. Possible values are "multiplicative" and "additive". Defaults to "multiplicative".
-        transformer_pipeline (BaseTransformer): A BaseTransformer or TransformerPipeline from sktime to apply to X and create features internally, such as Fourier series. See sktime's Transformer documentation for more information. Defaults to None.
-        individual_regressors (list, optional): A list of regexes/names of individual regressors to separate by timeseries. If not provided, all regressors are shared. Defaults to [].
-        mcmc_samples (int, optional): The number of MCMC samples to draw. Defaults to 2000.
-        mcmc_warmup (int, optional): The number of MCMC warmup steps. Defaults to 200.
-        mcmc_chains (int, optional): The number of MCMC chains to run in parallel. Defaults to 4.
-        rng_key (jax.random.PRNGKey, optional): The random number generator key. Defaults to random.PRNGKey(24).
-
-
+        changepoint_interval (int): The number of points between each potential changepoint.
+        changepoint_range (float): Proportion of the history in which trend changepoints will be estimated.
+                                   If a float between 0 and 1, the range will be that proportion of the history.
+                                   If an int, the range will be that number of points. A negative int indicates number of points
+                                   counting from the end of the history.
+        changepoint_prior_scale (float): Parameter controlling the flexibility of the automatic changepoint selection.
+        capacity_prior_scale (float): Scale parameter for the capacity prior. Defaults to 0.2.
+        capacity_prior_loc (float): Location parameter for the capacity prior. Defaults to 1.1.
+        trend (str): Type of trend. Either "linear" or "logistic". Defaults to "linear".
+        feature_transformer (BaseTransformer or None): A transformer to preprocess the exogenous features. Defaults to None.
+        exogenous_effects (list or None): List of exogenous effects to include in the model. Defaults to None.
+        default_effect_mode (str): Default mode for exogenous effects. Either "multiplicative" or "additive". Defaults to "multiplicative".
+        default_exogenous_prior (tuple): Default prior distribution for exogenous effects. See numpyro.distributions for options. Defaults to ("Normal", 0, 1).
+        shared_features (list): List of shared features across series. Defaults to an empty list.
+        mcmc_samples (int): Number of MCMC samples to draw. Defaults to 2000.
+        mcmc_warmup (int): Number of warmup steps for MCMC. Defaults to 200.
+        mcmc_chains (int): Number of MCMC chains. Defaults to 4.
+        inference_method (str): Inference method to use. Either "map" or "mcmc". Defaults to "map".
+        optimizer_name (str): Name of the optimizer to use. Defaults to "Adam".
+        optimizer_kwargs (dict): Additional keyword arguments for the optimizer. Defaults to {"step_size": 1e-4}.
+        optimizer_steps (int): Number of optimization steps. Defaults to 100_000.
+        noise_scale (float): Scale parameter for the noise. Defaults to 0.05.
+        correlation_matrix_concentration (float): Concentration parameter for the correlation matrix. Defaults to 1.0.
+        rng_key (jax.random.PRNGKey): Random number generator key. Defaults to random.PRNGKey(24).
     """
 
     _tags = {
@@ -108,7 +116,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
         trend="linear",
-        transformer_pipeline: BaseTransformer = None,
+        feature_transformer: BaseTransformer = None,
         exogenous_effects=None,
         default_effect_mode="multiplicative",
         default_exogenous_prior=("Normal", 0, 1),
@@ -134,7 +142,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.trend = trend
         self.default_exogenous_prior = default_exogenous_prior
         self.shared_features = shared_features
-        self.transformer_pipeline = transformer_pipeline
+        self.feature_transformer = feature_transformer
         self.correlation_matrix_concentration = correlation_matrix_concentration
 
         super().__init__(
@@ -152,32 +160,15 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         )
 
         self.model = model
-
-        self.aggregator_ = None
-        self.original_y_indexes_ = None
-        self.full_y_indexes_ = None
-        self.hierarchy_matrix = None
-        self._has_exogenous_variables = None
-        self.expand_columns_transformer_ = None
-        self._time_scaler = None
-        self.max_y = None
-        self.min_y = None
-        self.max_t = None
-        self.min_t = None
-        self._changepoint_matrix_maker = None
-
         self._validate_hyperparams()
 
-    def _validate_hyperparams(self, y=None):
+    def _validate_hyperparams(self):
         """
         Validate the hyperparameters of the HierarchicalProphet forecaster.
         """
         if self.changepoint_interval <= 0:
             raise ValueError("changepoint_interval must be greater than 0.")
-        # if self.changepoint_range is not None and (
-        #    self.changepoint_range <= 0 or self.changepoint_range > 1
-        # ):
-        #    raise ValueError("changepoint_range must be in the range (0, 1].")
+
         if self.changepoint_prior_scale <= 0:
             raise ValueError("changepoint_prior_scale must be greater than 0.")
         if self.noise_scale <= 0:
@@ -206,7 +197,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             dict: A dictionary containing the model data.
         """
 
-        self._validate_hyperparams(y=y)
         # Handling series without __total indexes
         self.aggregator_ = Aggregator()
         self.original_y_indexes_ = y.index
@@ -220,40 +210,29 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         # Forecast Horizon into multiindex correcly
         self._y = y
 
-        # If no exogenous variables, create empty DataFrame
-        # Else, aggregate exogenous variables and transform them
-        if X is None or X.columns.empty:
-
-            X = pd.DataFrame(index=y.index)
-            if self.transformer_pipeline is None:
-                self._has_exogenous_variables = False
-            else:
-                self._has_exogenous_variables = True
-
-        else:
-            self._has_exogenous_variables = True
-            X = self.aggregator_.transform(X)
-
-        if self.transformer_pipeline is not None:
-            X = self.transformer_pipeline.fit_transform(X)
-
-        y_bottom = loc_bottom_series(y)
-
         # Convert inputs to array, including the time index
-        y_arrays = series_to_tensor(y)
+        y_bottom = loc_bottom_series(y)
         y_bottom_arrays = series_to_tensor(y_bottom)
         t_arrays = extract_timetensor_from_dataframe(y_bottom)
 
-        # Setup model parameters and scalers, and get
-        self._setup_scales(t_arrays, y_bottom_arrays)
-
+        # Setup time scale
+        self._set_time_scale(t_arrays)
         t_scaled = self._time_scaler.scale(t_arrays)
+        # We use a single time array for all series, with shape (n_timepoints, 1)
         t_scaled = t_scaled[0].reshape((-1, 1))
         # Changepoints
         self._setup_changepoints(t_scaled=t_scaled)
         changepoint_matrix = self._get_changepoint_matrix(t_scaled)
 
         # Exog variables
+
+        # If no exogenous variables, create empty DataFrame
+        # Else, aggregate exogenous variables and transform them
+        if (X is None or X.columns.empty) and self.feature_transformer is not None:
+            X = pd.DataFrame(index=y.index)
+        if self.feature_transformer is not None:
+            X = self.feature_transformer.fit_transform(X)
+        self._has_exogenous_variables = X is not None and not X.columns.empty
 
         if self._has_exogenous_variables:
 
@@ -267,24 +246,25 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             exogenous_data = self._get_exogenous_data_array(loc_bottom_series(X))
 
         else:
+            self._exogenous_effects_and_columns = {}
             exogenous_data = {}
 
-        self.extra_inputs_ = {
-            "changepoint_matrix": changepoint_matrix,
+        self.fit_and_predict_data_ = {
             "trend_mode": self.trend,
             "exogenous_effects": self.exogenous_effect_dict,
             "init_trend_params": self._get_trend_sample_func(
                 t_arrays=t_scaled, y_arrays=y_bottom_arrays
             ),
             "correlation_matrix_concentration": self.correlation_matrix_concentration,
-            "noise_scale" : self.noise_scale,
+            "noise_scale": self.noise_scale,
         }
 
         return dict(
             t=t_scaled,
             y=y_bottom_arrays,
             data=exogenous_data,
-            **self.extra_inputs_,
+            changepoint_matrix=changepoint_matrix,
+            **self.fit_and_predict_data_,
         )
 
     def _get_exogenous_matrix_from_X(self, X: pd.DataFrame) -> jnp.ndarray:
@@ -302,13 +282,18 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         return X_arrays
 
-    def _setup_scales(self, t_arrays, y_arrays):
+    def _set_time_scale(self, t_arrays):
         """
         Setup model parameters and scalers.
 
+        This function has the collateral effect of setting the following attributes:
+        - self._time_scaler
+        - self.max_t
+        - self.min_t
+
+
         Args:
             t_arrays (ndarray): Transformed time index.
-            y_arrays (ndarray): Transformed target time series.
 
         Returns:
             None
@@ -320,8 +305,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         t_scaled = self._time_scaler.scale(t=t_arrays)
 
         # Setting loc and scales for the priors
-        self.max_y = y_arrays.max(axis=1).squeeze()
-        self.min_y = y_arrays.min(axis=1).squeeze()
         self.max_t = t_scaled.max(axis=1).squeeze()
         self.min_t = t_scaled.min(axis=1).squeeze()
 
@@ -341,6 +324,11 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
     @property
     def _capacity_prior_scale(self):
+        """
+        The capacity prior scale
+
+        Returns a float or an array-like with the same shape as the number of series.
+        """
         val = self.capacity_prior_scale
         if isinstance(val, Iterable):
             return jnp.array(val)
@@ -350,14 +338,17 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         """
         Setup changepoint variables and transformer.
 
+        This function has the collateral effect of setting the following attributes:
+        - self._changepoint_ts
+
         Args:
             t_arrays (ndarray): Transformed time index.
 
         Returns:
             None
         """
-        changepoint_intervals = (
-            to_list_if_scalar(self.changepoint_interval, self.n_series)
+        changepoint_intervals = to_list_if_scalar(
+            self.changepoint_interval, self.n_series
         )
         changepoint_ranges = to_list_if_scalar(
             self.changepoint_range or -self.changepoint_interval, self.n_series
@@ -379,7 +370,8 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
     def _get_changepoint_matrix(self, t_scaled):
         """
-        Get the changepoint matrix.
+        Get the changepoint matrix. The changepoint matrix has shape (n_series, n_timepoints, total number of changepoints for all series).
+        A mask is applied so that for index i at dim 0, only the changepoints for series i are non-zero at dim -1.
 
         Args:
             t_scaled (ndarray): Transformed time index.
@@ -405,15 +397,26 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         changepoint_mask_tensor = np.stack(changepoint_mask_tensor, axis=0)
         return changepoint_design_tensor * changepoint_mask_tensor
 
-    def get_changepoint_prior_vectors(
-        self, n_changepoint_per_series, changepoint_prior_scale, n_series, global_rates
+    def _get_changepoint_prior_vectors(
+        self,
+        n_changepoint_per_series: List[int],
+        changepoint_prior_scale: float,
+        global_rates: jnp.array,
     ):
         """
-        Set the prior vectors for changepoint distribution.
+
+        Returns the prior vectors for the changepoint coefficients.
+
+        Args:
+            n_changepoint_per_series (List[int]): Number of changepoints for each series.
+            changepoint_prior_scale (float): Scale parameter for the changepoint prior.
+            global_rates (jnp.array): Global rates for each series.
 
         Returns:
             None
         """
+
+        n_series = len(n_changepoint_per_series)
 
         def zeros_with_first_value(size, first_value):
             x = jnp.zeros(size)
@@ -443,7 +446,24 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             changepoint_prior_scale_vector
         )
 
-    def _get_trend_sample_func(self, t_arrays, y_arrays):
+    def _get_trend_sample_func(
+        self, t_arrays: jnp.ndarray, y_arrays: jnp.ndarray
+    ) -> Callable:
+        """
+
+        Get a function that samples the trend parameters.
+
+        This function may change in the future. Currently, the model function receives a function to get the changepoint coefficients.
+        This function is passed to the model as a partial function, with the changepoint coefficients as a parameter
+
+        Args:
+            t_arrays (jnp.array): array with shape (n_timepoints, 1).
+            y_arrays (jnp.array): array with shape (n_series, n_timepoints, 1).
+
+        Returns:
+            Callable: Function that samples the trend parameters.
+
+        """
 
         distributions = self._get_trend_prior_distributions(t_arrays, y_arrays)
 
@@ -459,7 +479,8 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         if self.trend == "linear":
             global_rates = enforce_array_if_zero_dim(
-                (y_arrays[:, -1].squeeze() - y_arrays[:, 0].squeeze()) / (t_arrays[0].squeeze() - t_arrays[-1].squeeze()) 
+                (y_arrays[:, -1].squeeze() - y_arrays[:, 0].squeeze())
+                / (t_arrays[0].squeeze() - t_arrays[-1].squeeze())
             )
             offset = y_arrays[:, 0].squeeze() - global_rates * t_arrays[0].squeeze()
 
@@ -473,29 +494,30 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             global_rates, offset = suggest_logistic_rate_and_offset(
                 t=t_arrays.squeeze(),
                 y=y_arrays.squeeze(),
-                capacities=self._capacity_prior_loc ,
+                capacities=self._capacity_prior_loc,
             )
-
-            distributions["capacity"] = dist.LogNormal(
-                self._capacity_prior_loc,
-                self._capacity_prior_scale,
+            # We subtract one because it is later added to capacity (inside the model)
+            distributions["capacity"] = dist.TransformedDistribution(
+                dist.HalfNormal(
+                    self._capacity_prior_scale,
+                ),
+                dist.transforms.AffineTransform(
+                    loc=self._capacity_prior_loc, scale=1
+                ),
             )
 
             distributions["offset"] = dist.Normal(
                 offset,
-                jnp.log(
-                    y_arrays.max(axis=1).squeeze().flatten()/ y_arrays.min(axis=1).squeeze().flatten() + 1
-                ),
+                jnp.array(self.changepoint_prior_scale) * 10,
             )
 
         # Trend
 
         # Changepoints and trend-related distributions
         changepoint_prior_loc_vector, changepoint_prior_scale_vector = (
-            self.get_changepoint_prior_vectors(
+            self._get_changepoint_prior_vectors(
                 n_changepoint_per_series=self.n_changepoint_per_series,
                 changepoint_prior_scale=self.changepoint_prior_scale,
-                n_series=self.n_series,
                 global_rates=global_rates,
             )
         )
@@ -505,55 +527,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         )
 
         return distributions
-
-    def _set_prior_distributions(
-        self, t_arrays: jnp.ndarray, y_arrays: jnp.ndarray, X: pd.DataFrame
-    ):
-        """Set the prior distributions.
-
-        Args:
-            t_arrays (jnp.ndarray): The array of time values.
-            y_arrays (jnp.ndarray): The array of target values.
-            X (pd.DataFrame): The dataframe of exogenous variables.
-
-        Returns:
-            None
-        """
-
-        distributions = {}
-        inputs = {}
-
-        # Trend
-        distributions.update(self._get_trend_prior_distributions(t_arrays, y_arrays))
-
-        # Exog variables
-        exogenous_distributions = None
-        if self._has_exogenous_variables:
-            # The dict self.exogenous_prior contain a regex as key, and a tuple (distribution, kwargs) as value.
-            # The regex is matched against the column names of X, and the corresponding distribution is used to
-
-            exogenous_distributions, exogenous_permutation_matrix = (
-                get_exogenous_priors(
-                    X, self.exogenous_priors, self.default_exogenous_prior
-                )
-            )
-
-            distributions["exogenous_coefficients"] = OrderedDict(
-                exogenous_distributions
-            )
-            inputs["exogenous_permutation_matrix"] = exogenous_permutation_matrix
-        else:
-            inputs["exogenous_permutation_matrix"] = None
-            # distributions["exogenous_coefficients"] = None
-
-        # Noise
-        distributions["std_observation"] = dist.HalfNormal(
-            self.noise_scale
-        )
-
-        inputs["distributions"] = distributions
-
-        return inputs
 
     def predict_samples(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
         """Generate samples for the given exogenous variables and forecasting horizon.
@@ -585,16 +558,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         )
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
-        if X is not None and X.shape[1] == 0:
-            X = None
-
-        if self.transformer_pipeline is not None:
-            # Create an empty X if the model has transformer and X is None
-            if X is None:
-                idx = reindex_time_series(self._y, fh_as_index).index
-                X = pd.DataFrame(index=idx)
-            X = self.transformer_pipeline.transform(X)
-
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
 
@@ -605,23 +568,29 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         t_arrays = self._time_scaler.scale(t_arrays)
         t_scaled = t_arrays[0]
 
-        changepoints_matrix = self._get_changepoint_matrix(t_scaled)
+        changepoint_matrix = self._get_changepoint_matrix(t_scaled)
 
         if self._has_exogenous_variables:
+            if X is None or X.shape[1] == 0:
+                idx = reindex_time_series(self._y, fh_as_index).index
+                X = pd.DataFrame(index=idx)
+                X = self.aggregator_.transform(X)
+
             X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
+            if self.feature_transformer is not None:
+                X = self.feature_transformer.transform(X)
             X = self.expand_columns_transformer_.transform(X)
             exogenous_data = self._get_exogenous_data_array(loc_bottom_series(X))
         else:
             exogenous_data = {}
 
-        extra_inputs_ = self.extra_inputs_.copy()
-        extra_inputs_.update(
-            {
-                "changepoint_matrix": changepoints_matrix,
-            }
+        return dict(
+            t=t_arrays,
+            y=None,
+            data=exogenous_data,
+            changepoint_matrix=changepoint_matrix,
+            **self.fit_and_predict_data_,
         )
-
-        return dict(t=t_arrays, y=None, data=exogenous_data, **extra_inputs_)
 
     def periodindex_to_multiindex(self, periodindex: pd.PeriodIndex) -> pd.MultiIndex:
         """

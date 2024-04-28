@@ -17,6 +17,7 @@ from hierarchical_prophet.effects import LinearEffect
 from hierarchical_prophet.utils.frame_to_array import series_to_tensor
 import arviz as az
 import re
+import logging
 
 class BaseBayesianForecaster(BaseForecaster):
     """
@@ -384,7 +385,7 @@ class ExogenousEffectMixin:
                 )
 
             if not len(columns):
-                raise ValueError("No columns match the regex {}".format(column_regex))
+                logging.warning("No columns match the regex {}".format(column_regex))
 
             columns_with_effects = columns_with_effects.union(columns)
 
@@ -409,8 +410,7 @@ class ExogenousEffectMixin:
                         features_without_effects,
                         LinearEffect(
                             id="exog",
-                            dist=default_dist,
-                            dist_args=args,
+                            prior=(default_dist, *args),
                             effect_mode=self.default_effect_mode,
                         ),
                     )
@@ -423,6 +423,10 @@ class ExogenousEffectMixin:
 
         out = {}
         for effect_name, (columns, _) in self._exogenous_effects_and_columns.items():
+            # If no columns are found, skip
+            if len(columns) == 0:
+                continue
+            
             if X.index.nlevels == 1:
                 array = jnp.array(X[columns].values)
             else:
@@ -434,4 +438,4 @@ class ExogenousEffectMixin:
 
     @property
     def exogenous_effect_dict(self):
-        return {k: v[1] for k, v in self._exogenous_effects_and_columns.items()}
+        return {k: v[1] for k, v in self._exogenous_effects_and_columns.items() if len(v[0])}

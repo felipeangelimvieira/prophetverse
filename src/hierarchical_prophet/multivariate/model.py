@@ -40,7 +40,7 @@ def model(
         (1, -1, 1)
     ) + offset.reshape((-1, 1, 1))
     if trend_mode == "logistic":
-        trend = capacity.reshape((-1, 1, 1)) / (1 + jnp.exp(-trend))
+        trend = (capacity.reshape((-1, 1, 1))) / (1 + jnp.exp(-trend))
 
     numpyro.deterministic("trend_", trend)
 

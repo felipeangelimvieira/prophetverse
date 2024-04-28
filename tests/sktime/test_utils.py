@@ -10,7 +10,7 @@ from hierarchical_prophet.utils.frame_to_array import (convert_dataframe_to_tens
                                     convert_index_to_days_since_epoch,
                                     get_bottom_series_idx, get_multiindex_loc,
                                     iterate_all_series, loc_bottom_series,
-                                    series_to_tensor, set_exogenous_priors)
+                                    series_to_tensor)
 
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
@@ -76,19 +76,6 @@ def test_convert_index_to_days_since_epoch():
 def test_series_to_tensor(multiindex_df):
     result = series_to_tensor(multiindex_df)
     assert isinstance(result, jnp.ndarray)
-
-
-def test_set_exogenous_priors():
-    exogenous_priors = {".*": (dist.Normal, 0, 1)}
-    df = pd.DataFrame(np.random.rand(10, 5), columns=list("abcde"))
-    result = set_exogenous_priors(exogenous_priors, df)
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    assert isinstance(result[0], list)
-    assert isinstance(result[1], jnp.ndarray)
-    
-    with pytest.raises(ValueError):
-        set_exogenous_priors({**exogenous_priors, **{"a" : (dist.Normal, 0, 2)}}, df[["a", "b"]])
 
 
 def test_convert_dataframe_to_tensors(multiindex_df):

@@ -28,7 +28,7 @@ class BaseBayesianForecaster(BaseForecaster):
         num_samples (int): Number of MCMC samples to draw.
         num_warmup (int): Number of warmup steps for MCMC.
         num_chains (int): Number of MCMC chains to run.
-        prefix (str): Prefix to add to sample site names.
+        
         *args: Additional positional arguments.
         **kwargs: Additional keyword arguments.
     """
@@ -40,37 +40,23 @@ class BaseBayesianForecaster(BaseForecaster):
 
     def __init__(
         self,
-        rng_key=1000,
-        inference_method="mcmc",
-        mcmc_samples=2000,
-        mcmc_warmup=100,
-        mcmc_chains=1,
-        optimizer_steps=100000,
-        optimizer_name="Adam",
-        optimizer_kwargs={"step_size" : 1e-3},
-        prefix="",
+        rng_key,
+        inference_method,
+        mcmc_samples,
+        mcmc_warmup,
+        mcmc_chains,
+        optimizer_steps,
+        optimizer_name,
+        optimizer_kwargs,
         *args,
         **kwargs,
     ):
-        """
-        Initialize the BaseBayesianForecaster.
-
-        Args:
-            rng_seed (int): Random number generator seed.
-            method (str): Inference method to use. Currently, only "mcmc" is supported.
-            num_samples (int): Number of MCMC samples to draw.
-            num_warmup (int): Number of warmup steps for MCMC.
-            num_chains (int): Number of MCMC chains to run.
-            prefix (str): Prefix to add to sample site names.
-            *args: Additional positional arguments.
-            **kwargs: Additional keyword arguments.
-        """
+        
         self.rng_key = rng_key
         self.mcmc_samples = mcmc_samples
         self.mcmc_warmup = mcmc_warmup
         self.mcmc_chains = mcmc_chains
         self.inference_method = inference_method
-        self.prefix = prefix
         self.optimizer_steps = optimizer_steps
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
@@ -366,8 +352,14 @@ def init_params(distributions) -> dict:
 
 
 class ExogenousEffectMixin:
-    
-    def __init__(self, exogenous_effects: Dict[str, Tuple[str, Any]] = None, default_exogenous_prior: Tuple[str, Any] = ("Normal", 0, 1), **kwargs):
+
+    def __init__(self,
+                 default_effect_mode,
+                 exogenous_effects: Dict[str, Tuple[str, Any]],
+                 default_exogenous_prior: Tuple[str, Any],
+                 **kwargs):
+
+        self.default_effect_mode = default_effect_mode
         self.exogenous_effects = exogenous_effects
         self.default_exogenous_prior = default_exogenous_prior
         super().__init__(**kwargs)
@@ -419,7 +411,7 @@ class ExogenousEffectMixin:
                             id="exog",
                             dist=default_dist,
                             dist_args=args,
-                            effect_mode=self.seasonality_mode,
+                            effect_mode=self.default_effect_mode,
                         ),
                     )
                 }
@@ -435,7 +427,7 @@ class ExogenousEffectMixin:
                 array = jnp.array(X[columns].values)
             else:
                 array = series_to_tensor(X[columns])
-                
+
             out[effect_name] = array 
 
         return out

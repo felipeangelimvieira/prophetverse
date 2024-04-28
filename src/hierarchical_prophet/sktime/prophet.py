@@ -23,7 +23,7 @@ from hierarchical_prophet.sktime.base import (
 from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
 
 from hierarchical_prophet.univariate.model import model
-from hierarchical_prophet.trend_utils import (
+from hierarchical_prophet.changepoint import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
 )
@@ -102,7 +102,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         capacity_prior_loc=1,
         noise_scale=0.05,
         trend="linear",
-        seasonality_mode="multiplicative",
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
@@ -111,6 +110,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         optimizer_kwargs={},
         optimizer_steps=100_000,
         exogenous_effects=None,
+        default_effect_mode="multiplicative",
         default_exogenous_prior=("Normal", 0, 1),
         rng_key=random.PRNGKey(24),
     ):
@@ -144,12 +144,15 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.growth_offset_prior_scale = growth_offset_prior_scale
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
-        self.seasonality_mode = seasonality_mode
         self.trend = trend
-        
 
         super().__init__(
             rng_key=rng_key,
+            # ExogenousEffectMixin
+            default_effect_mode=default_effect_mode,
+            default_exogenous_prior=default_exogenous_prior,
+            exogenous_effects=exogenous_effects,
+            # BaseBayesianForecaster
             inference_method=inference_method,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
@@ -157,8 +160,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
             optimizer_steps=optimizer_steps,
-            default_exogenous_prior=default_exogenous_prior,
-            exogenous_effects=exogenous_effects,
         )
 
         # Define all attributes that are created outside init
@@ -346,7 +347,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         self.t_scale = (t_days[1:] - t_days[:-1]).mean()
         self.t_start = t_days.min() / self.t_scale
-
 
     def _replace_hyperparam_nones_with_defaults(self, y):
         """

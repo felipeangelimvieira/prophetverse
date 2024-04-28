@@ -10,7 +10,7 @@ class ExpandColumnPerLevel(BaseTransformer):
     """
     Transformer that expands columns based on a regular expression pattern per level of a multi-level index.
     If there are M colums matching the pattern and N distinct multi-level indexes, then the transformer will
-    create M * N new columns, setting the value to zero to each of M * (N-1) columns for a given index j if the current index 
+    create M * N new columns, setting the value to zero to each of M * (N-1) columns for a given index j if the current index
     i /= j.
 
     Parameters:
@@ -41,9 +41,14 @@ class ExpandColumnPerLevel(BaseTransformer):
         - self (ExpandColumnPerLevel): The fitted transformer object.
         """
         regex_patterns = [re.compile(pattern) for pattern in self.columns_regex]
-        self.matched_columns_ = set([
-            col for col in X.columns for pattern in regex_patterns if pattern.match(col)
-        ])
+        self.matched_columns_ = set(
+            [
+                col
+                for col in X.columns
+                for pattern in regex_patterns
+                if pattern.match(col)
+            ]
+        )
 
         self.new_columns_ = {}
         # Ensure identifiers are tuples

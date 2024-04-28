@@ -8,7 +8,6 @@ import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist
 from hierarchical_prophet.effects import AbstractEffect
-from hierarchical_prophet.hierarchical_prophet._distribution import NormalReconciled
 
 
 def model(
@@ -41,7 +40,7 @@ def model(
         (1, -1, 1)
     ) + offset.reshape((-1, 1, 1))
     if trend_mode == "logistic":
-        trend = capacity.reshape((1, -1, 1)) / (1 + jnp.exp(-trend))
+        trend = capacity.reshape((-1, 1, 1)) / (1 + jnp.exp(-trend))
 
     numpyro.deterministic("trend_", trend)
 
@@ -60,21 +59,34 @@ def model(
         "std_observation", dist.HalfNormal(jnp.array([noise_scale] * mean.shape[0]))
     )
 
-    correlation_matrix = numpyro.sample(
-        "corr_matrix",
-        dist.LKJCholesky(
-            mean.shape[0],
-            concentration=correlation_matrix_concentration,
-        ),
-    )
+    if y is not None:
+        y = y.squeeze(-1).T
+        
+    if correlation_matrix_concentration is None:
 
+        with numpyro.plate("time", mean.shape[-1], dim=-2):
+            numpyro.sample(
+                "obs",
+                dist.Normal(mean.squeeze(-1).T, std_observation),
+                obs=y
+            )
 
-    cov_mat = jnp.diag(std_observation) @ correlation_matrix @ jnp.diag(std_observation)
+    else:
+        correlation_matrix = numpyro.sample(
+            "corr_matrix",
+            dist.LKJCholesky(
+                mean.shape[0],
+                concentration=correlation_matrix_concentration,
+            ),
+        )
 
-    cov_mat = jnp.tile(jnp.expand_dims(cov_mat, axis=0), (mean.shape[1], 1, 1))
+        cov_mat = jnp.diag(std_observation) @ correlation_matrix @ jnp.diag(std_observation)
 
-    numpyro.sample(
-        "obs",
-        dist.MultivariateNormal(mean.squeeze(-1).T, scale_tril=cov_mat),
-        obs=y,
-    )
+        cov_mat = jnp.tile(jnp.expand_dims(cov_mat, axis=0), (mean.shape[1], 1, 1))
+
+        with numpyro.plate("time", mean.shape[-1], dim=-2):
+            numpyro.sample(
+                "obs",
+                dist.MultivariateNormal(mean.squeeze(-1).T, scale_tril=cov_mat),
+                obs=y,
+            )

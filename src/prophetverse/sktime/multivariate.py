@@ -538,9 +538,11 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             np.ndarray: Predicted samples.
         """
-        samples = super().predict_samples(X, fh)
+        samples = super().predict_samples(X=X, fh=fh)
 
         return self.aggregator_.transform(samples)
+
+    
 
     def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
         """Generate samples for the given exogenous variables and forecasting horizon.

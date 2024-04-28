@@ -389,3 +389,5 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             changepoint_matrix=changepoint_matrix,
             **self.fit_and_predict_data_,
         )
+
+   

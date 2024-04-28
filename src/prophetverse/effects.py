@@ -103,8 +103,7 @@ class LinearEffect(AbstractEffect):
 
     Args:
         id (str): The identifier for the effect.
-        dist (type): The distribution class to use for sampling coefficients.
-        dist_args (tuple): The arguments to pass to the distribution class.
+        prior (tuple): A tuple with the distribution class to use for sampling coefficients and  the arguments to pass to the distribution class. Defaults to (dist.Normal, 0, 1).
         effect_mode (str): The mode of the effect, either "multiplicative" or "additive".
 
     Attributes:

@@ -44,7 +44,7 @@ from prophetverse.changepoint import (
     get_changepoint_timeindexes,
 )
 
-from prophetverse.multivariate.model import model
+from prophetverse.models.multivariate_model._model import model
 from prophetverse.effects import LinearEffect, LinearHeterogenousPriorsEffect
 
 logger = logging.getLogger("sktime-numpyro")

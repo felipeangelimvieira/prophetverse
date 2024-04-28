@@ -12,7 +12,7 @@ from jax import lax, random
 from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import ForecastingHorizon
-from sktime.transformations.series.fourier import FourierFeatures
+
 from hierarchical_prophet.utils.frame_to_array import convert_index_to_days_since_epoch
 from hierarchical_prophet.sktime.base import (
     BaseBayesianForecaster,
@@ -38,51 +38,8 @@ NANOSECONDS_TO_SECONDS = 1000 * 1000 * 1000
 
 class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
     """
-    Prophet is a Bayesian time series forecasting model based on the hierarchical-prophet library.
-
-    Args:
-        n_changepoints (int): Number of changepoints to be considered in the model.
-        changepoint_range (float): Proportion of the data range in which changepoints will be considered.
-        changepoint_prior_scale (float): Scale parameter for the Laplace prior distribution of the changepoints.
-        growth_offset_prior_scale (float): Scale parameter for the prior distribution of the growth offset.
-        capacity_prior_scale (float): Scale parameter for the prior distribution of the capacity.
-        capacity_prior_loc (float): Location parameter for the prior distribution of the capacity.
-        noise_scale (float): Scale parameter for the observation noise.
-        trend (str): Type of trend to be considered in the model. Options are "linear" and "logistic".
-        seasonality_mode (str): Mode of seasonality to be considered in the model. Options are "additive" and "multiplicative".
-        mcmc_samples (int): Number of MCMC samples to be drawn.
-        mcmc_warmup (int): Number of MCMC warmup steps.
-        mcmc_chains (int): Number of MCMC chains.
-        exogenous_priors (dict): Dictionary specifying the prior distributions for the exogenous variables.
-        default_exogenous_prior (tuple): Default prior distribution for the exogenous variables.
-        rng_key (jax.random.PRNGKey): Random number generator key.
-
-    Attributes:
-        n_changepoints (int): Number of changepoints to be considered in the model.
-        changepoint_range (float): Proportion of the data range in which changepoints will be considered.
-        changepoint_prior_scale (float): Scale parameter for the Laplace prior distribution of the changepoints.
-        noise_scale (float): Scale parameter for the observation noise.
-        growth_offset_prior_scale (float): Scale parameter for the prior distribution of the growth offset.
-        capacity_prior_scale (float): Scale parameter for the prior distribution of the capacity.
-        capacity_prior_loc (float): Location parameter for the prior distribution of the capacity.
-        seasonality_mode (str): Mode of seasonality to be considered in the model. Options are "additive" and "multiplicative".
-        trend (str): Type of trend to be considered in the model. Options are "linear" and "logistic".
-        exogenous_priors (dict): Dictionary specifying the prior distributions for the exogenous variables.
-        default_exogenous_prior (tuple): Default prior distribution for the exogenous variables.
-        rng_key (jax.random.PRNGKey): Random number generator key.
-        _ref_date (None): Reference date for the time series.
-        _linear_global_rate (float): Global rate of the linear trend.
-        _linear_offset (float): Offset of the linear trend.
-        _changepoint_t (jax.numpy.ndarray): Array of changepoint times.
-        _changepoint_dists (list): List of prior distributions for the changepoints.
-        _exogenous_dists (list): List of prior distributions for the exogenous variables.
-        _exogenous_permutation_matrix (jax.numpy.ndarray): Permutation matrix for the exogenous variables.
-        _exogenous_coefficients (jax.numpy.ndarray): Coefficients for the exogenous variables.
-        _changepoint_coefficients (jax.numpy.ndarray): Coefficients for the changepoints.
-        _linear_offset_coef (float): Coefficient for the linear offset.
-        _capacity (float): Capacity parameter for the logistic trend.
-        _samples_predictive (dict): Dictionary of predictive samples.
-
+    
+    
     """
 
     _tags = {
@@ -95,9 +52,8 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         changepoint_interval=25,
         changepoint_range=0.8,
         changepoint_prior_scale=0.001,
-        yearly_seasonality=False,
-        weekly_seasonality=False,
         growth_offset_prior_scale=1,
+        transformer_pipeline=None,
         capacity_prior_scale=None,
         capacity_prior_loc=1,
         noise_scale=0.05,
@@ -114,33 +70,12 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         default_exogenous_prior=("Normal", 0, 1),
         rng_key=random.PRNGKey(24),
     ):
-        """
-        Initializes a Prophet object.
-
-        Args:
-            n_changepoints (int): Number of changepoints to be considered in the model.
-            changepoint_range (float): Proportion of the data range in which changepoints will be considered.
-            changepoint_prior_scale (float): Scale parameter for the Laplace prior distribution of the changepoints.
-            growth_offset_prior_scale (float): Scale parameter for the prior distribution of the growth offset.
-            capacity_prior_scale (float): Scale parameter for the prior distribution of the capacity.
-            capacity_prior_loc (float): Location parameter for the prior distribution of the capacity.
-            noise_scale (float): Scale parameter for the observation noise.
-            trend (str): Type of trend to be considered in the model. Options are "linear" and "logistic".
-            seasonality_mode (str): Mode of seasonality to be considered in the model. Options are "additive" and "multiplicative".
-            mcmc_samples (int): Number of MCMC samples to be drawn.
-            mcmc_warmup (int): Number of MCMC warmup steps.
-            mcmc_chains (int): Number of MCMC chains.
-            exogenous_priors (dict): Dictionary specifying the prior distributions for the exogenous variables.
-            default_exogenous_prior (tuple): Default prior distribution for the exogenous variables.
-            rng_key (jax.random.PRNGKey): Random number generator key.
-        """
 
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
         self.changepoint_prior_scale = changepoint_prior_scale
-        self.yearly_seasonality = yearly_seasonality
-        self.weekly_seasonality = weekly_seasonality
         self.noise_scale = noise_scale
+        self.transformer_pipeline = transformer_pipeline
         self.growth_offset_prior_scale = growth_offset_prior_scale
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
@@ -185,11 +120,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             dict: Dictionary of data for the Numpyro model.
         """
-        if X is None or X.columns.empty:
-            self._has_exogenous = False
-        else:
-            self._has_exogenous = True
-            X = X.loc[y.index]
 
         self._set_time_and_y_scales(y)
         self._replace_hyperparam_nones_with_defaults(y)
@@ -199,14 +129,16 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         t = self._index_to_scaled_timearray(y.index)
         changepoint_matrix = self._get_changepoint_matrix(t)
 
-        # Must create empty X
-        if not self._has_exogenous and self.has_seasonality:
-            X = pd.DataFrame(index=y.index)
-            self._has_exogenous = True
+        if self.transformer_pipeline is not None:
+            if X is None:
+                X = pd.DataFrame(index=y.index)
+            X = self.transformer_pipeline.fit_transform(X)
 
-        if self.has_seasonality:
-            self.init_seasonalities(y, X)
-            X = self.add_seasonalities(X)
+        if X is None or X.columns.empty:
+            self._has_exogenous = False
+        else:
+            self._has_exogenous = True
+            X = X.loc[y.index]
 
         self._set_custom_effects(X.columns)
         exogenous_data = self._get_exogenous_data_array(X)
@@ -230,48 +162,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         }
 
         return inputs
-
-    def init_seasonalities(self, y: pd.DataFrame, X: pd.DataFrame) -> pd.DataFrame:
-        sp_list = []
-        fourier_term_list = []
-
-        index: pd.PeriodIndex = y.index
-
-        if isinstance(self.yearly_seasonality, bool):
-            yearly_seasonality_num_terms = 10
-        elif isinstance(self.yearly_seasonality, int):
-            yearly_seasonality_num_terms = self.yearly_seasonality
-        else:
-            raise ValueError("yearly_seasonality must be a boolean or an integer")
-        if self.yearly_seasonality:
-            sp_list.append("Y")
-            fourier_term_list.append(yearly_seasonality_num_terms)
-
-        if isinstance(self.weekly_seasonality, bool):
-            weekly_seasonality_num_terms = 3
-        elif isinstance(self.weekly_seasonality, int):
-            weekly_seasonality_num_terms = self.weekly_seasonality
-        else:
-            raise ValueError("weekly_seasonality must be a boolean or an integer")
-
-        if self.weekly_seasonality:
-            sp_list.append("W")
-            fourier_term_list.append(weekly_seasonality_num_terms)
-
-        self.fourier_feature_transformer_ = FourierFeatures(
-            sp_list=sp_list, fourier_terms_list=fourier_term_list, freq=index.freq
-        ).fit(y)
-
-    def add_seasonalities(self, X):
-        return self.fourier_feature_transformer_.transform(X)
-
-    @property
-    def has_seasonality(self):
-        return self.yearly_seasonality or self.weekly_seasonality
-
-    @property
-    def has_exogenous_or_seasonality(self):
-        return self._has_exogenous or self.has_seasonality
 
     def _get_trend_sample_func(self, y: pd.DataFrame, X: pd.DataFrame):
         t_scaled = self._index_to_scaled_timearray(y.index)
@@ -433,14 +323,14 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         t = self._index_to_scaled_timearray(fh_as_index)
         changepoint_matrix = self._get_changepoint_matrix(t)
 
-        if X is None and self.has_seasonality:
-            X = pd.DataFrame(index=fh_as_index)
+        if self.transformer_pipeline is not None:
+            if X is None:
+                X = pd.DataFrame(index=fh_as_index)
+            X = self.transformer_pipeline.fit_transform(X)
 
-        if self.has_seasonality:
-            X = self.add_seasonalities(X)
 
         exogenous_data = (
-            self._get_exogenous_data_array(X.loc[fh_as_index]) if self.has_exogenous_or_seasonality else None
+            self._get_exogenous_data_array(X.loc[fh_as_index]) if self._has_exogenous else None
         )
 
         return dict(

@@ -52,7 +52,7 @@ class BaseBayesianForecaster(BaseForecaster):
         *args,
         **kwargs,
     ):
-        
+
         self.rng_key = rng_key
         self.mcmc_samples = mcmc_samples
         self.mcmc_warmup = mcmc_warmup
@@ -68,11 +68,11 @@ class BaseBayesianForecaster(BaseForecaster):
     @property
     def optimizer(self):
         if self.optimizer_name.startswith('optax'):
-            
+
             from numpyro.optim import optax_to_numpyro
             import optax
             scheduler = optax.cosine_decay_schedule(**self.optimizer_kwargs)
-        
+
             opt = optax_to_numpyro(
                 optax.chain(
                     
@@ -81,7 +81,7 @@ class BaseBayesianForecaster(BaseForecaster):
                     optax.scale(-1.0))
             )
             return opt
-        
+
         return getattr(numpyro.optim, self.optimizer_name)(**self.optimizer_kwargs)
 
     def _get_fit_data(self, y, X, fh) -> Dict[str, Any]:
@@ -178,13 +178,33 @@ class BaseBayesianForecaster(BaseForecaster):
         Returns:
             pd.DataFrame: Point forecasts for the forecasting horizon.
         """
-        predictive_samples = self.predict_samples(X, fh)
+        predictive_samples = self.predict_samples(fh=fh, X=X)
         self.forecast_samples_ = predictive_samples
         y_pred = predictive_samples.mean(axis=1).to_frame(self._y.columns[0])
 
         return y_pred
 
-    def predict_samples(self, X, fh):
+    def predict_all_sites(self, fh, X=None):
+        fh_as_index = self.fh_to_index(fh)
+
+        predict_data = self._get_predict_data(X, fh)
+
+        predictive_samples_ = self.inference_engine_.predict(**predict_data)
+        out=  pd.DataFrame(
+            data={
+                site: data.mean(axis=0).squeeze()
+                for site, data in predictive_samples_.items()
+            },
+            index=fh_as_index,
+        )
+        
+        return self._inv_scale_y(out)
+
+    def predict_samples(
+        self,
+        fh,
+        X=None
+):
         """
         Generate samples from the posterior predictive distribution.
 
@@ -197,7 +217,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         fh_as_index = self.fh_to_index(fh)
 
-        predict_data = self._get_predict_data(X, fh)
+        predict_data = self._get_predict_data(X=X, fh=fh)
 
         self.predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
@@ -244,7 +264,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if isinstance(alpha, float):
             alpha = [alpha]
 
-        forecast_samples_ = self.predict_samples(X, fh)
+        forecast_samples_ = self.predict_samples(X=X, fh=fh)
 
         var_names = self._get_varnames()
         var_name = var_names[0]

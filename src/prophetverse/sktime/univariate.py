@@ -23,7 +23,7 @@ from prophetverse.sktime.base import (
 from sktime.transformations.base import BaseTransformer
 from prophetverse.utils.logistic import suggest_logistic_rate_and_offset
 
-from prophetverse.univariate.model import model
+from prophetverse.models.univariate_model import model
 from prophetverse.changepoint import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
@@ -376,7 +376,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             X = pd.DataFrame(index=fh_as_index)
 
         if self.feature_transformer is not None:
-            X = self.feature_transformer.fit_transform(X)
+            X = self.feature_transformer.transform(X)
 
         exogenous_data = (
             self._get_exogenous_data_array(X.loc[fh_as_index]) if self._has_exogenous else None

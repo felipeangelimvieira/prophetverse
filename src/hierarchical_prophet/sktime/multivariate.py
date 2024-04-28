@@ -24,7 +24,7 @@ from hierarchical_prophet.hierarchical_prophet._changepoint_matrix import (
     ChangepointMatrix,
 )
 
-from hierarchical_prophet._utils import (
+from hierarchical_prophet.utils.frame_to_array import (
     convert_dataframe_to_tensors,
     convert_index_to_days_since_epoch,
     extract_timetensor_from_dataframe,
@@ -34,7 +34,7 @@ from hierarchical_prophet._utils import (
 )
 from hierarchical_prophet.utils.multiindex import reindex_time_series
 from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
-from hierarchical_prophet.sktime.base import BaseBayesianForecaster, init_params
+from hierarchical_prophet.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin, init_params
 from hierarchical_prophet.utils.exogenous_priors import (
     get_exogenous_priors,
     sample_exogenous_coefficients,
@@ -53,12 +53,12 @@ from hierarchical_prophet.trend_utils import (
 )
 
 from hierarchical_prophet.multivariate.model import model
-from hierarchical_prophet.effects import LinearEffect, CustomPriorEffect
+from hierarchical_prophet.effects import LinearEffect, LinearHeterogenousPriorsEffect
 
 logger = logging.getLogger("sktime-numpyro")
 
 
-class HierarchicalProphet(BaseBayesianForecaster):
+class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
     """A class that represents a Bayesian hierarchical time series forecasting model based on the Prophet algorithm.
 
     Args:
@@ -109,12 +109,12 @@ class HierarchicalProphet(BaseBayesianForecaster):
         self,
         changepoint_interval=25,
         changepoint_range=None,
-        exogenous_priors={},
-        default_exogenous_prior=(dist.Normal, 0, 1),
+        
+        default_exogenous_prior=("Normal", 0, 1),
+        exogenous_effects=None,
         changepoint_prior_scale=0.1,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
-        y_scales=None,
         noise_scale=0.05,
         trend="linear",
         seasonality_mode="multiplicative",
@@ -125,7 +125,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
         mcmc_chains=4,
         inference_method="map",
         optimizer_name="Adam",
-        optimizer_kwargs={"step_size" : 1e-3},
+        optimizer_kwargs={"step_size" : 1e-4},
+        optimizer_steps=100_000,
+        correlation_matrix_concentration=1.0,
         rng_key=random.PRNGKey(24),
     ):
         """
@@ -139,7 +141,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
             changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1. Note that this parameter is scaled by the magnitude of the timeseries.
             capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 1.1, i.e., 110% of the maximum value of the series, or the y_scales if provided.
             capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 0.2.
-            y_scales (array-like or None, optional): The scales of the target time series. Defaults to None. If not provided, the scales are computed from the data, according to its maximum value.
+            
             noise_scale (float, optional): The scale parameter for the prior distribution of observation noise. Defaults to 0.05.
             trend (str, optional): The type of trend to model. Possible values are "linear" and "logistic". Defaults to "linear".
             seasonality_mode (str, optional): The mode of seasonality to model. Possible values are "multiplicative" and "additive". Defaults to "multiplicative".
@@ -156,22 +158,24 @@ class HierarchicalProphet(BaseBayesianForecaster):
         self.noise_scale = noise_scale
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
-        self.y_scales = y_scales
         self.seasonality_mode = seasonality_mode
         self.trend = trend
-        self.exogenous_priors = exogenous_priors
         self.default_exogenous_prior = default_exogenous_prior
         self.individual_regressors = individual_regressors
         self.transformer_pipeline = transformer_pipeline
+        self.correlation_matrix_concentration = correlation_matrix_concentration
 
         super().__init__(
             rng_key=rng_key,
             inference_method=inference_method,
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
+            optimizer_steps=optimizer_steps,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
             mcmc_chains=mcmc_chains,
+            exogenous_effects=exogenous_effects,
+            default_exogenous_prior=default_exogenous_prior,
         )
 
         self.model = model
@@ -209,22 +213,12 @@ class HierarchicalProphet(BaseBayesianForecaster):
             raise ValueError("capacity_prior_scale must be greater than 0.")
         if self.capacity_prior_loc <= 0:
             raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.y_scales is not None:
-            if any([scale <= 0 for scale in self.y_scales]):
-                raise ValueError("y_scales must be greater than 0.")
         if self.seasonality_mode not in ["multiplicative", "additive"]:
             raise ValueError(
                 'seasonality_mode must be either "multiplicative" or "additive".'
             )
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
-
-        if y is not None:
-            if self.y_scales is not None:
-                if len(self.y_scales) != len(y.columns):
-                    raise ValueError(
-                        "y_scales must have the same length as the number of columns in y."
-                    )
 
     def _get_fit_data(self, y, X, fh):
         """
@@ -295,34 +289,28 @@ class HierarchicalProphet(BaseBayesianForecaster):
             ).fit(X)
             X = X.loc[y.index]
             X = self.expand_columns_transformer_.transform(X)
-            exogenous_matrix = self._get_exogenous_matrix_from_X(X)
 
-            self.exogenous_effects = {
-                "X": CustomPriorEffect(
-                    exogenous_priors=self.exogenous_priors,
-                    default_exogenous_prior=self.default_exogenous_prior,
-                    feature_names=X.columns,
-                    effect_mode=self.seasonality_mode,
-                )
-            }
+            self._set_custom_effects(feature_names=X.columns)
+            exogenous_data = self._get_exogenous_data_array(loc_bottom_series(X))
 
         else:
-            exogenous_matrix = jnp.zeros_like(t_scaled)
+            exogenous_data = {}
 
         self.extra_inputs_ = {
             "changepoint_matrix": changepoint_matrix,
-            "y_scale": self.y_scales,
             "trend_mode": self.trend,
-            "exogenous_effects": self.exogenous_effects,
-            "init_trend_params": self._get_trend_sample_func(t_arrays=t_scaled, y_arrays=y_bottom_arrays),
+            "exogenous_effects": self.exogenous_effect_dict,
+            "init_trend_params": self._get_trend_sample_func(
+                t_arrays=t_scaled, y_arrays=y_bottom_arrays
+            ),
+            "correlation_matrix_concentration": self.correlation_matrix_concentration,
+            "noise_scale" : self.noise_scale,
         }
 
         return dict(
             t=t_scaled,
             y=y_bottom_arrays,
-            data={
-                "X": exogenous_matrix,
-            },
+            data=exogenous_data,
             **self.extra_inputs_,
         )
 
@@ -352,8 +340,6 @@ class HierarchicalProphet(BaseBayesianForecaster):
         Returns:
             None
         """
-        if self.y_scales is None:
-            self.y_scales = np.abs(y_arrays).max(axis=1).squeeze()
 
         # Scale time index
         self._time_scaler = TimeScaler()
@@ -500,9 +486,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
 
         if self.trend == "linear":
             global_rates = enforce_array_if_zero_dim(
-                (self.max_y - self.min_y) / (self.max_t - self.min_t) / self.y_scales
+                (self.max_y - self.min_y) / (self.max_t - self.min_t) 
             )
-            offset = (self.min_y - global_rates * self.min_t) / self.y_scales
+            offset = (self.min_y - global_rates * self.min_t) 
 
             distributions["offset"] = dist.Normal(
                 offset,
@@ -514,9 +500,8 @@ class HierarchicalProphet(BaseBayesianForecaster):
             global_rates, offset = suggest_logistic_rate_and_offset(
                 t=t_arrays.squeeze(),
                 y=y_arrays.squeeze(),
-                capacities=self._capacity_prior_loc * self.y_scales,
+                capacities=self._capacity_prior_loc ,
             )
-            global_rates /= self.y_scales
 
             distributions["capacity"] = dist.LogNormal(
                 self._capacity_prior_loc,
@@ -591,7 +576,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
 
         # Noise
         distributions["std_observation"] = dist.HalfNormal(
-            self.noise_scale * self.y_scales
+            self.noise_scale
         )
 
         inputs["distributions"] = distributions
@@ -610,9 +595,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
         """
         samples = super().predict_samples(X, fh)
 
-        return get_multiindex_loc(
-            samples, self.original_y_indexes_.droplevel(-1).unique()
-        )
+        return self.aggregator_.transform(samples)
 
     def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
         """Generate samples for the given exogenous variables and forecasting horizon.
@@ -655,9 +638,9 @@ class HierarchicalProphet(BaseBayesianForecaster):
         if self._has_exogenous_variables:
             X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
             X = self.expand_columns_transformer_.transform(X)
-            exogenous_matrix = self._get_exogenous_matrix_from_X(X)
+            exogenous_data = self._get_exogenous_data_array(loc_bottom_series(X))
         else:
-            exogenous_matrix = jnp.zeros_like(t_arrays)
+            exogenous_data = {}
 
         extra_inputs_ = self.extra_inputs_.copy()
         extra_inputs_.update(
@@ -666,7 +649,7 @@ class HierarchicalProphet(BaseBayesianForecaster):
             }
         )
 
-        return dict(t=t_arrays, y=None, data={"X": exogenous_matrix}, **extra_inputs_)
+        return dict(t=t_arrays, y=None, data=exogenous_data, **extra_inputs_)
 
     def periodindex_to_multiindex(self, periodindex: pd.PeriodIndex) -> pd.MultiIndex:
         """
@@ -690,7 +673,6 @@ class HierarchicalProphet(BaseBayesianForecaster):
         # objects inside levels list are strings. We do that to make it more "uniform"
         if not isinstance(levels[0], tuple):
             levels = [(x,) for x in levels]
-            
 
         bottom_levels = [idx for idx in levels if idx[-1] != "__total"]
 

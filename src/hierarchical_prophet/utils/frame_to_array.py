@@ -116,50 +116,6 @@ def series_to_tensor(y):
     return jnp.array(array)
 
 
-def set_exogenous_priors(exogenous_priors, X):
-    """
-    Set exogenous priors for a given DataFrame.
-    
-    The dict exogenous_prior contain a regex as key, and a tuple (distribution, kwargs) as value.
-    The regex is matched against the column names of X, and the corresponding distribution is used to
-    
-
-    Parameters:
-    exogenous_priors (dict): A dictionary containing regex patterns as keys and tuples (distribution, kwargs) as values.
-    X (pd.DataFrame): The DataFrame.
-
-    Returns:
-    tuple: A tuple containing the exogenous distributions and the permutation matrix.
-    """
-    _exogenous_dists = []
-    exogenous_permutation_matrix = []
-    already_set_columns = set()
-    for regex, (distribution_class, *args) in exogenous_priors.items():
-        # Find columns that match the regex
-        columns = [column for column in X.columns if re.match(regex, column)]
-        if already_set_columns.intersection(columns):
-            raise ValueError(
-                "Columns {} are already set".format(
-                    already_set_columns.intersection(columns)
-                )
-            )
-        already_set_columns = already_set_columns.union(columns)
-
-        # Get idx of columns that match the regex
-        idx = jnp.array([X.columns.get_loc(column) for column in columns])
-        # Set the distribution for each column that matches the regex
-        distribution = distribution_class(*[jnp.ones(len(idx)) * arg for arg in args])
-
-        # Matrix of shape (len(columns), len(idx) that map len(idx) to the corresponding indexes
-        exogenous_permutation_matrix.append(jnp.eye(len(columns))[idx].T)
-        _exogenous_dists.append((regex, distribution))
-
-    _exogenous_permutation_matrix = jnp.concatenate(
-        exogenous_permutation_matrix, axis=0
-    )
-    return _exogenous_dists, _exogenous_permutation_matrix
-
-
 def extract_timetensor_from_dataframe(df: pd.DataFrame) -> jnp.array:
     """
     Extract the time array from a pandas DataFrame.

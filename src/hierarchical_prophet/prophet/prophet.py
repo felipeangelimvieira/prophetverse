@@ -13,7 +13,7 @@ from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.series.fourier import FourierFeatures
-from hierarchical_prophet._utils import convert_index_to_days_since_epoch
+from hierarchical_prophet.utils.frame_to_array import convert_index_to_days_since_epoch
 from hierarchical_prophet.sktime.base import BaseBayesianForecaster, init_params
 from hierarchical_prophet.exogenous_priors import (
     get_exogenous_priors,

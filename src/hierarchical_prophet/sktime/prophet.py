@@ -13,8 +13,11 @@ from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.series.fourier import FourierFeatures
-from hierarchical_prophet._utils import convert_index_to_days_since_epoch
-from hierarchical_prophet.sktime.base import BaseBayesianForecaster, init_params
+from hierarchical_prophet.utils.frame_to_array import convert_index_to_days_since_epoch
+from hierarchical_prophet.sktime.base import (
+    BaseBayesianForecaster,
+    ExogenousEffectMixin, init_params,
+)
 
 
 from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
@@ -24,7 +27,7 @@ from hierarchical_prophet.trend_utils import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
 )
-from hierarchical_prophet.effects import CustomPriorEffect, LinearEffect
+from hierarchical_prophet.effects import LinearHeterogenousPriorsEffect, LinearEffect
 import functools
 
 
@@ -33,7 +36,7 @@ logger = logging.getLogger("hierarchical-prophet")
 NANOSECONDS_TO_SECONDS = 1000 * 1000 * 1000
 
 
-class Prophet(BaseBayesianForecaster):
+class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
     """
     Prophet is a Bayesian time series forecasting model based on the hierarchical-prophet library.
 
@@ -142,9 +145,8 @@ class Prophet(BaseBayesianForecaster):
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
         self.seasonality_mode = seasonality_mode
-        self.default_exogenous_prior = default_exogenous_prior
         self.trend = trend
-        self.exogenous_effects = exogenous_effects
+        
 
         super().__init__(
             rng_key=rng_key,
@@ -155,6 +157,8 @@ class Prophet(BaseBayesianForecaster):
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
             optimizer_steps=optimizer_steps,
+            default_exogenous_prior=default_exogenous_prior,
+            exogenous_effects=exogenous_effects,
         )
 
         # Define all attributes that are created outside init
@@ -167,79 +171,6 @@ class Prophet(BaseBayesianForecaster):
         self.fit_and_predict_data_ = None
         self.exogenous_columns_ = None
         self.model = model
-
-    def _scale_y(self, y):
-        return y / self.y_scale
-
-    def _inv_scale_y(self, y):
-        return y * self.y_scale
-
-    def _set_custom_effects(self, feature_names):
-
-        effects_and_columns = {}
-        columns_with_effects = set()
-        exogenous_effects = self.exogenous_effects or {}
-
-        for effect_name, (column_regex, effect) in exogenous_effects.items():
-
-            columns = [column for column in feature_names if re.match(column_regex, column)]
-
-            if columns_with_effects.intersection(columns):
-                raise ValueError(
-                    "Columns {} are already set".format(
-                        columns_with_effects.intersection(columns)
-                    )
-                )
-                
-            if not len(columns):
-                raise ValueError(
-                    "No columns match the regex {}".format(
-                        column_regex
-                    )
-                )
-
-            columns_with_effects = columns_with_effects.union(columns)
-
-            effects_and_columns.update({
-                effect_name: (
-                    columns,
-                    effect,
-                )
-            })
-
-        features_without_effects : set = feature_names.difference(columns_with_effects)
-
-        if len(features_without_effects):
-
-            default_dist = getattr(dist, self.default_exogenous_prior[0])
-            args = self.default_exogenous_prior[1:]
-            effects_and_columns.update({
-                "default": (
-                    features_without_effects,
-                    LinearEffect(
-                        id="exog",
-                        dist=default_dist,
-                        dist_args=args,
-                        effect_mode=self.seasonality_mode,
-                    ),
-                )
-            })
-
-        self._exogenous_effects_and_columns = effects_and_columns
-
-    def _get_exogenous_data_array(self, X):
-
-        out = {}
-        for effect_name, (columns, _) in self._exogenous_effects_and_columns.items():
-            out[effect_name] = jnp.array(X[columns].values)
-
-        return out
-
-    @property
-    def exogenous_effect_dict(self):
-        return {
-            k: v[1] for k,v in self._exogenous_effects_and_columns.items()
-        }
 
     def _get_fit_data(self, y, X, fh):
         """
@@ -260,7 +191,6 @@ class Prophet(BaseBayesianForecaster):
             X = X.loc[y.index]
 
         self._set_time_and_y_scales(y)
-        y = self._scale_y(y)
         self._replace_hyperparam_nones_with_defaults(y)
 
         ## Changepoints
@@ -417,8 +347,6 @@ class Prophet(BaseBayesianForecaster):
         self.t_scale = (t_days[1:] - t_days[:-1]).mean()
         self.t_start = t_days.min() / self.t_scale
 
-        # Set y scale
-        self.y_scale = np.max(np.abs(y.values.flatten()))
 
     def _replace_hyperparam_nones_with_defaults(self, y):
         """

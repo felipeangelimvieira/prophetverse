@@ -5,6 +5,7 @@ import numpyro
 from numpyro import distributions as dist
 import re
 import logging
+import pandas as pd
 from abc import ABC, abstractmethod
 
 
@@ -63,7 +64,7 @@ class LinearEffect(AbstractEffect):
             return multiplicative_effect(trend, data, coefficients)
         return additive_effect(trend, data, coefficients)
 
-class CustomPriorEffect(AbstractEffect):
+class LinearHeterogenousPriorsEffect(AbstractEffect):
 
     def __init__(self,
                      exogenous_priors,
@@ -72,7 +73,7 @@ class CustomPriorEffect(AbstractEffect):
                      effect_mode = "multiplicative",
                      id=""):
         self.exogenous_priors = exogenous_priors
-        self.feature_names = feature_names
+        self.feature_names = pd.Index(feature_names)
         self.default_exogenous_prior = default_exogenous_prior
         self.effect_mode = effect_mode
         super().__init__(id)

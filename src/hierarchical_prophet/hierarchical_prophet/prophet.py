@@ -22,7 +22,7 @@ from hierarchical_prophet.hierarchical_prophet._time_scaler import TimeScaler
 
 from hierarchical_prophet.hierarchical_prophet._changepoint_matrix import ChangepointMatrix
 
-from hierarchical_prophet._utils import (
+from hierarchical_prophet.utils.frame_to_array import (
     convert_dataframe_to_tensors,
     convert_index_to_days_since_epoch,
     extract_timetensor_from_dataframe,

@@ -20,7 +20,7 @@ def model(
     data={},
     exogenous_effects: Dict[str, AbstractEffect] = {},
     noise_scale=0.05,
-    y_scale: float = 1,
+    correlation_matrix_concentration=1.0,
 ):
     """
     Defines the Numpyro model.
@@ -43,8 +43,6 @@ def model(
     if trend_mode == "logistic":
         trend = capacity.reshape((1, -1, 1)) / (1 + jnp.exp(-trend))
 
-    trend = trend * y_scale.reshape((-1, 1, 1))
-
     numpyro.deterministic("trend_", trend)
 
     mean = trend
@@ -59,20 +57,19 @@ def model(
             mean += effect
 
     std_observation = numpyro.sample(
-        "std_observation", dist.HalfNormal(jnp.array([0.1] * mean.shape[0]))
+        "std_observation", dist.HalfNormal(jnp.array([noise_scale] * mean.shape[0]))
     )
 
     correlation_matrix = numpyro.sample(
         "corr_matrix",
         dist.LKJCholesky(
             mean.shape[0],
-            concentration=1.0,
+            concentration=correlation_matrix_concentration,
         ),
     )
 
-    noise_scale = std_observation * y_scale
 
-    cov_mat = jnp.diag(noise_scale) @ correlation_matrix @ jnp.diag(noise_scale)
+    cov_mat = jnp.diag(std_observation) @ correlation_matrix @ jnp.diag(std_observation)
 
     cov_mat = jnp.tile(jnp.expand_dims(cov_mat, axis=0), (mean.shape[1], 1, 1))
 

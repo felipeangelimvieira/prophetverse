@@ -1,6 +1,7 @@
 import itertools
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import jax
 import jax.numpy as jnp
 import numpyro
@@ -12,8 +13,10 @@ from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from collections import OrderedDict
 from hierarchical_prophet.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
+from hierarchical_prophet.effects import LinearEffect
+from hierarchical_prophet.utils.frame_to_array import series_to_tensor
 import arviz as az
-
+import re
 
 class BaseBayesianForecaster(BaseForecaster):
     """
@@ -74,10 +77,24 @@ class BaseBayesianForecaster(BaseForecaster):
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
         self.predictive_samples_ = None
-        
-        
+
     @property
     def optimizer(self):
+        if self.optimizer_name.startswith('optax'):
+            
+            from numpyro.optim import optax_to_numpyro
+            import optax
+            scheduler = optax.cosine_decay_schedule(**self.optimizer_kwargs)
+        
+            opt = optax_to_numpyro(
+                optax.chain(
+                    
+                    optax.scale_by_adam(),
+                    optax.scale_by_schedule(scheduler),
+                    optax.scale(-1.0))
+            )
+            return opt
+        
         return getattr(numpyro.optim, self.optimizer_name)(**self.optimizer_kwargs)
 
     def _get_fit_data(self, y, X, fh) -> Dict[str, Any]:
@@ -139,6 +156,9 @@ class BaseBayesianForecaster(BaseForecaster):
             self: The fitted Bayesian forecaster.
         """
 
+        self._set_y_scales(y)
+        y  = self._scale_y(y)
+
         data = self._get_fit_data(y, X, fh)
 
         self.distributions_ = data.get("distributions", {})
@@ -194,21 +214,33 @@ class BaseBayesianForecaster(BaseForecaster):
 
         self.predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
-
         observation_site = self.predictive_samples_["obs"]
-        observation_site = self._inv_scale_y(observation_site)
         n_samples = self.predictive_samples_["obs"].shape[0]
-        return pd.DataFrame(
+        preds = pd.DataFrame(
             data=observation_site.T.reshape((-1, n_samples)),
             columns=list(range(n_samples)),
             index=self.periodindex_to_multiindex(fh_as_index),
         ).sort_index()
-        
+
+        return self._inv_scale_y(preds)
+
+    def _set_y_scales(self, y):
+        if y.index.nlevels == 1:
+            self._scale = y.abs().max().values[0]
+        else:
+            self._scale = y.groupby(level=list(range(y.index.nlevels - 1))).agg(lambda x: np.abs(x).max())
+
     def _scale_y(self, y):
-        return y
-    
+        if y.index.nlevels == 1:
+            return y / self._scale
+        scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
+        return y / scale_for_each_obs
+
     def _inv_scale_y(self, y):
-        return y
+        if y.index.nlevels == 1:
+            return y * self._scale
+        scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
+        return y * scale_for_each_obs
 
     def _predict_quantiles(self, fh, X, alpha):
         """
@@ -331,3 +363,83 @@ def init_params(distributions) -> dict:
             params[coefficient_name] = jnp.concatenate(coefficients, axis=0)
 
     return params
+
+
+class ExogenousEffectMixin:
+    
+    def __init__(self, exogenous_effects: Dict[str, Tuple[str, Any]] = None, default_exogenous_prior: Tuple[str, Any] = ("Normal", 0, 1), **kwargs):
+        self.exogenous_effects = exogenous_effects
+        self.default_exogenous_prior = default_exogenous_prior
+        super().__init__(**kwargs)
+
+    def _set_custom_effects(self, feature_names):
+
+        effects_and_columns = {}
+        columns_with_effects = set()
+        exogenous_effects = self.exogenous_effects or {}
+
+        for effect_name, (column_regex, effect) in exogenous_effects.items():
+
+            columns = [
+                column for column in feature_names if re.match(column_regex, column)
+            ]
+
+            if columns_with_effects.intersection(columns):
+                raise ValueError(
+                    "Columns {} are already set".format(
+                        columns_with_effects.intersection(columns)
+                    )
+                )
+
+            if not len(columns):
+                raise ValueError("No columns match the regex {}".format(column_regex))
+
+            columns_with_effects = columns_with_effects.union(columns)
+
+            effects_and_columns.update(
+                {
+                    effect_name: (
+                        columns,
+                        effect,
+                    )
+                }
+            )
+
+        features_without_effects: set = feature_names.difference(columns_with_effects)
+
+        if len(features_without_effects):
+
+            default_dist = getattr(dist, self.default_exogenous_prior[0])
+            args = self.default_exogenous_prior[1:]
+            effects_and_columns.update(
+                {
+                    "default": (
+                        features_without_effects,
+                        LinearEffect(
+                            id="exog",
+                            dist=default_dist,
+                            dist_args=args,
+                            effect_mode=self.seasonality_mode,
+                        ),
+                    )
+                }
+            )
+
+        self._exogenous_effects_and_columns = effects_and_columns
+
+    def _get_exogenous_data_array(self, X):
+
+        out = {}
+        for effect_name, (columns, _) in self._exogenous_effects_and_columns.items():
+            if X.index.nlevels == 1:
+                array = jnp.array(X[columns].values)
+            else:
+                array = series_to_tensor(X[columns])
+                
+            out[effect_name] = array 
+
+        return out
+
+    @property
+    def exogenous_effect_dict(self):
+        return {k: v[1] for k, v in self._exogenous_effects_and_columns.items()}

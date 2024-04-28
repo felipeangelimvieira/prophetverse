@@ -3,7 +3,7 @@ from sktime.transformations.base import BaseTransformer
 import numpy as np
 import pandas as pd
 from hierarchical_prophet.hierarchical_prophet._time_scaler import TimeScaler
-from hierarchical_prophet._utils import convert_index_to_days_since_epoch
+from hierarchical_prophet.utils.frame_to_array import convert_index_to_days_since_epoch
 class ChangepointMatrix:
     def __init__(self, changepoint_freq, changepoint_range):
         """

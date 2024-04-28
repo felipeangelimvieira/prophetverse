@@ -185,19 +185,22 @@ class BaseBayesianForecaster(BaseForecaster):
         return y_pred
 
     def predict_all_sites(self, fh, X=None):
+
+        if not isinstance(fh, ForecastingHorizon):
+            fh = self._check_fh(fh)
+            
         fh_as_index = self.fh_to_index(fh)
 
-        predict_data = self._get_predict_data(X, fh)
+        predict_data = self._get_predict_data(X=X,fh= fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
-        out=  pd.DataFrame(
+        out = pd.DataFrame(
             data={
-                site: data.mean(axis=0).squeeze()
+                site: data.mean(axis=0).flatten()
                 for site, data in predictive_samples_.items()
             },
-            index=fh_as_index,
-        )
-        
+            index=self.periodindex_to_multiindex(fh_as_index),
+        ).sort_index()
         return self._inv_scale_y(out)
 
     def predict_samples(

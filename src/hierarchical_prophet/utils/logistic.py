@@ -30,9 +30,9 @@ def suggest_logistic_rate_and_offset(
         t = t.squeeze()
 
     i0, i1 = t.argmin(axis=1), t.argmax(axis=1)
-    t0, t1 = np.diag(t[:, i0]), np.diag(t[:, i1])
+    t0, t1 = t[:, i0].flatten(), t[:, i1].flatten()
     T = t0 - t1
-    y0, y1 = np.diag(y[:, i0]), np.diag(y[:, i1])
+    y0, y1 = y[:, i0].flatten(), y[:, i1].flatten()
 
     r0 = capacities / y0
     r1 = capacities / y1

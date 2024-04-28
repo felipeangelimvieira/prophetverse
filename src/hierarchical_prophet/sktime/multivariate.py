@@ -18,11 +18,6 @@ from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
-from hierarchical_prophet.hierarchical_prophet._time_scaler import TimeScaler
-
-from hierarchical_prophet.hierarchical_prophet._changepoint_matrix import (
-    ChangepointMatrix,
-)
 
 from hierarchical_prophet.utils.frame_to_array import (
     convert_dataframe_to_tensors,
@@ -39,15 +34,15 @@ from hierarchical_prophet.utils.exogenous_priors import (
     get_exogenous_priors,
     sample_exogenous_coefficients,
 )
-from hierarchical_prophet.hierarchical_prophet._distribution import NormalReconciled
-from hierarchical_prophet.hierarchical_prophet._expand_column_per_level import (
+
+from ._expand_column_per_level import (
     ExpandColumnPerLevel,
 )
 from hierarchical_prophet.utils.jax_functions import (
     additive_mean_model,
     multiplicative_mean_model,
 )
-from hierarchical_prophet.trend_utils import (
+from hierarchical_prophet.changepoint import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
 )
@@ -109,64 +104,42 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self,
         changepoint_interval=25,
         changepoint_range=None,
-        
-        default_exogenous_prior=("Normal", 0, 1),
-        exogenous_effects=None,
         changepoint_prior_scale=0.1,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
-        noise_scale=0.05,
         trend="linear",
-        seasonality_mode="multiplicative",
         transformer_pipeline: BaseTransformer = None,
-        individual_regressors=[],
+        exogenous_effects=None,
+        default_effect_mode="multiplicative",
+        default_exogenous_prior=("Normal", 0, 1),
+        shared_features=[],
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
         inference_method="map",
         optimizer_name="Adam",
-        optimizer_kwargs={"step_size" : 1e-4},
+        optimizer_kwargs={"step_size": 1e-4},
         optimizer_steps=100_000,
+        noise_scale=0.05,
         correlation_matrix_concentration=1.0,
         rng_key=random.PRNGKey(24),
     ):
-        """
-        Initialize the HierarchicalProphet forecaster.
 
-        Args:
-            changepoint_interval (int, optional): The interval between potential changepoints in the time series. Defaults to 25.
-            changepoint_range (float or None, optional): The index of the last changepoint. If None, default to -changepoint_freq. Note that this is the index in the list of timestamps, and because the timeseries increases in size, it is better to use negative indexes instead of positive. Defaults to None.
-            exogenous_priors (dict, optional): A dictionary of prior distributions for the exogenous variables. The keys are regexes, or the name of an specific column, and the values are tuples of the format (dist.Distribution, *args). The args are passed to dist.Distributions at the moment of sampling. Defaults to {}.
-            default_exogenous_prior (tuple, optional): The default prior distribution for the exogenous variables. Defaults to (dist.Normal, 0, 1), and is applied to columns not included in exogenous_priors above.
-            changepoint_prior_scale (float, optional): The scale parameter for the prior distribution of changepoints. Defaults to 0.1. Note that this parameter is scaled by the magnitude of the timeseries.
-            capacity_prior_loc (float, optional): The location parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 1.1, i.e., 110% of the maximum value of the series, or the y_scales if provided.
-            capacity_prior_scale (float, optional): The scale parameter for the prior distribution of capacity. This parameter is scaled according to y_scales. Defaults to 0.2.
-            
-            noise_scale (float, optional): The scale parameter for the prior distribution of observation noise. Defaults to 0.05.
-            trend (str, optional): The type of trend to model. Possible values are "linear" and "logistic". Defaults to "linear".
-            seasonality_mode (str, optional): The mode of seasonality to model. Possible values are "multiplicative" and "additive". Defaults to "multiplicative".
-            transformer_pipeline (BaseTransformer): A BaseTransformer or TransformerPipeline from sktime to apply to X and create features internally, such as Fourier series. See sktime's Transformer documentation for more information. Defaults to None.
-            individual_regressors (list, optional): A list of regexes/names of individual regressors to separate by timeseries. If not provided, all regressors are shared. Defaults to [].
-            mcmc_samples (int, optional): The number of MCMC samples to draw. Defaults to 2000.
-            mcmc_warmup (int, optional): The number of MCMC warmup steps. Defaults to 200.
-            mcmc_chains (int, optional): The number of MCMC chains to run in parallel. Defaults to 4.
-            rng_key (jax.random.PRNGKey, optional): The random number generator key. Defaults to random.PRNGKey(24).
-        """
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
         self.changepoint_prior_scale = changepoint_prior_scale
         self.noise_scale = noise_scale
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
-        self.seasonality_mode = seasonality_mode
         self.trend = trend
         self.default_exogenous_prior = default_exogenous_prior
-        self.individual_regressors = individual_regressors
+        self.shared_features = shared_features
         self.transformer_pipeline = transformer_pipeline
         self.correlation_matrix_concentration = correlation_matrix_concentration
 
         super().__init__(
             rng_key=rng_key,
+            default_effect_mode=default_effect_mode,
             inference_method=inference_method,
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
@@ -213,7 +186,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_scale must be greater than 0.")
         if self.capacity_prior_loc <= 0:
             raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.seasonality_mode not in ["multiplicative", "additive"]:
+        if self.default_effect_mode not in ["multiplicative", "additive"]:
             raise ValueError(
                 'seasonality_mode must be either "multiplicative" or "additive".'
             )
@@ -281,11 +254,11 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         changepoint_matrix = self._get_changepoint_matrix(t_scaled)
 
         # Exog variables
-        self.exogenous_columns_ = set([])
+
         if self._has_exogenous_variables:
 
             self.expand_columns_transformer_ = ExpandColumnPerLevel(
-                self.individual_regressors
+                X.columns.difference(self.shared_features)
             ).fit(X)
             X = X.loc[y.index]
             X = self.expand_columns_transformer_.transform(X)
@@ -486,9 +459,9 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         if self.trend == "linear":
             global_rates = enforce_array_if_zero_dim(
-                (self.max_y - self.min_y) / (self.max_t - self.min_t) 
+                (y_arrays[:, -1].squeeze() - y_arrays[:, 0].squeeze()) / (t_arrays[0].squeeze() - t_arrays[-1].squeeze()) 
             )
-            offset = (self.min_y - global_rates * self.min_t) 
+            offset = y_arrays[:, 0].squeeze() - global_rates * t_arrays[0].squeeze()
 
             distributions["offset"] = dist.Normal(
                 offset,
@@ -511,8 +484,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             distributions["offset"] = dist.Normal(
                 offset,
                 jnp.log(
-                    y_arrays.max(axis=1).squeeze().flatten()
-                    - y_arrays.min(axis=1).squeeze().flatten()
+                    y_arrays.max(axis=1).squeeze().flatten()/ y_arrays.min(axis=1).squeeze().flatten() + 1
                 ),
             )
 
@@ -733,3 +705,48 @@ def to_list_if_scalar(x, size=1):
     if np.isscalar(x):
         return [x] * size
     return x
+
+
+class TimeScaler:
+
+    def fit(self, t):
+        """
+        Fit the time scaler.
+
+        Parameters:
+            t (ndarray): Time indices for each series.
+
+        Returns:
+            TimeScaler: The fitted TimeScaler object.
+        """
+
+        if t.ndim == 1:
+            t = t.reshape(1, -1)
+        self.t_scale = (t[:, 1:] - t[:, :-1]).flatten().mean()
+        self.t_min = t.min()
+        return self
+
+    def scale(self, t):
+        """
+        Transform the time indices.
+
+        Parameters:
+            t (ndarray): Time indices for each series.
+
+        Returns:
+            ndarray: Transformed time indices.
+        """
+        return (t - self.t_min) / self.t_scale
+
+    def fit_scale(self, t):
+        """
+        Fit the time scaler and transform the time indices.
+
+        Parameters:
+            t (ndarray): Time indices for each series.
+
+        Returns:
+            ndarray: Transformed time indices.
+        """
+        self.fit(t)
+        return self.scale(t)

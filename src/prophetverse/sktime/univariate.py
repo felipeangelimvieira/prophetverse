@@ -13,18 +13,18 @@ from numpyro import distributions as dist
 from jax import random
 from sktime.forecasting.base import ForecastingHorizon
 
-from hierarchical_prophet.utils.frame_to_array import convert_index_to_days_since_epoch
-from hierarchical_prophet.sktime.base import (
+from prophetverse.utils.frame_to_array import convert_index_to_days_since_epoch
+from prophetverse.sktime.base import (
     BaseBayesianForecaster,
     ExogenousEffectMixin, init_params,
 )
 
 
 from sktime.transformations.base import BaseTransformer
-from hierarchical_prophet.utils.logistic import suggest_logistic_rate_and_offset
+from prophetverse.utils.logistic import suggest_logistic_rate_and_offset
 
-from hierarchical_prophet.univariate.model import model
-from hierarchical_prophet.changepoint import (
+from prophetverse.univariate.model import model
+from prophetverse.changepoint import (
     get_changepoint_matrix,
     get_changepoint_timeindexes,
 )

@@ -7,9 +7,9 @@ from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
                                                 _make_hierarchical)
 
-from hierarchical_prophet.sktime.univariate import Prophet
-from hierarchical_prophet.sktime.seasonality import seasonal_transformer
-from hierarchical_prophet.effects import LinearEffect
+from prophetverse.sktime.univariate import Prophet
+from prophetverse.sktime.seasonality import seasonal_transformer
+from prophetverse.effects import LinearEffect
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
 

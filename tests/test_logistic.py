@@ -1,4 +1,4 @@
-from hierarchical_prophet.utils.logistic import (
+from prophetverse.utils.logistic import (
     suggest_logistic_rate_and_offset,
     suggest_logistic_rate_and_offset,
 )

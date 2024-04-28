@@ -7,7 +7,7 @@ from typing import Protocol, TypedDict, Dict
 import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist
-from hierarchical_prophet.effects import AbstractEffect
+from prophetverse.effects import AbstractEffect
 
 
 def model(

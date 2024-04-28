@@ -554,7 +554,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             np.ndarray: Predicted samples.
         """
-
+        
         fh_dates = fh.to_absolute(
             cutoff=self.full_y_indexes_.get_level_values(-1).max()
         )

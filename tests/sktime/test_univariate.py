@@ -7,9 +7,9 @@ from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
                                                 _make_hierarchical)
 
-from hierarchical_prophet import exogenous_priors
-from hierarchical_prophet.prophet import Prophet
-
+from hierarchical_prophet.sktime.univariate import Prophet
+from hierarchical_prophet.sktime.seasonality import seasonal_transformer
+from hierarchical_prophet.effects import LinearEffect
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
 
@@ -24,28 +24,29 @@ def _make_None_X(y):
 def _make_empty_X(y):
     return pd.DataFrame(index=y.index)
 
-
 HYPERPARAMS = [
-    dict(yearly_seasonality=True, weekly_seasonality=True),
-    dict(yearly_seasonality=False, weekly_seasonality=True),
-    dict(yearly_seasonality=5, weekly_seasonality=2),
-    dict(exogenous_priors={".*": (dist.Normal, 0, 1)}),
     dict(
-        exogenous_priors={
-            r"x1": (dist.Normal, 0, 1),
-            r"x2": (dist.Laplace, 0, 1),
-            r"x3": (dist.Normal, 0, 1),
-        },
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        )
     ),
     dict(
-        exogenous_priors={".*": (dist.Laplace, 0, 1)}
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
+        default_effect_mode="multiplicative",
     ),
+    dict(feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
+         exogenous_effects={"x1": (r"(x1).*", LinearEffect(id="lineareffect1")),
+                            "x2": (r"(x2).*", LinearEffect(id="lineareffect2", prior=(dist.Laplace, 0, 1))),
+                            },),
     dict(
         trend="linear",
     ),
-    dict(
-        trend="logistic"
-    ),
+    dict(trend="logistic"),
+    dict(inference_method="mcmc"),
 ]
 
 
@@ -62,7 +63,7 @@ def test_prophet2_fit_with_different_nlevels(hierarchy_levels, make_X, hyperpara
     )
     fh = list(range(-5, 3))
     y_train = y.loc[y.index.get_level_values(-1) < "2000-01-10"]
-    forecaster = Prophet(**hyperparams, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = Prophet(**hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
     forecaster.fit(y_train, X)
     y_pred = forecaster.predict(X=X, fh=fh)
 

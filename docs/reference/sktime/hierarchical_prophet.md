@@ -1,0 +1,3 @@
+# HierarchicalProphet
+
+::: prophetverse.sktime.multivariate

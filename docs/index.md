@@ -1,4 +1,4 @@
-# Hierarchical Prophet
+# Prophetverse
 
 <p align="center">
 <img src="static/logo-removebg.png" width="300">
@@ -15,33 +15,14 @@ The idea was not to fully reproduce Prophet, but to provide an extension where t
 To install with pip:
 
 ```bash
-pip install hierarchical-prophet
+pip install prophetverse
 ```
 
 Or with poetry:
 
 ```bash
-poetry add hierarchical-prophet
+poetry add prophetverse
 ```
-
-## Hierarchical Model
-
-Let $Y_{bottom} \in \mathcal{R}^{b}$ be the random vector of bottom series which follow a normal distribution $\mathcal{N}(y_{bottom}, \Sigma)$, where $\Sigma \in \mathcal{R}^{b \times b}$ is the covariance matrix of the bottom series which we assume is diagonal. In addition, let $S \in \mathcal{R}^{m \times b}$ be the matrix that define the hierarchical structure of the series, where $m \geq b$ is the total number of series . Then, the random variable $Y$ which define the value of all series is defined as:
-
-$$
-Y = SY_{bottom}
-$$
-
-Its distribution is given by:
-
-$$
-Y  \sim \mathcal{N}(SY_{bottom}, S\Sigma S^T)
-$$
-
-A custom distribution was implemented so that samples are drawn according to that multivariate distribution - in a bottom-up fashion -, and the likelihood applied to all levels at once.
-
-
-# Installation
 
 
 
@@ -67,19 +48,8 @@ The main differences with the original Prophet model are:
 
 2. The capacity is also modelled as a random variable, and it's assumed constant.
 3. One can set different prior distributions for the parameters of the model. The parameters also may be different for different groups of variables, which allows to force positive coefficients for some groups and not for others (with HalfNormal prior, for example).
-4. The exogenous variable inputs are not scaled. They should be scaled prior to the model fitting, with sktime transfomers for example.
+4. Changepoint interval is used instead of changepoint number. Motivation: as the timeseries evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations, but too little for a series with 1000 observations. The changepoint interval may avoid this problem.
+5. The exogenous variable inputs are not scaled. They should be scaled prior to the model fitting, with sktime transfomers for example.
+6. The fourier terms for seasonality must be passed as exogenous variables in `feature_transformer` argument.
 
-
-### Differences between this Hierarchical Prophet and the original one
-
-1. All the above
-2. Changepoint interval is used instead of changepoint number. Motivation: as the timeseries evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations, but too little for a series with 1000 observations. The changepoint interval may avoid this problem.
-3. The fourier terms for seasonality must be passed as exogenous variables in `transformer_pipeline` argument.
-
-
-For the moment, the following features are not implemented:
-
-- Maximum a posteriori estimation (mcmc_samples=0). Only MCMC with NUTS is implemented.
-- There's no method/function for extracting the timeseries components (trend, seasonality, etc) from the model directly. Although 100% possible, it's not implemented as a function or method yet. May arrive in a near future.
-
-In addition, I've not used jax.jit to optimize the computation. This may be a future improvement.
+For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are infered simultaneously, and a multivariate normal likelihood is used (LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.

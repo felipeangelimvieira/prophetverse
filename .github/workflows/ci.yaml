@@ -27,9 +27,12 @@ jobs:
         poetry config virtualenvs.create false  # Avoids creating an additional virtual environment
 
     - name: Install dependencies
-      run: poetry install --no-interaction --no-root --group dev
-
+      run: poetry install --no-interaction --no-root --all-extras
 
     - name: Test with pytest
       run: poetry run pytest
       
+    - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+            token: ${{ secrets.CODECOV_TOKEN }}

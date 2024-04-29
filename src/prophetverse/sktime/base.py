@@ -15,7 +15,7 @@ from collections import OrderedDict
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
 from prophetverse.effects import LinearEffect
 from prophetverse.utils.frame_to_array import series_to_tensor
-import arviz as az
+
 import re
 import logging
 
@@ -188,7 +188,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
-            
+
         fh_as_index = self.fh_to_index(fh)
 
         predict_data = self._get_predict_data(X=X,fh= fh)
@@ -333,6 +333,8 @@ class BaseBayesianForecaster(BaseForecaster):
         return list(self.distributions_.keys())
 
     def plot_trace(self, *, figsize=(15,25), compact=True, var_names=None, **kwargs):
+        import arviz as az
+        
 
         if var_names is None:
             var_names = self.var_names

@@ -45,5 +45,5 @@ def seasonal_transformer(freq="D", yearly_seasonality=False, weekly_seasonality=
         fourier_term_list.append(weekly_seasonality_num_terms)
 
     return FourierFeatures(
-        sp_list=sp_list, fourier_terms_list=fourier_term_list, freq=freq
+        sp_list=sp_list, fourier_terms_list=fourier_term_list, freq=freq, keep_original_columns=True
     )

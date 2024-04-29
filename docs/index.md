@@ -7,7 +7,7 @@
 
 This library was created to make a numpyro-based Prophet model for timeseries forecasting. In addition, it also provides an extension that allows for hierarchical forecasting simultaneously, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
 
-The idea was not to fully reproduce Prophet, but to provide an extension where the capacity is a random variable, and the hierarchical structure is considered. The hierarchical one creates a Prophet-like model for each bottom series, but uses a multivariate normal likelihood based on the hierarchy structure to also consider information of middle-top levels.
+The idea was not to fully reproduce Prophet, but to provide an extension with some extra features.
 
 
 ## Installation
@@ -25,9 +25,6 @@ poetry add prophetverse
 ```
 
 
-
-# Remarks
-
 ## Differences between this Prophet and the original one
 
 The main differences with the original Prophet model are:
@@ -44,9 +41,9 @@ The main differences with the original Prophet model are:
     trend = \frac{C}{1 + \exp(-(kt + m'))}
     $$
 
-    which are equivalent. The priors for those parameters $k$ and $m$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.
+    which are equivalent. The priors for those parameters $k$ and $m'$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.
 
-2. The capacity is also modelled as a random variable, and it's assumed constant.
+2. The capacity is also modelled as a random variable, and it's assumed constant. The user can pass the capacity prior as a parameter.
 3. One can set different prior distributions for the parameters of the model. The parameters also may be different for different groups of variables, which allows to force positive coefficients for some groups and not for others (with HalfNormal prior, for example).
 4. Changepoint interval is used instead of changepoint number. Motivation: as the timeseries evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations, but too little for a series with 1000 observations. The changepoint interval may avoid this problem.
 5. The exogenous variable inputs are not scaled. They should be scaled prior to the model fitting, with sktime transfomers for example.

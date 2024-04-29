@@ -15,13 +15,19 @@ The idea was not to fully reproduce Prophet, but to provide an extension with so
 
 ### Features
 
-:heavy_check_mark: Univariate and multivariate forecasting
-:heavy_check_mark: Custom prior distributions for exogenous variables
-:heavy_check_mark: Non-linear effects for exogenous variables (one may create custom effects inheriting AbstractEffect class)
-:heavy_check_mark: Shared coefficients between timeseries (multi-variate model)
-:heavy_check_mark: Sktime interface
-:heavy_check_mark: Capacity parameter of logistic trend as a random variable
-:heavy_check_mark: MCMC and MAP inference
+✅ Univariate and multivariate forecasting
+
+✅ Custom prior distributions for exogenous variables
+
+✅ Non-linear effects for exogenous variables (one may create custom effects inheriting AbstractEffect class)
+
+✅ Shared coefficients between timeseries (multi-variate model)
+
+✅ Sktime interface
+
+✅ Capacity parameter of logistic trend as a random variable
+
+✅ MCMC and MAP inference
 
 
 ## Installation

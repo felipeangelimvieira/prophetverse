@@ -1,0 +1,43 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.10'
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Configure Poetry
+      run: |
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        poetry config virtualenvs.create false  # Avoids creating an additional virtual environment
+
+    - name: Install dependencies
+      run: poetry install --no-interaction --no-root --all-extras
+    
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+
+    - name: Test with pytest
+      run: poetry run pytest --cov=prophetverse --cov-report=xml
+      
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}

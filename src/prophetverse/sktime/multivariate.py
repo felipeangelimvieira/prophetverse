@@ -26,7 +26,7 @@ from prophetverse.utils.frame_to_array import (
     loc_bottom_series,
     series_to_tensor,
 )
-from prophetverse.utils.multiindex import reindex_time_series
+from prophetverse.models.multivariate_model.multiindex import reindex_time_series
 from prophetverse.utils.logistic import suggest_logistic_rate_and_offset
 from prophetverse.sktime.base import (
     BaseBayesianForecaster,

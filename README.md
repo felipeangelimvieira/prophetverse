@@ -5,7 +5,7 @@
 </p>
 
 [![PyPI version](https://badge.fury.io/py/prophetverse.svg)](https://badge.fury.io/py/prophetverse)
-
+[![codecov](https://codecov.io/gh/felipeangelimvieira/prophetverse/graph/badge.svg?token=O37PGJI3ZX)](https://codecov.io/gh/felipeangelimvieira/prophetverse)
 This library was created to make a numpyro-based Prophet model for timeseries forecasting. In addition, it also provides an extension that allows for hierarchical forecasting simultaneously, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
 
 The hierarchical one creates a Prophet-like model for each bottom series, but uses a multivariate normal likelihood as likelihood. Checkout the docs for more example!

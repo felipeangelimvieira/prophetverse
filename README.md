@@ -55,13 +55,13 @@ The main differences with the original Prophet model are:
 trend = \frac{C}{1 + \exp(-k(t - m))}
 ```
 
-    where $C$ is the capacity, $k$ is the growth rate and $m$ is the timeoffset. In this implementation, we implement a similar and equivalent model, but with a different parameterization:
+where $C$ is the capacity, $k$ is the growth rate and $m$ is the timeoffset. In this implementation, we implement a similar and equivalent model, but with a different parameterization:
 
 ```math
 trend = \frac{C}{1 + \exp(-(kt + m'))}
 ```
 
-    which are equivalent. The priors for those parameters $k$ and $m'$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.
+which are equivalent. The priors for those parameters $k$ and $m'$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.
 
 2. The capacity is also modelled as a random variable, and it's assumed constant. The user can pass the capacity prior as a parameter.
 3. One can set different prior distributions for the parameters of the model. The parameters also may be different for different groups of variables, which allows to force positive coefficients for some groups and not for others (with HalfNormal prior, for example).

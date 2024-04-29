@@ -1,13 +1,27 @@
 # Prophetverse
 
 <p align="center">
-<img src="static/logo-removebg.png" width="300">
+<img src="static/logo-removebg.png" width="200">
+
 </p>
 
+[![PyPI version](https://badge.fury.io/py/prophetverse.svg)](https://badge.fury.io/py/prophetverse)
+[![codecov](https://codecov.io/gh/felipeangelimvieira/prophetverse/graph/badge.svg?token=O37PGJI3ZX)](https://codecov.io/gh/felipeangelimvieira/prophetverse)
 
-This library was created to make a numpyro-based Prophet model for timeseries forecasting. In addition, it also provides an extension that allows for hierarchical forecasting simultaneously, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
+
+This library was created to make a numpyro-based Prophet model for timeseries forecasting, allowing the user to provide custom priors for specific groups of exogenous variables. In addition, it offers a multivariate implementation for hierarchical forecasting, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
 
 The idea was not to fully reproduce Prophet, but to provide an extension with some extra features.
+
+### Features
+
+:heavy_check_mark: Univariate and multivariate forecasting
+:heavy_check_mark: Custom prior distributions for exogenous variables
+:heavy_check_mark: Non-linear effects for exogenous variables (one may create custom effects inheriting AbstractEffect class)
+:heavy_check_mark: Shared coefficients between timeseries (multi-variate model)
+:heavy_check_mark: Sktime interface
+:heavy_check_mark: Capacity parameter of logistic trend as a random variable
+:heavy_check_mark: MCMC and MAP inference
 
 
 ## Installation

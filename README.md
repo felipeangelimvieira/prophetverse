@@ -51,15 +51,15 @@ The main differences with the original Prophet model are:
 
 1. The logistic version of the trend. In the original paper, the logistic growth is:
 
-    ```math
-    trend = \frac{C}{1 + \exp(-k(t - m))}
-    ```
+```math
+trend = \frac{C}{1 + \exp(-k(t - m))}
+```
 
     where $C$ is the capacity, $k$ is the growth rate and $m$ is the timeoffset. In this implementation, we implement a similar and equivalent model, but with a different parameterization:
 
-    ```math
-    trend = \frac{C}{1 + \exp(-(kt + m'))}
-    ```
+```math
+trend = \frac{C}{1 + \exp(-(kt + m'))}
+```
 
     which are equivalent. The priors for those parameters $k$ and $m'$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.
 

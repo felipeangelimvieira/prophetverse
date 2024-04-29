@@ -15,7 +15,7 @@ from collections import OrderedDict
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
 from prophetverse.effects import LinearEffect
 from prophetverse.utils.frame_to_array import series_to_tensor
-
+from prophetverse.effects import AbstractEffect
 import re
 import logging
 
@@ -380,27 +380,33 @@ def init_params(distributions) -> dict:
 class ExogenousEffectMixin:
 
     def __init__(self,
-                 default_effect_mode,
-                 exogenous_effects: Dict[str, Tuple[str, Any]],
-                 default_exogenous_prior: Tuple[str, Any],
+                 
+                 exogenous_effects: List[AbstractEffect],
+                 default_effect = None,
                  **kwargs):
 
-        self.default_effect_mode = default_effect_mode
+        
         self.exogenous_effects = exogenous_effects
-        self.default_exogenous_prior = default_exogenous_prior
+        self.default_effect = default_effect
         super().__init__(**kwargs)
+        
+        if self.default_effect is None:
+            self.default_effect = LinearEffect(
+                id="default_exog",
+                prior=(dist.Normal, 0, 1),
+                effect_mode="additive",
+            )
 
     def _set_custom_effects(self, feature_names):
 
         effects_and_columns = {}
         columns_with_effects = set()
         exogenous_effects = self.exogenous_effects or {}
+        
 
-        for effect_name, (column_regex, effect) in exogenous_effects.items():
+        for effect in exogenous_effects:
 
-            columns = [
-                column for column in feature_names if re.match(column_regex, column)
-            ]
+            columns = effect.match_columns(feature_names)
 
             if columns_with_effects.intersection(columns):
                 raise ValueError(
@@ -410,13 +416,13 @@ class ExogenousEffectMixin:
                 )
 
             if not len(columns):
-                logging.warning("No columns match the regex {}".format(column_regex))
+                logging.warning("No columns match the regex {}".format(effect.regex))
 
             columns_with_effects = columns_with_effects.union(columns)
 
             effects_and_columns.update(
                 {
-                    effect_name: (
+                    effect.id: (
                         columns,
                         effect,
                     )
@@ -427,17 +433,11 @@ class ExogenousEffectMixin:
 
         if len(features_without_effects):
 
-            default_dist = getattr(dist, self.default_exogenous_prior[0])
-            args = self.default_exogenous_prior[1:]
             effects_and_columns.update(
                 {
                     "default": (
                         features_without_effects,
-                        LinearEffect(
-                            id="exog",
-                            prior=(default_dist, *args),
-                            effect_mode=self.default_effect_mode,
-                        ),
+                        self.default_effect,
                     )
                 }
             )

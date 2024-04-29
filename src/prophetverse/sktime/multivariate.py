@@ -70,9 +70,8 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         capacity_prior_loc (float): Location parameter for the capacity prior. Defaults to 1.1.
         trend (str): Type of trend. Either "linear" or "logistic". Defaults to "linear".
         feature_transformer (BaseTransformer or None): A transformer to preprocess the exogenous features. Defaults to None.
-        exogenous_effects (list or None): List of exogenous effects to include in the model. Defaults to None.
-        default_effect_mode (str): Default mode for exogenous effects. Either "multiplicative" or "additive". Defaults to "multiplicative".
-        default_exogenous_prior (tuple): Default prior distribution for exogenous effects. See numpyro.distributions for options. Defaults to ("Normal", 0, 1).
+        exogenous_effects (List[AbstractEffect]): A list defining the exogenous effects to be used in the model.
+        default_effect (AbstractEffect): The default effect to be used when no effect is specified for a variable.
         shared_features (list): List of shared features across series. Defaults to an empty list.
         mcmc_samples (int): Number of MCMC samples to draw. Defaults to 2000.
         mcmc_warmup (int): Number of warmup steps for MCMC. Defaults to 200.
@@ -118,8 +117,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         trend="linear",
         feature_transformer: BaseTransformer = None,
         exogenous_effects=None,
-        default_effect_mode="multiplicative",
-        default_exogenous_prior=("Normal", 0, 1),
+        default_effect=None,
         shared_features=[],
         mcmc_samples=2000,
         mcmc_warmup=200,
@@ -140,14 +138,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
         self.trend = trend
-        self.default_exogenous_prior = default_exogenous_prior
         self.shared_features = shared_features
         self.feature_transformer = feature_transformer
         self.correlation_matrix_concentration = correlation_matrix_concentration
 
         super().__init__(
             rng_key=rng_key,
-            default_effect_mode=default_effect_mode,
             inference_method=inference_method,
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
@@ -155,8 +151,8 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
             mcmc_chains=mcmc_chains,
+            default_effect=default_effect,
             exogenous_effects=exogenous_effects,
-            default_exogenous_prior=default_exogenous_prior,
         )
 
         self.model = model
@@ -177,10 +173,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_scale must be greater than 0.")
         if self.capacity_prior_loc <= 0:
             raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.default_effect_mode not in ["multiplicative", "additive"]:
-            raise ValueError(
-                'seasonality_mode must be either "multiplicative" or "additive".'
-            )
+
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 
@@ -542,8 +535,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         return self.aggregator_.transform(samples)
 
-    
-
     def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
         """Generate samples for the given exogenous variables and forecasting horizon.
 
@@ -554,7 +545,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             np.ndarray: Predicted samples.
         """
-        
+
         fh_dates = fh.to_absolute(
             cutoff=self.full_y_indexes_.get_level_values(-1).max()
         )

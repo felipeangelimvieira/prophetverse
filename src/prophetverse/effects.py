@@ -1,5 +1,5 @@
 #  pylint: disable=g-import-not-at-top
-from typing import Protocol, TypedDict, Dict, Tuple, Callable
+from typing import Protocol, TypedDict, Dict, Tuple, Callable, List
 import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist
@@ -21,8 +21,43 @@ class AbstractEffect(ABC):
     
     """
 
-    def __init__(self, id=""):
+    def __init__(self, id="", regex=None, **kwargs):
         self.id = id
+        self.regex = regex
+        
+        
+    def match_columns(self, columns : pd.Index) -> pd.Index:
+        """Match the columns of the DataFrame with the regex pattern.
+        
+        Args:
+            X (pd.DataFrame): The DataFrame to match.
+        
+        Returns:
+            pd.Index: The columns that match the regex pattern.
+        """
+        
+        if isinstance(columns, List):
+            columns = pd.Index(columns)
+            
+        if self.regex is None:
+            raise ValueError("To use this method, you must set the regex pattern")
+        return columns[columns.str.match(self.regex)]
+    
+    @staticmethod
+    def split_data_into_effects(X : pd.DataFrame, effects : List) -> Dict[str, pd.DataFrame]:
+        """Split the data into effects.
+        
+        Args:
+            X (pd.DataFrame): The DataFrame to split.
+            effects (List[AbstractEffect]): The effects to split the data into.
+        
+        Returns:
+            Dict[str, pd.DataFrame]: A dictionary mapping effect names to DataFrames.
+        """
+        data = {}
+        for effect in effects:
+            data[effect.id] = X[effect.match_columns(X)]
+        return data
 
     def sample(self, name : str, *args, **kwargs):
         """
@@ -60,23 +95,21 @@ class LogEffect(AbstractEffect):
 
     Args:
         id (str): The identifier for the effect.
-        scale_prior (tuple): A tuple specifying the gamma prior for the scale parameter. 
-            The tuple should contain the gamma distribution class, followed by the parameters 
-            for the distribution (shape and rate).
-        rate_prior (tuple): A tuple specifying the gamma prior for the rate parameter. 
-            The tuple should contain the gamma distribution class, followed by the parameters 
-            for the distribution (shape and rate).
+        scale_prior (dist.Distribution): The prior distribution for the scale parameter.
+        rate_prior (dist.Distribution): The prior distribution for the rate parameter.
     """
 
-    def __init__(self,
-                 id="",
-                 scale_prior=(dist.Gamma, 1, 1),
-                 rate_prior=(dist.Gamma, 1, 1),
-                 effect_mode="multiplicative"):
+    def __init__(
+        self,
+        scale_prior=dist.Gamma(1, 1),
+        rate_prior=dist.Gamma(1, 1),
+        effect_mode="multiplicative",
+        **kwargs,
+    ):
         self.scale_prior = scale_prior
         self.rate_prior = rate_prior
         self.effect_mode = effect_mode
-        super().__init__(id)
+        super().__init__(**kwargs)
 
     def compute_effect(self, trend, data):
         """
@@ -89,8 +122,8 @@ class LogEffect(AbstractEffect):
         Returns:
             The computed effect.
         """
-        scale = self.sample("log_scale", self.scale_prior[0](*self.scale_prior[1:]))
-        rate = self.sample("log_rate", self.rate_prior[0](*self.rate_prior[1:]))
+        scale = self.sample("log_scale", self.scale_prior)
+        rate = self.sample("log_rate", self.rate_prior)
         effect = scale * jnp.log(rate * data + 1)
         if self.effect_mode == "additive":
             return effect
@@ -116,10 +149,14 @@ class LinearEffect(AbstractEffect):
 
     """
 
-    def __init__(self, id="", prior=(dist.Normal, 0, 1), effect_mode="multiplicative"):
+    def __init__(
+        self,
+        prior=(dist.Normal, 0, 1),
+        effect_mode="multiplicative",
+        **kwargs):
         self.prior = prior
         self.effect_mode = effect_mode
-        super().__init__(id)
+        super().__init__(**kwargs)
 
     def compute_effect(self, trend, data):
         """
@@ -134,14 +171,14 @@ class LinearEffect(AbstractEffect):
 
         """
         n_features = data.shape[-1]
-        
+
         dist = self.prior[0]
         dist_args = self.prior[1:]
         coefficients = self.sample(
             "coefs",
             dist(*[jnp.array([arg] * n_features) for arg in dist_args]),
         )
-        
+
         if coefficients.ndim == 1:
             coefficients = jnp.expand_dims(coefficients, axis=-1)
 
@@ -190,12 +227,12 @@ class LinearHeterogenousPriorsEffect(AbstractEffect):
                  feature_names: pd.Index,
                  default_exogenous_prior=(dist.Normal, 0, 1),
                  effect_mode="multiplicative",
-                 id=""):
+                 **kwargs):
         self.exogenous_priors = exogenous_priors
         self.feature_names = pd.Index(feature_names)
         self.default_exogenous_prior = default_exogenous_prior
         self.effect_mode = effect_mode
-        super().__init__(id)
+        super().__init__(**kwargs)
 
         self.set_distributions_and_permutation_matrix()
 
@@ -306,6 +343,53 @@ class LinearHeterogenousPriorsEffect(AbstractEffect):
         return self.exogenous_permutation_matrix @ jnp.concatenate(parameters, axis=0)
 
 
+class HillEffect(AbstractEffect):
+    """
+    Represents a Hill effect in a time series model.
+
+    Attributes:
+        half_max_prior: Prior distribution for the half-maximum parameter.
+        slope_prior: Prior distribution for the slope parameter.
+        max_effect_prior: Prior distribution for the maximum effect parameter.
+        effect_mode: Mode of the effect (either "additive" or "multiplicative").
+    """
+
+    def __init__(
+        self,
+        half_max_prior=dist.Gamma(1, 1),
+        slope_prior=dist.HalfNormal(10),
+        max_effect_prior=dist.Gamma(1, 1),
+        effect_mode="multiplicative",
+        **kwargs,
+    ):
+        self.half_max_prior = half_max_prior
+        self.slope_prior = slope_prior
+        self.max_effect_prior = max_effect_prior
+        self.effect_mode = effect_mode
+        super().__init__(**kwargs)
+
+    def compute_effect(self, trend, data):
+        """
+        Computes the effect using the log transformation.
+
+        Args:
+            trend: The trend component.
+            data: The input data.
+
+        Returns:
+            The computed effect.
+        """
+
+        half_max = self.sample("half_max", self.half_max_prior)
+        slope = self.sample("slope", self.slope_prior)
+        max_effect = self.sample("max_effect", self.max_effect_prior)
+
+        effect = max_effect * (1 / (1 + (data / half_max) ** -slope))
+
+        if self.effect_mode == "additive":
+            return effect
+        return trend * effect
+
 
 def matrix_multiplication(data, coefficients):
     return data @ coefficients.reshape((-1, 1))
@@ -321,25 +405,3 @@ def multiplicative_effect(
     trend: jnp.ndarray, data: jnp.ndarray, coefficients: jnp.ndarray
 ) -> jnp.ndarray:
     return trend * matrix_multiplication(data, coefficients)
-
-
-
-
-def _apply_exponent_safe(
-    data: jnp.ndarray,
-    exponent: jnp.ndarray,
-) -> jnp.ndarray:
-    """Applies an exponent to given data in a gradient safe way.
-
-    More info on the double jnp.where can be found:
-    https://github.com/tensorflow/probability/blob/main/discussion/where-nan.pdf
-
-    Args:
-      data: Input data to use.
-      exponent: Exponent required for the operations.
-
-    Returns:
-      The result of the exponent operation with the inputs provided.
-    """
-    exponent_safe = jnp.where(data == 0, 1, data) ** exponent
-    return jnp.where(data == 0, 0, exponent_safe)

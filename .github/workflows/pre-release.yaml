@@ -3,7 +3,7 @@ name: Pre-Release Workflow
 on:
   push:
     branches:
-      - develop
+      - 'release/v*-rc*'
 
 jobs:
   pre-release:
@@ -11,10 +11,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-          show-progress: true
-          fetch-depth: 100
 
 
       - name: Set up Python
@@ -28,21 +24,11 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Bump pre-release version and tag
+      - name: Extract Version
         run: |
-          CURRENT_VERSION=$(poetry version --short)
-          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-          # Check if the latest tag matches the current version and increment if needed
-          if [[ "$LATEST_TAG" == "$CURRENT_VERSION"* ]]; then
-            BUILD_NUMBER=$(echo $LATEST_TAG | grep -oP '\d+$')  # assuming the tag ends with a number
-            BUILD_NUMBER=$((BUILD_NUMBER + 1))
-            NEW_VERSION="${CURRENT_VERSION}-rc${BUILD_NUMBER}"
-          else
-            NEW_VERSION="${CURRENT_VERSION}-rc1"
-          fi
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          git tag v$NEW_VERSION
-          poetry version $NEW_VERSION
+          VERSION=${GITHUB_REF#refs/heads/release/v}
+          echo "Extracted version: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV  # Set version for use in subsequent steps
 
       - name: Build and publish to PyPI
         env:
@@ -57,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.NEW_VERSION }}
-          release_name: v${{ env.NEW_VERSION }}
+          tag_name: v${{ env.VERSION }}
+          release_name: v${{ env.VERSION }}
           draft: false
           prerelease: true

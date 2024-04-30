@@ -72,8 +72,8 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         optimizer_name (str): Name of the optimizer to use for variational inference.
         optimizer_kwargs (dict): Additional keyword arguments to pass to the optimizer.
         optimizer_steps (int): Number of optimization steps to perform for variational inference.
-        exogenous_effects (dict): Dictionary specifying the exogenous effects and their modes.
-        default_effect_mode (str): Default mode for exogenous effects.
+        exogenous_effects (List[AbstractEffect]): A list defining the exogenous effects to be used in the model.
+        default_effect (AbstractEffect): The default effect to be used when no effect is specified for a variable.
         default_exogenous_prior (tuple): Default prior distribution for exogenous effects.
         rng_key (jax.random.PRNGKey): Random number generator key.
 
@@ -103,8 +103,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         optimizer_kwargs={"step_size" : 1e-4},
         optimizer_steps=100_000,
         exogenous_effects=None,
-        default_effect_mode="multiplicative",
-        default_exogenous_prior=("Normal", 0, 1),
+        default_effect=None,
         rng_key=random.PRNGKey(24),
     ):
         """
@@ -123,8 +122,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         super().__init__(
             rng_key=rng_key,
             # ExogenousEffectMixin
-            default_effect_mode=default_effect_mode,
-            default_exogenous_prior=default_exogenous_prior,
+            default_effect=default_effect,
             exogenous_effects=exogenous_effects,
             # BaseBayesianForecaster
             inference_method=inference_method,
@@ -154,10 +152,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_scale must be greater than 0.")
         if self.capacity_prior_loc <= 0:
             raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.default_effect_mode not in ["multiplicative", "additive"]:
-            raise ValueError(
-                'seasonality_mode must be either "multiplicative" or "additive".'
-            )
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 

@@ -30,24 +30,19 @@ jobs:
           poetry version prerelease
           echo "NEW_VERSION=$(poetry version --short)" >> $GITHUB_ENV
 
-      - name: Configure Git
+      - name: Build and publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          git config user.name Github Actions
-          git config user.email felipeangelim@gmail.com
-
-      - name: Commit and Tag
-        run: |
-          git commit -am "Bump version to ${{ env.NEW_VERSION }}"
-          git tag ${{ env.NEW_VERSION }}
-          git push
-          git push --tags
+          poetry build
+          poetry publish
 
       - name: Create GitHub Pre-Release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.NEW_VERSION }}
-          release_name: Release ${{ env.NEW_VERSION }}
+          tag_name: v${{ env.NEW_VERSION }}
+          release_name: v${{ env.NEW_VERSION }}
           draft: false
           prerelease: true

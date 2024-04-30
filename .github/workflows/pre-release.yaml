@@ -2,8 +2,8 @@ name: Pre-Release Workflow
 
 on:
   push:
-    branches:
-      - develop
+    tags:
+      - 'v*-rc*'
 
 jobs:
   pre-release:
@@ -25,15 +25,17 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Bump pre-release version
+      - name: Extract Version from Tag
         run: |
-          poetry version prerelease
-          echo "NEW_VERSION=$(poetry version --short)" >> $GITHUB_ENV
+          # Strip "refs/tags/" and the leading "v" from the tag reference
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Build and publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          poetry version ${{ env.VERSION }}
           poetry build
           poetry publish
 
@@ -42,7 +44,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.NEW_VERSION }}
-          release_name: v${{ env.NEW_VERSION }}
+          tag_name: v${{ env.VERSION }}
+          release_name: v${{ env.VERSION }}
           draft: false
           prerelease: true

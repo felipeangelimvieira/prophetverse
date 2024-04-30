@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # Ensures history is checked out
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -33,9 +31,9 @@ jobs:
           if [[ "$LATEST_TAG" == "$CURRENT_VERSION"* ]]; then
             BUILD_NUMBER=$(echo $LATEST_TAG | grep -oP '\d+$')  # assuming the tag ends with a number
             BUILD_NUMBER=$((BUILD_NUMBER + 1))
-            NEW_VERSION="${CURRENT_VERSION}-${BUILD_NUMBER}"
+            NEW_VERSION="${CURRENT_VERSION}-rc${BUILD_NUMBER}"
           else
-            NEW_VERSION="${CURRENT_VERSION}-1"
+            NEW_VERSION="${CURRENT_VERSION}-rc1"
           fi
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           git tag v$NEW_VERSION

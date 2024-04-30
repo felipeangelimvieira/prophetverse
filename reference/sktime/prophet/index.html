@@ -924,11 +924,11 @@ to model the effect of a feature.</p>
         <tr>
           <td><code>exogenous_effects</code></td>
           <td>
-                <code>dict</code>
+                <code>List[AbstractEffect]</code>
           </td>
           <td>
             <div class="doc-md-description">
-              <p>Dictionary specifying the exogenous effects and their modes.</p>
+              <p>A list defining the exogenous effects to be used in the model.</p>
             </div>
           </td>
           <td>
@@ -936,17 +936,17 @@ to model the effect of a feature.</p>
           </td>
         </tr>
         <tr>
-          <td><code>default_effect_mode</code></td>
+          <td><code>default_effect</code></td>
           <td>
-                <code>str</code>
+                <code>AbstractEffect</code>
           </td>
           <td>
             <div class="doc-md-description">
-              <p>Default mode for exogenous effects.</p>
+              <p>The default effect to be used when no effect is specified for a variable.</p>
             </div>
           </td>
           <td>
-                <code>&#39;multiplicative&#39;</code>
+                <code>None</code>
           </td>
         </tr>
         <tr>
@@ -960,7 +960,7 @@ to model the effect of a feature.</p>
             </div>
           </td>
           <td>
-                <code>(&#39;Normal&#39;, 0, 1)</code>
+              <em>required</em>
           </td>
         </tr>
         <tr>
@@ -1330,13 +1330,7 @@ to model the effect of a feature.</p>
 <span class="normal">382</span>
 <span class="normal">383</span>
 <span class="normal">384</span>
-<span class="normal">385</span>
-<span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span>
-<span class="normal">389</span>
-<span class="normal">390</span>
-<span class="normal">391</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Prophet</span><span class="p">(</span><span class="n">ExogenousEffectMixin</span><span class="p">,</span> <span class="n">BaseBayesianForecaster</span><span class="p">):</span>
+<span class="normal">385</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Prophet</span><span class="p">(</span><span class="n">ExogenousEffectMixin</span><span class="p">,</span> <span class="n">BaseBayesianForecaster</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">    Univariate Prophet model, similar to the one implemented in the `prophet` library.</span>
@@ -1374,8 +1368,8 @@ to model the effect of a feature.</p>
 <span class="sd">        optimizer_name (str): Name of the optimizer to use for variational inference.</span>
 <span class="sd">        optimizer_kwargs (dict): Additional keyword arguments to pass to the optimizer.</span>
 <span class="sd">        optimizer_steps (int): Number of optimization steps to perform for variational inference.</span>
-<span class="sd">        exogenous_effects (dict): Dictionary specifying the exogenous effects and their modes.</span>
-<span class="sd">        default_effect_mode (str): Default mode for exogenous effects.</span>
+<span class="sd">        exogenous_effects (List[AbstractEffect]): A list defining the exogenous effects to be used in the model.</span>
+<span class="sd">        default_effect (AbstractEffect): The default effect to be used when no effect is specified for a variable.</span>
 <span class="sd">        default_exogenous_prior (tuple): Default prior distribution for exogenous effects.</span>
 <span class="sd">        rng_key (jax.random.PRNGKey): Random number generator key.</span>
 
@@ -1405,8 +1399,7 @@ to model the effect of a feature.</p>
         <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;step_size&quot;</span> <span class="p">:</span> <span class="mf">1e-4</span><span class="p">},</span>
         <span class="n">optimizer_steps</span><span class="o">=</span><span class="mi">100_000</span><span class="p">,</span>
         <span class="n">exogenous_effects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">default_effect_mode</span><span class="o">=</span><span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
-        <span class="n">default_exogenous_prior</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;Normal&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">default_effect</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">rng_key</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">PRNGKey</span><span class="p">(</span><span class="mi">24</span><span class="p">),</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1425,8 +1418,7 @@ to model the effect of a feature.</p>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">rng_key</span><span class="o">=</span><span class="n">rng_key</span><span class="p">,</span>
             <span class="c1"># ExogenousEffectMixin</span>
-            <span class="n">default_effect_mode</span><span class="o">=</span><span class="n">default_effect_mode</span><span class="p">,</span>
-            <span class="n">default_exogenous_prior</span><span class="o">=</span><span class="n">default_exogenous_prior</span><span class="p">,</span>
+            <span class="n">default_effect</span><span class="o">=</span><span class="n">default_effect</span><span class="p">,</span>
             <span class="n">exogenous_effects</span><span class="o">=</span><span class="n">exogenous_effects</span><span class="p">,</span>
             <span class="c1"># BaseBayesianForecaster</span>
             <span class="n">inference_method</span><span class="o">=</span><span class="n">inference_method</span><span class="p">,</span>
@@ -1456,10 +1448,6 @@ to model the effect of a feature.</p>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;capacity_prior_scale must be greater than 0.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_loc</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;capacity_prior_loc must be greater than 0.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_effect_mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span> <span class="s2">&quot;additive&quot;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;seasonality_mode must be either &quot;multiplicative&quot; or &quot;additive&quot;.&#39;</span>
-            <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="s2">&quot;logistic&quot;</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;trend must be either &quot;linear&quot; or &quot;logistic&quot;.&#39;</span><span class="p">)</span>
 
@@ -1712,7 +1700,7 @@ to model the effect of a feature.</p>
 
 
 <h3 id="prophetverse.sktime.univariate.Prophet.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">changepoint_interval</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">changepoint_range</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">feature_transformer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">capacity_prior_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">capacity_prior_loc</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">noise_scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">trend</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">mcmc_samples</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">mcmc_warmup</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">mcmc_chains</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">inference_method</span><span class="o">=</span><span class="s1">&#39;map&#39;</span><span class="p">,</span> <span class="n">optimizer_name</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;step_size&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">},</span> <span class="n">optimizer_steps</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">exogenous_effects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default_effect_mode</span><span class="o">=</span><span class="s1">&#39;multiplicative&#39;</span><span class="p">,</span> <span class="n">default_exogenous_prior</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Normal&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">rng_key</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">PRNGKey</span><span class="p">(</span><span class="mi">24</span><span class="p">))</span></code>
+          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">changepoint_interval</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">changepoint_range</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">feature_transformer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">capacity_prior_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">capacity_prior_loc</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">noise_scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">trend</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">mcmc_samples</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">mcmc_warmup</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">mcmc_chains</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">inference_method</span><span class="o">=</span><span class="s1">&#39;map&#39;</span><span class="p">,</span> <span class="n">optimizer_name</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;step_size&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">},</span> <span class="n">optimizer_steps</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">exogenous_effects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default_effect</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rng_key</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">PRNGKey</span><span class="p">(</span><span class="mi">24</span><span class="p">))</span></code>
 
 </h3>
 
@@ -1773,9 +1761,7 @@ to model the effect of a feature.</p>
 <span class="normal">135</span>
 <span class="normal">136</span>
 <span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">changepoint_interval</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
     <span class="n">changepoint_range</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
@@ -1793,8 +1779,7 @@ to model the effect of a feature.</p>
     <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;step_size&quot;</span> <span class="p">:</span> <span class="mf">1e-4</span><span class="p">},</span>
     <span class="n">optimizer_steps</span><span class="o">=</span><span class="mi">100_000</span><span class="p">,</span>
     <span class="n">exogenous_effects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">default_effect_mode</span><span class="o">=</span><span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
-    <span class="n">default_exogenous_prior</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;Normal&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">default_effect</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">rng_key</span><span class="o">=</span><span class="n">random</span><span class="o">.</span><span class="n">PRNGKey</span><span class="p">(</span><span class="mi">24</span><span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1813,8 +1798,7 @@ to model the effect of a feature.</p>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
         <span class="n">rng_key</span><span class="o">=</span><span class="n">rng_key</span><span class="p">,</span>
         <span class="c1"># ExogenousEffectMixin</span>
-        <span class="n">default_effect_mode</span><span class="o">=</span><span class="n">default_effect_mode</span><span class="p">,</span>
-        <span class="n">default_exogenous_prior</span><span class="o">=</span><span class="n">default_exogenous_prior</span><span class="p">,</span>
+        <span class="n">default_effect</span><span class="o">=</span><span class="n">default_effect</span><span class="p">,</span>
         <span class="n">exogenous_effects</span><span class="o">=</span><span class="n">exogenous_effects</span><span class="p">,</span>
         <span class="c1"># BaseBayesianForecaster</span>
         <span class="n">inference_method</span><span class="o">=</span><span class="n">inference_method</span><span class="p">,</span>

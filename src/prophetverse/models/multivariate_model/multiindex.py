@@ -116,50 +116,6 @@ def series_to_tensor(y):
     return jnp.array(array)
 
 
-def set_exogenous_priors(exogenous_priors, X):
-    """
-    Set exogenous priors for a given DataFrame.
-    
-    The dict exogenous_prior contain a regex as key, and a tuple (distribution, kwargs) as value.
-    The regex is matched against the column names of X, and the corresponding distribution is used to
-    
-
-    Parameters:
-    exogenous_priors (dict): A dictionary containing regex patterns as keys and tuples (distribution, kwargs) as values.
-    X (pd.DataFrame): The DataFrame.
-
-    Returns:
-    tuple: A tuple containing the exogenous distributions and the permutation matrix.
-    """
-    _exogenous_dists = []
-    exogenous_permutation_matrix = []
-    already_set_columns = set()
-    for regex, (distribution_class, *args) in exogenous_priors.items():
-        # Find columns that match the regex
-        columns = [column for column in X.columns if re.match(regex, column)]
-        if already_set_columns.intersection(columns):
-            raise ValueError(
-                "Columns {} are already set".format(
-                    already_set_columns.intersection(columns)
-                )
-            )
-        already_set_columns = already_set_columns.union(columns)
-
-        # Get idx of columns that match the regex
-        idx = jnp.array([X.columns.get_loc(column) for column in columns])
-        # Set the distribution for each column that matches the regex
-        distribution = distribution_class(*[jnp.ones(len(idx)) * arg for arg in args])
-
-        # Matrix of shape (len(columns), len(idx) that map len(idx) to the corresponding indexes
-        exogenous_permutation_matrix.append(jnp.eye(len(columns))[idx].T)
-        _exogenous_dists.append((regex, distribution))
-
-    _exogenous_permutation_matrix = jnp.concatenate(
-        exogenous_permutation_matrix, axis=0
-    )
-    return _exogenous_dists, _exogenous_permutation_matrix
-
-
 def extract_timetensor_from_dataframe(df: pd.DataFrame) -> jnp.array:
     """
     Extract the time array from a pandas DataFrame.
@@ -194,3 +150,32 @@ def convert_dataframe_to_tensors(df: pd.DataFrame) -> Tuple[jnp.array, jnp.array
     df_as_arrays = series_to_tensor(df)
 
     return t_arrays, df_as_arrays
+
+
+def reindex_time_series(df, new_time_index):
+    """
+    Reindexes the time index level (-1) of a multi-index DataFrame with a new time index.
+
+    Parameters:
+    df (pd.DataFrame): The original DataFrame with a multi-level index.
+    new_time_index (pd.Index or similar): The new time index to apply to the DataFrame.
+
+    Returns:
+    pd.DataFrame: A DataFrame with the updated time index.
+    """
+    # Ensure the input DataFrame has a multi-index
+    if not isinstance(df.index, pd.MultiIndex):
+        raise ValueError("DataFrame must have a multi-level index")
+
+    # Extract the current indices except for the time index
+    levels = df.index.levels[:-1]
+    labels = df.index.codes[:-1]
+    names = df.index.names[:-1]
+
+    # Create a new multi-index combining the existing levels with the new time index
+    new_index = pd.MultiIndex.from_product(
+        levels + [new_time_index], names=names + [df.index.names[-1]]
+    )
+
+    # Reindex the DataFrame using the new index
+    return df.reindex(new_index)

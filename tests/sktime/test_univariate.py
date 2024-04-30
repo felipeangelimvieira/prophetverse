@@ -34,14 +34,19 @@ HYPERPARAMS = [
         feature_transformer=seasonal_transformer(
             yearly_seasonality=True, weekly_seasonality=True
         ),
-        default_effect_mode="multiplicative",
+        default_effect=LinearEffect(effect_mode="multiplicative"),
     ),
-    dict(feature_transformer=seasonal_transformer(
+    dict(
+        feature_transformer=seasonal_transformer(
             yearly_seasonality=True, weekly_seasonality=True
         ),
-         exogenous_effects={"x1": (r"(x1).*", LinearEffect(id="lineareffect1")),
-                            "x2": (r"(x2).*", LinearEffect(id="lineareffect2", prior=(dist.Laplace, 0, 1))),
-                            },),
+        exogenous_effects=[
+            LinearEffect(id="lineareffect1", regex=r"(x1).*"),
+            LinearEffect(
+                id="lineareffect2", regex=r"(x2).*", prior=(dist.Laplace, 0, 1)
+            ),
+        ],
+    ),
     dict(
         trend="linear",
     ),

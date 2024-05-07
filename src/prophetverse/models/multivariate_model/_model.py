@@ -11,11 +11,9 @@ from prophetverse.effects import AbstractEffect
 
 
 def model(
-    t,
     y,
-    changepoint_matrix,
-    init_trend_params,
-    trend_mode,
+    trend_model,
+    trend_data={},
     data={},
     exogenous_effects: Dict[str, AbstractEffect] = {},
     noise_scale=0.05,
@@ -29,18 +27,7 @@ def model(
         X (jnp.ndarray): Array of exogenous variables.
         t (jnp.ndarray): Array of time values.
     """
-    params = init_trend_params()
-
-    # Trend
-    changepoint_coefficients = params["changepoint_coefficients"]
-    offset = params["offset"]
-    capacity = params.get("capacity", None)
-
-    trend = (changepoint_matrix) @ changepoint_coefficients.reshape(
-        (1, -1, 1)
-    ) + offset.reshape((-1, 1, 1))
-    if trend_mode == "logistic":
-        trend = (capacity.reshape((-1, 1, 1))) / (1 + jnp.exp(-trend))
+    trend = trend_model(**trend_data)
 
     numpyro.deterministic("trend_", trend)
 
@@ -61,7 +48,7 @@ def model(
 
     if y is not None:
         y = y.squeeze(-1).T
-        
+
     if correlation_matrix_concentration is None:
 
         with numpyro.plate("time", mean.shape[-1], dim=-2):

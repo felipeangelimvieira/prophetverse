@@ -46,6 +46,7 @@ from prophetverse.changepoint import (
 
 from prophetverse.models.multivariate_model._model import model
 from prophetverse.effects import LinearEffect, LinearHeterogenousPriorsEffect
+from prophetverse.trend import TrendModel, LinearTrend, LogisticTrend
 
 logger = logging.getLogger("sktime-numpyro")
 
@@ -195,6 +196,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.original_y_indexes_ = y.index
         y = self.aggregator_.fit_transform(y)
         self.full_y_indexes_ = y.index
+        
 
         # Hierarchy matrix (S Matrix)
         self.hierarchy_matrix = jnp.array(_get_s_matrix(y).values)
@@ -214,8 +216,25 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         # We use a single time array for all series, with shape (n_timepoints, 1)
         t_scaled = t_scaled[0].reshape((-1, 1))
         # Changepoints
-        self._setup_changepoints(t_scaled=t_scaled)
-        changepoint_matrix = self._get_changepoint_matrix(t_scaled)
+
+        ## Changepoints and trend
+        if self.trend == "linear":
+            self.trend_model_ = LinearTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+            )
+
+        elif self.trend == "logistic":
+            self.trend_model_ = LogisticTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+            )
+
+        self.trend_model_.initialize(y_bottom)
+        fh = y.index.get_level_values(-1).unique()
+        trend_data = self.trend_model_.prepare_input_data(fh)
 
         # Exog variables
 
@@ -243,20 +262,18 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             exogenous_data = {}
 
         self.fit_and_predict_data_ = {
-            "trend_mode": self.trend,
+            "noise_scale" : self.noise_scale,
+            "trend_model" : self.trend_model_,
             "exogenous_effects": self.exogenous_effect_dict,
-            "init_trend_params": self._get_trend_sample_func(
-                t_arrays=t_scaled, y_arrays=y_bottom_arrays
-            ),
             "correlation_matrix_concentration": self.correlation_matrix_concentration,
             "noise_scale": self.noise_scale,
         }
 
         return dict(
-            t=t_scaled,
             y=y_bottom_arrays,
             data=exogenous_data,
-            changepoint_matrix=changepoint_matrix,
+            trend_data = trend_data,
+            
             **self.fit_and_predict_data_,
         )
 
@@ -554,14 +571,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
 
-        t_arrays = jnp.array(convert_index_to_days_since_epoch(fh_as_index)).reshape(
-            (1, -1, 1)
-        )
-        t_arrays = jnp.tile(t_arrays, (self.n_series, 1, 1))
-        t_arrays = self._time_scaler.scale(t_arrays)
-        t_scaled = t_arrays[0]
-
-        changepoint_matrix = self._get_changepoint_matrix(t_scaled)
+        trend_data = self.trend_model_.prepare_input_data(fh_as_index)
 
         if self._has_exogenous_variables:
             if X is None or X.shape[1] == 0:
@@ -578,10 +588,9 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             exogenous_data = {}
 
         return dict(
-            t=t_arrays,
             y=None,
             data=exogenous_data,
-            changepoint_matrix=changepoint_matrix,
+            trend_data=trend_data,
             **self.fit_and_predict_data_,
         )
 

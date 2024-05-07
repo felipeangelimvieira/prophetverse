@@ -29,6 +29,7 @@ from prophetverse.changepoint import (
     get_changepoint_timeindexes,
 )
 import functools
+from prophetverse.trend import TrendModel, LinearTrend, LogisticTrend
 
 
 __all__ = ["Prophet"]
@@ -167,14 +168,26 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             dict: Dictionary of data for the Numpyro model.
         """
-
+        fh = y.index.get_level_values(-1).unique()
         self._set_time_scale(y)
 
         ## Changepoints and trend
-        self._set_changepoints_t(y)
-        t = self._index_to_scaled_timearray(y.index)
-        changepoint_matrix = self._get_changepoint_matrix(t)
-        trend_sample_func = self._get_trend_sample_func(y=y, X=X)
+        if self.trend == "linear":
+            self.trend_model_ = LinearTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale)
+
+        elif self.trend == "logistic":
+            self.trend_model_ = LogisticTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale
+            )
+
+        self.trend_model_.initialize(y)
+
+        trend_data = self.trend_model_.prepare_input_data(fh)
 
         ## Exogenous features
 
@@ -195,16 +208,18 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         ## Inputs that also are used in predict
         self.fit_and_predict_data_ = {
-            "init_trend_params": trend_sample_func,
-            "trend_mode": self.trend,
-            "exogenous_effects": self.exogenous_effect_dict if self._has_exogenous else None,
-            }
+            
+            "trend_model": self.trend_model_,
+            "noise_scale" : self.noise_scale,
+            "exogenous_effects": (
+                self.exogenous_effect_dict if self._has_exogenous else None
+            ),
+        }
 
         inputs = {
-            "t": self._index_to_scaled_timearray(y.index),
             "y": y_array,
             "data": exogenous_data,
-            "changepoint_matrix": changepoint_matrix,
+            "trend_data": trend_data,
             **self.fit_and_predict_data_,
         }
 
@@ -364,7 +379,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
         t = self._index_to_scaled_timearray(fh_as_index)
-        changepoint_matrix = self._get_changepoint_matrix(t)
+        trend_data = self.trend_model_.prepare_input_data(fh_as_index)
 
         if X is None:
             X = pd.DataFrame(index=fh_as_index)
@@ -377,11 +392,8 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         )
 
         return dict(
-            t=t.reshape((-1, 1)),
             y=None,
             data=exogenous_data,
-            changepoint_matrix=changepoint_matrix,
+            trend_data=trend_data,
             **self.fit_and_predict_data_,
         )
-
-   

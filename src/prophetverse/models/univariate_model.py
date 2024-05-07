@@ -10,14 +10,12 @@ from numpyro import distributions as dist
 from ..effects import AbstractEffect
 
 def model(
-    t,
     y,
-    changepoint_matrix,
-    init_trend_params,
-    trend_mode,
+    trend_model,
+    trend_data={},
     data={},
-    exogenous_effects: Dict[str, AbstractEffect]={}
-    
+    exogenous_effects: Dict[str, AbstractEffect]={},
+    noise_scale=0.5,    
 ):
     """
     Defines the Numpyro model.
@@ -27,16 +25,7 @@ def model(
         X (jnp.ndarray): Array of exogenous variables.
         t (jnp.ndarray): Array of time values.
     """
-    params = init_trend_params()
-
-    # Trend
-    changepoint_coefficients = params["changepoint_coefficients"]
-    offset = params["offset"]
-    capacity = params.get("capacity", None)
-
-    trend = (changepoint_matrix) @ changepoint_coefficients.reshape((-1, 1)) + offset
-    if trend_mode == "logistic":
-        trend = capacity / (1 + jnp.exp(-trend))
+    trend = trend_model(**trend_data)
 
 
     numpyro.deterministic("trend_", trend)
@@ -52,7 +41,7 @@ def model(
             numpyro.deterministic(key, effect)
             mean += effect
 
-    noise_scale = params["std_observation"] 
+    noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2) as time_plate:
         numpyro.sample(

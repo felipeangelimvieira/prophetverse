@@ -105,6 +105,10 @@ def series_to_tensor(y):
     names = []
     array = []
     series_len = None
+    
+    if y.index.nlevels== 1:
+        return jnp.array(y.values).reshape((1, -1, len(y.columns)))
+    
     for idx, series in iterate_all_series(y):
         if series_len is None:
             series_len = len(series)

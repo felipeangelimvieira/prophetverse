@@ -29,7 +29,7 @@ from prophetverse.changepoint import (
     get_changepoint_timeindexes,
 )
 import functools
-from prophetverse.trend import TrendModel, LinearTrend, LogisticTrend
+from prophetverse.trend import TrendModel, PiecewiseLinearTrend, PiecewiseLogisticTrend
 
 
 __all__ = ["Prophet"]
@@ -173,13 +173,13 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         ## Changepoints and trend
         if self.trend == "linear":
-            self.trend_model_ = LinearTrend(
+            self.trend_model_ = PiecewiseLinearTrend(
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale)
 
         elif self.trend == "logistic":
-            self.trend_model_ = LogisticTrend(
+            self.trend_model_ = PiecewiseLogisticTrend(
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale

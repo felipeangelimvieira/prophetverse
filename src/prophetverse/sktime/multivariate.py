@@ -46,7 +46,7 @@ from prophetverse.changepoint import (
 
 from prophetverse.models.multivariate_model._model import model
 from prophetverse.effects import LinearEffect, LinearHeterogenousPriorsEffect
-from prophetverse.trend import TrendModel, LinearTrend, LogisticTrend
+from prophetverse.trend import TrendModel, PiecewiseLinearTrend, PiecewiseLogisticTrend
 
 logger = logging.getLogger("sktime-numpyro")
 
@@ -219,17 +219,23 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         ## Changepoints and trend
         if self.trend == "linear":
-            self.trend_model_ = LinearTrend(
+            self.trend_model_ = PiecewiseLinearTrend(
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
             )
 
         elif self.trend == "logistic":
-            self.trend_model_ = LogisticTrend(
+            self.trend_model_ = PiecewiseLogisticTrend(
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
+                capacity_prior=dist.TransformedDistribution(
+                    dist.HalfNormal(self.capacity_prior_scale),
+                    dist.transforms.AffineTransform(
+                        loc=self.capacity_prior_loc, scale=1
+                    ),
+                )
             )
 
         self.trend_model_.initialize(y_bottom)

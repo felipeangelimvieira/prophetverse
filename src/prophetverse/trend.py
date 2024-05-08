@@ -54,7 +54,8 @@ class TrendModel(ABC):
         return self.compute_trend(**kwargs)
 
 
-class BaseChangepointTrend(TrendModel):
+
+class PiecewiseLinearTrend(TrendModel):
 
     def __init__(
         self,
@@ -72,13 +73,13 @@ class BaseChangepointTrend(TrendModel):
         self.squeeze_if_single_series = squeeze_if_single_series
         super().__init__(**kwargs)
 
-    @abstractmethod
-    def _suggest_global_trend_and_offset(self, y: pd.DataFrame): ...
 
     def initialize(self, y: pd.DataFrame):
 
         super().initialize(y)
-        t_scaled = self._index_to_scaled_timearray(y.index.get_level_values(-1).unique())
+        t_scaled = self._index_to_scaled_timearray(
+            y.index.get_level_values(-1).unique()
+        )
         self._setup_changepoints(t_scaled)
         self._setup_changepoint_prior_vectors(y)
 
@@ -226,26 +227,6 @@ class BaseChangepointTrend(TrendModel):
 
         return {"changepoint_matrix": self.get_changepoint_matrix(idx)}
 
-
-class LinearTrend(BaseChangepointTrend):
-
-    def __init__(
-        self,
-        changepoint_interval: int,
-        changepoint_range: int,
-        changepoint_prior_scale: float,
-        offset_prior_scale=0.1,
-        **kwargs
-    ):
-        super().__init__(
-            changepoint_interval,
-            changepoint_range,
-            changepoint_prior_scale,
-            offset_prior_scale=offset_prior_scale,
-            squeeze_if_single_series=True,
-            **kwargs
-        )
-
     def _suggest_global_trend_and_offset(self, y: pd.DataFrame):
 
         t = self._index_to_scaled_timearray(y.index.get_level_values(-1).unique())
@@ -282,7 +263,7 @@ class LinearTrend(BaseChangepointTrend):
         return trend
 
 
-class LogisticTrend(BaseChangepointTrend): ...
+class PiecewiseLogisticTrend(PiecewiseLinearTrend): 
 
     def __init__(
         self,
@@ -290,11 +271,11 @@ class LogisticTrend(BaseChangepointTrend): ...
         changepoint_interval: int,
         changepoint_range: int,
         changepoint_prior_scale: float,
-        offset_prior_scale=0.1,
+        offset_prior_scale=10,
         capacity_prior : dist.Distribution = None,
         **kwargs
     ):
-        
+
         if capacity_prior is None:
             capacity_prior = dist.TransformedDistribution(
                 dist.HalfNormal(
@@ -304,38 +285,49 @@ class LogisticTrend(BaseChangepointTrend): ...
                     loc=1.05, scale=1
                 ),
             )
+
         self.capacity_prior = capacity_prior
-        
+
         super().__init__(
             changepoint_interval,
             changepoint_range,
             changepoint_prior_scale,
             offset_prior_scale=offset_prior_scale,
-            squeeze_if_single_series=True,
+            squeeze_if_single_series=False,
             **kwargs
         )
 
     def _suggest_global_trend_and_offset(self, y: pd.DataFrame):
-        
+
         t_arrays = self._index_to_scaled_timearray(y.index.get_level_values(-1).unique())
         y_arrays = series_to_tensor(y)
 
         if hasattr(self.capacity_prior, "loc"):
             capacity_prior_loc = self.capacity_prior.loc
         else:
-            capacity_prior_loc = self.capacity_prior.mean()
-            
+            capacity_prior_loc = 1.05
+
         global_rates, offset = suggest_logistic_rate_and_offset(
                 t=t_arrays.squeeze(),
                 y=y_arrays.squeeze(),
                 capacities=capacity_prior_loc,
         )
-        
+
         return global_rates, offset
-        
+
     def compute_trend(self, changepoint_matrix: jnp.ndarray):
+
+        with numpyro.plate("series", self.n_series, dim=-3):
+            capacity = numpyro.sample(
+                "capacity", self.capacity_prior
+            )
         
-        
+        trend = super().compute_trend(changepoint_matrix)
+        if self.n_series == 1:
+            capacity = capacity.squeeze()
+            
+        trend = capacity / (1 + jnp.exp(-trend))
+        return trend
 
 
 def to_list_if_scalar(x, size=1):
@@ -368,7 +360,6 @@ def enforce_array_if_zero_dim(x):
     if x.ndim == 0:
         return x.reshape(1)
     return x
-
 
 
 def suggest_logistic_rate_and_offset(

@@ -1,13 +1,13 @@
 #  pylint: disable=g-import-not-at-top
-from typing import Protocol, TypedDict, Dict, Tuple, Callable, List
+import logging
+import re
+from abc import ABC, abstractmethod
+from typing import Callable, Dict, List, Protocol, Tuple, TypedDict
+
 import jax.numpy as jnp
 import numpyro
-from numpyro import distributions as dist
-import re
-import logging
 import pandas as pd
-from abc import ABC, abstractmethod
-
+from numpyro import distributions as dist
 
 # --------------
 #     Effects
@@ -101,11 +101,16 @@ class LogEffect(AbstractEffect):
 
     def __init__(
         self,
-        scale_prior=dist.Gamma(1, 1),
-        rate_prior=dist.Gamma(1, 1),
+        scale_prior=None,
+        rate_prior=None,
         effect_mode="multiplicative",
         **kwargs,
     ):
+        if scale_prior is None:
+            scale_prior = dist.Gamma(1, 1)
+        if rate_prior is None:
+            rate_prior = dist.Gamma(1, 1)
+            
         self.scale_prior = scale_prior
         self.rate_prior = rate_prior
         self.effect_mode = effect_mode
@@ -201,12 +206,20 @@ class HillEffect(AbstractEffect):
 
     def __init__(
         self,
-        half_max_prior=dist.Gamma(1, 1),
-        slope_prior=dist.HalfNormal(10),
-        max_effect_prior=dist.Gamma(1, 1),
+        half_max_prior=None,
+        slope_prior=None,
+        max_effect_prior=None,
         effect_mode="multiplicative",
         **kwargs,
     ):
+        
+        if half_max_prior is None:
+            half_max_prior = dist.Gamma(1, 1)
+        if slope_prior is None:
+            slope_prior = dist.HalfNormal(10)
+        if max_effect_prior is None:
+            max_effect_prior = dist.Gamma(1, 1)
+            
         self.half_max_prior = half_max_prior
         self.slope_prior = slope_prior
         self.max_effect_prior = max_effect_prior
@@ -229,7 +242,8 @@ class HillEffect(AbstractEffect):
         slope = self.sample("slope", self.slope_prior)
         max_effect = self.sample("max_effect", self.max_effect_prior)
 
-        effect = max_effect * (1 / (1 + (data / half_max) ** -slope))
+        x = _exponent_safe(data / half_max, -slope)
+        effect = max_effect / (1 + x)
 
         if self.effect_mode == "additive":
             return effect
@@ -250,3 +264,9 @@ def multiplicative_effect(
     trend: jnp.ndarray, data: jnp.ndarray, coefficients: jnp.ndarray
 ) -> jnp.ndarray:
     return trend * matrix_multiplication(data, coefficients)
+
+
+def _exponent_safe(data, exponent):
+    # From lightweight mmm library
+    exponent_safe = jnp.where(data == 0, 1, data) ** exponent
+    return jnp.where(data == 0, 0, exponent_safe)

@@ -1,17 +1,16 @@
+import functools
 import itertools
 import logging
 import re
-import functools
-from typing import Dict, List, Tuple, Iterable
+from collections import OrderedDict
+from typing import Callable, Dict, Iterable, List, Tuple
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro
-from typing import Callable
 import pandas as pd
 from jax import lax, random
-from collections import OrderedDict
 from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS, Predictive
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
@@ -19,34 +18,16 @@ from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
+from prophetverse.models import multivariate_model
+from prophetverse.sktime.base import (BaseBayesianForecaster,
+                                      ExogenousEffectMixin)
+from prophetverse.trend.piecewise import (PiecewiseLinearTrend,
+                                          PiecewiseLogisticTrend, TrendModel)
+from prophetverse.utils.frame_to_array import (loc_bottom_series,
+                                               series_to_tensor)
+from prophetverse.utils.multiindex import reindex_time_series
 
-from prophetverse.utils.frame_to_array import (
-    convert_index_to_days_since_epoch,
-    extract_timetensor_from_dataframe,
-    loc_bottom_series,
-    series_to_tensor,
-)
-from prophetverse.models.multivariate_model.multiindex import reindex_time_series
-from prophetverse.utils.logistic import suggest_logistic_rate_and_offset
-from prophetverse.sktime.base import (
-    BaseBayesianForecaster,
-    ExogenousEffectMixin,
-    init_params,
-)
-
-
-from ._expand_column_per_level import (
-    ExpandColumnPerLevel,
-)
-
-from prophetverse.changepoint import (
-    get_changepoint_matrix,
-    get_changepoint_timeindexes,
-)
-
-from prophetverse.models.multivariate_model._model import model
-from prophetverse.effects import LinearEffect, LinearHeterogenousPriorsEffect
-from prophetverse.trend import TrendModel, PiecewiseLinearTrend, PiecewiseLogisticTrend
+from ._expand_column_per_level import ExpandColumnPerLevel
 
 logger = logging.getLogger("sktime-numpyro")
 
@@ -125,11 +106,11 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         mcmc_chains=4,
         inference_method="map",
         optimizer_name="Adam",
-        optimizer_kwargs={"step_size": 1e-4},
+        optimizer_kwargs=None,
         optimizer_steps=100_000,
         noise_scale=0.05,
         correlation_matrix_concentration=1.0,
-        rng_key=random.PRNGKey(24),
+        rng_key=None,
     ):
 
         self.changepoint_interval = changepoint_interval
@@ -156,7 +137,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             exogenous_effects=exogenous_effects,
         )
 
-        self.model = model
+        self.model = multivariate_model
         self._validate_hyperparams()
 
     def _validate_hyperparams(self):
@@ -178,6 +159,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 
+        if self.optimizer_kwargs is None:
+            self.optimizer_kwargs = {"step_size": 1e-4}
+
+        if self.rng_key is None:
+            self.rng_key = random.PRNGKey(24)
+
     def _get_fit_data(self, y, X, fh):
         """
         Prepare the data for the NumPyro model.
@@ -196,7 +183,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.original_y_indexes_ = y.index
         y = self.aggregator_.fit_transform(y)
         self.full_y_indexes_ = y.index
-        
 
         # Hierarchy matrix (S Matrix)
         self.hierarchy_matrix = jnp.array(_get_s_matrix(y).values)
@@ -208,14 +194,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         # Convert inputs to array, including the time index
         y_bottom = loc_bottom_series(y)
         y_bottom_arrays = series_to_tensor(y_bottom)
-        t_arrays = extract_timetensor_from_dataframe(y_bottom)
-
-        # Setup time scale
-        self._set_time_scale(t_arrays)
-        t_scaled = self._time_scaler.scale(t_arrays)
-        # We use a single time array for all series, with shape (n_timepoints, 1)
-        t_scaled = t_scaled[0].reshape((-1, 1))
-        # Changepoints
 
         ## Changepoints and trend
         if self.trend == "linear":
@@ -237,6 +215,11 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                     ),
                 )
             )
+        
+        elif isinstance(self.trend, TrendModel):
+            self.trend_model_ = self.trend
+        else:
+            raise ValueError("trend must be either 'linear', 'logistic' or a TrendModel instance.")
 
         self.trend_model_.initialize(y_bottom)
         fh = y.index.get_level_values(-1).unique()
@@ -283,6 +266,20 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             **self.fit_and_predict_data_,
         )
 
+    def predict_samples(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
+        """Generate samples for the given exogenous variables and forecasting horizon.
+
+        Args:
+            X (pd.DataFrame): Exogenous variables.
+            fh (ForecastingHorizon): Forecasting horizon.
+
+        Returns:
+            np.ndarray: Predicted samples.
+        """
+        samples = super().predict_samples(X=X, fh=fh)
+
+        return self.aggregator_.transform(samples)
+
     def _get_exogenous_matrix_from_X(self, X: pd.DataFrame) -> jnp.ndarray:
         """
         Convert the exogenous variables to a NumPyro matrix.
@@ -297,252 +294,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         X_arrays = series_to_tensor(X_bottom)
 
         return X_arrays
-
-    def _set_time_scale(self, t_arrays):
-        """
-        Setup model parameters and scalers.
-
-        This function has the collateral effect of setting the following attributes:
-        - self._time_scaler
-        - self.max_t
-        - self.min_t
-
-
-        Args:
-            t_arrays (ndarray): Transformed time index.
-
-        Returns:
-            None
-        """
-
-        # Scale time index
-        self._time_scaler = TimeScaler()
-        self._time_scaler.fit(t=t_arrays)
-        t_scaled = self._time_scaler.scale(t=t_arrays)
-
-        # Setting loc and scales for the priors
-        self.max_t = t_scaled.max(axis=1).squeeze()
-        self.min_t = t_scaled.min(axis=1).squeeze()
-
-    @property
-    def _capacity_prior_loc(self):
-        """
-        The prior location of the capacity parameter.
-
-        Returns:
-            float: The prior location of the capacity parameter.
-        """
-
-        val = self.capacity_prior_loc
-        if isinstance(val, Iterable):
-            return jnp.array(val)
-        return jnp.ones(self.n_series) * val
-
-    @property
-    def _capacity_prior_scale(self):
-        """
-        The capacity prior scale
-
-        Returns a float or an array-like with the same shape as the number of series.
-        """
-        val = self.capacity_prior_scale
-        if isinstance(val, Iterable):
-            return jnp.array(val)
-        return jnp.ones(self.n_series) * val
-
-    def _setup_changepoints(self, t_scaled):
-        """
-        Setup changepoint variables and transformer.
-
-        This function has the collateral effect of setting the following attributes:
-        - self._changepoint_ts
-
-        Args:
-            t_arrays (ndarray): Transformed time index.
-
-        Returns:
-            None
-        """
-        changepoint_intervals = to_list_if_scalar(
-            self.changepoint_interval, self.n_series
-        )
-        changepoint_ranges = to_list_if_scalar(
-            self.changepoint_range or -self.changepoint_interval, self.n_series
-        )
-
-        changepoint_ts = []
-        for changepoint_interval, changepoint_range in zip(
-            changepoint_intervals, changepoint_ranges
-        ):
-            changepoint_ts.append(
-                get_changepoint_timeindexes(
-                    t_scaled,
-                    changepoint_interval=changepoint_interval,
-                    changepoint_range=changepoint_range,
-                )
-            )
-
-        self._changepoint_ts = changepoint_ts
-
-    def _get_changepoint_matrix(self, t_scaled):
-        """
-        Get the changepoint matrix. The changepoint matrix has shape (n_series, n_timepoints, total number of changepoints for all series).
-        A mask is applied so that for index i at dim 0, only the changepoints for series i are non-zero at dim -1.
-
-        Args:
-            t_scaled (ndarray): Transformed time index.
-
-        Returns:
-            ndarray: The changepoint matrix.
-        """
-        changepoint_ts = np.concatenate(self._changepoint_ts)
-        changepoint_design_tensor = []
-        changepoint_mask_tensor = []
-        for i, n_changepoints in enumerate(self.n_changepoint_per_series):
-            A = get_changepoint_matrix(t_scaled, changepoint_ts)
-
-            start_idx = sum(self.n_changepoint_per_series[:i])
-            end_idx = start_idx + n_changepoints
-            mask = np.zeros_like(A)
-            mask[:, start_idx:end_idx] = 1
-
-            changepoint_design_tensor.append(A)
-            changepoint_mask_tensor.append(mask)
-
-        changepoint_design_tensor = np.stack(changepoint_design_tensor, axis=0)
-        changepoint_mask_tensor = np.stack(changepoint_mask_tensor, axis=0)
-        return changepoint_design_tensor * changepoint_mask_tensor
-
-    def _get_changepoint_prior_vectors(
-        self,
-        n_changepoint_per_series: List[int],
-        changepoint_prior_scale: float,
-        global_rates: jnp.array,
-    ):
-        """
-
-        Returns the prior vectors for the changepoint coefficients.
-
-        Args:
-            n_changepoint_per_series (List[int]): Number of changepoints for each series.
-            changepoint_prior_scale (float): Scale parameter for the changepoint prior.
-            global_rates (jnp.array): Global rates for each series.
-
-        Returns:
-            None
-        """
-
-        n_series = len(n_changepoint_per_series)
-
-        def zeros_with_first_value(size, first_value):
-            x = jnp.zeros(size)
-            x.at[0].set(first_value)
-            return x
-
-        changepoint_prior_scale_vector = np.concatenate(
-            [
-                np.ones(n_changepoint) * cur_changepoint_prior_scale
-                for n_changepoint, cur_changepoint_prior_scale in zip(
-                    n_changepoint_per_series,
-                    to_list_if_scalar(changepoint_prior_scale, n_series),
-                )
-            ]
-        )
-
-        changepoint_prior_loc_vector = np.concatenate(
-            [
-                zeros_with_first_value(n_changepoint, estimated_global_rate)
-                for n_changepoint, estimated_global_rate in zip(
-                    n_changepoint_per_series, global_rates
-                )
-            ]
-        )
-
-        return jnp.array(changepoint_prior_loc_vector), jnp.array(
-            changepoint_prior_scale_vector
-        )
-
-    def _get_trend_sample_func(
-        self, t_arrays: jnp.ndarray, y_arrays: jnp.ndarray
-    ) -> Callable:
-        """
-
-        Get a function that samples the trend parameters.
-
-        This function may change in the future. Currently, the model function receives a function to get the changepoint coefficients.
-        This function is passed to the model as a partial function, with the changepoint coefficients as a parameter
-
-        Args:
-            t_arrays (jnp.array): array with shape (n_timepoints, 1).
-            y_arrays (jnp.array): array with shape (n_series, n_timepoints, 1).
-
-        Returns:
-            Callable: Function that samples the trend parameters.
-
-        """
-
-        distributions = self._get_trend_prior_distributions(t_arrays, y_arrays)
-
-        def trend_sample_func(distributions):
-
-            return init_params(distributions)
-
-        return functools.partial(trend_sample_func, distributions=distributions)
-
-    def _get_trend_prior_distributions(self, t_arrays, y_arrays):
-
-        distributions = {}
-
-        if self.trend == "linear":
-            global_rates = enforce_array_if_zero_dim(
-                (y_arrays[:, -1].squeeze() - y_arrays[:, 0].squeeze())
-                / (t_arrays[0].squeeze() - t_arrays[-1].squeeze())
-            )
-            offset = y_arrays[:, 0].squeeze() - global_rates * t_arrays[0].squeeze()
-
-            distributions["offset"] = dist.Normal(
-                offset,
-                jnp.array(self.changepoint_prior_scale) * 10,
-            )
-
-        if self.trend == "logistic":
-
-            global_rates, offset = suggest_logistic_rate_and_offset(
-                t=t_arrays.squeeze(),
-                y=y_arrays.squeeze(),
-                capacities=self._capacity_prior_loc,
-            )
-            # We subtract one because it is later added to capacity (inside the model)
-            distributions["capacity"] = dist.TransformedDistribution(
-                dist.HalfNormal(
-                    self._capacity_prior_scale,
-                ),
-                dist.transforms.AffineTransform(
-                    loc=self._capacity_prior_loc, scale=1
-                ),
-            )
-
-            distributions["offset"] = dist.Normal(
-                offset,
-                jnp.array(self.changepoint_prior_scale) * 10,
-            )
-
-        # Trend
-
-        # Changepoints and trend-related distributions
-        changepoint_prior_loc_vector, changepoint_prior_scale_vector = (
-            self._get_changepoint_prior_vectors(
-                n_changepoint_per_series=self.n_changepoint_per_series,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                global_rates=global_rates,
-            )
-        )
-
-        distributions["changepoint_coefficients"] = dist.Laplace(
-            changepoint_prior_loc_vector, changepoint_prior_scale_vector
-        )
-
-        return distributions
 
     def predict_samples(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
         """Generate samples for the given exogenous variables and forecasting horizon.
@@ -600,47 +351,10 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             **self.fit_and_predict_data_,
         )
 
-    def periodindex_to_multiindex(self, periodindex: pd.PeriodIndex) -> pd.MultiIndex:
-        """
-        Convert a PeriodIndex to a MultiIndex.
-
-        Args:
-            periodindex (pd.PeriodIndex): PeriodIndex to convert.
-
-        Returns:
-            pd.MultiIndex: Converted MultiIndex.
-        """
-        if self._y.index.nlevels == 1:
-            return periodindex
-
-        levels = self._y.index.droplevel(-1).unique().tolist()
-        # import Iterable
-        from collections.abc import Iterable
-
-        # Check if base_levels 0 is a iterable, because, if there are more than
-        # one level, the objects are tuples. If there's only one level, the
-        # objects inside levels list are strings. We do that to make it more "uniform"
-        if not isinstance(levels[0], tuple):
-            levels = [(x,) for x in levels]
+    def _filter_series_tuples(self, levels: List[Tuple]) -> List[Tuple]:
 
         bottom_levels = [idx for idx in levels if idx[-1] != "__total"]
-
-        return pd.Index(
-            map(
-                lambda x: (*x[0], x[1]),
-                itertools.product(bottom_levels, periodindex),
-            ),
-            name=self._y.index.names,
-        )
-
-    @property
-    def n_changepoint_per_series(self):
-        """Get the number of changepoints per series.
-
-        Returns:
-            int: Number of changepoints per series.
-        """
-        return [len(cp) for cp in self._changepoint_ts]
+        return bottom_levels
 
     @property
     def n_series(self):
@@ -650,80 +364,3 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             int: Number of series.
         """
         return self.hierarchy_matrix.shape[1]
-
-
-def enforce_array_if_zero_dim(x):
-    """
-    Reshapes the input array `x` to have at least one dimension if it has zero dimensions.
-
-    Args:
-        x (array-like): The input array.
-
-    Returns:
-        array-like: The reshaped array.
-
-    """
-    if x.ndim == 0:
-        return x.reshape(1)
-    return x
-
-
-def to_list_if_scalar(x, size=1):
-    """
-    Converts a scalar value to a list of the same value repeated `size` times.
-
-    Args:
-        x (scalar or array-like): The input value to be converted.
-        size (int, optional): The number of times to repeat the value in the list. Default is 1.
-
-    Returns:
-        list: A list containing the input value repeated `size` times if `x` is a scalar, otherwise returns `x` unchanged.
-    """
-    if np.isscalar(x):
-        return [x] * size
-    return x
-
-
-class TimeScaler:
-
-    def fit(self, t):
-        """
-        Fit the time scaler.
-
-        Parameters:
-            t (ndarray): Time indices for each series.
-
-        Returns:
-            TimeScaler: The fitted TimeScaler object.
-        """
-
-        if t.ndim == 1:
-            t = t.reshape(1, -1)
-        self.t_scale = (t[:, 1:] - t[:, :-1]).flatten().mean()
-        self.t_min = t.min()
-        return self
-
-    def scale(self, t):
-        """
-        Transform the time indices.
-
-        Parameters:
-            t (ndarray): Time indices for each series.
-
-        Returns:
-            ndarray: Transformed time indices.
-        """
-        return (t - self.t_min) / self.t_scale
-
-    def fit_scale(self, t):
-        """
-        Fit the time scaler and transform the time indices.
-
-        Parameters:
-            t (ndarray): Time indices for each series.
-
-        Returns:
-            ndarray: Transformed time indices.
-        """
-        self.fit(t)
-        return self.scale(t)

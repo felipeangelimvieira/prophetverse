@@ -1,16 +1,12 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import jax.numpy as jnp
-from numpyro import distributions as dist
 import pandas as pd
-from prophetverse.effects import (
-    LogEffect,
-    LinearEffect,
-    LinearHeterogenousPriorsEffect,
-    AbstractEffect,
-    additive_effect,
-    multiplicative_effect,
-)
+import pytest
+from numpyro import distributions as dist
+
+from prophetverse.effects import (AbstractEffect, LinearEffect, LogEffect,
+                                  additive_effect, multiplicative_effect)
 
 
 # Mock for numpyro.sample
@@ -31,13 +27,6 @@ def linear_effect():
     return LinearEffect(id="linear_test")
 
 
-@pytest.fixture
-def linear_heterogenous_priors_effect():
-    priors = {"feature1": (dist.Normal, 1, 0.5)}
-    feature_names = pd.Index(["feature1", "feature2"])
-    return LinearHeterogenousPriorsEffect(
-        exogenous_priors=priors, feature_names=feature_names, id="heterogenous_test"
-    )
 
 
 # Testing AbstractEffect instantiation
@@ -68,16 +57,6 @@ def test_linear_effect_compute(mock_numpyro_sample, linear_effect):
     mock_numpyro_sample.assert_called()
 
 
-# Testing LinearHeterogenousPriorsEffect
-def test_linear_heterogeneous_effect_compute(
-    mock_numpyro_sample, linear_heterogenous_priors_effect
-):
-    mock_numpyro_sample.return_value = jnp.array([1.0])
-    trend = jnp.array([[10.0]])
-    data = jnp.array([[1.0, 2.0]])
-    effect = linear_heterogenous_priors_effect.compute_effect(trend, data)
-    assert effect.shape == trend.shape
-    mock_numpyro_sample.assert_called()
 
 
 # Testing Additive and Multiplicative effects

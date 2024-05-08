@@ -1,5 +1,9 @@
 import pandas as pd
 
+__all__ = [
+    "reindex_time_series"
+]
+
 def reindex_time_series(df, new_time_index):
     """
     Reindexes the time index level (-1) of a multi-index DataFrame with a new time index.

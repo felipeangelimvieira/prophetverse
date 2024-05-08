@@ -1,59 +1,16 @@
-import numpyro
-import numpyro.distributions as dist
-from prophetverse.utils.frame_to_array import (
-    convert_index_to_days_since_epoch,
-    series_to_tensor,
-)
-import numpy as np
+from typing import Tuple, Union
 
 import jax.numpy as jnp
-import pandas as pd
-from .changepoint import get_changepoint_matrix, get_changepoint_timeindexes
-from abc import ABC, abstractmethod
 import numpy as np
-from typing import List
+import numpyro
+import numpyro.distributions as dist
+import pandas as pd
 
+from prophetverse.utils.frame_to_array import series_to_tensor
 
-class TrendModel(ABC):
+from .base import TrendModel
 
-    def initialize(self, y: pd.DataFrame):
-        # Set time scale
-        t_days = convert_index_to_days_since_epoch(y.index.get_level_values(-1).unique())
-        self.t_scale = (t_days[1:] - t_days[:-1]).mean()
-        self.t_start = t_days.min() / self.t_scale
-        if y.index.nlevels > 1:
-            self.n_series = y.index.droplevel(-1).nunique()
-        else:
-            self.n_series = 1
-        
-
-    @abstractmethod
-    def prepare_input_data(self, idx: pd.PeriodIndex) -> dict:
-        """
-        Returns a dictionary containing the data needed for the trend model.
-        For example, given t, a possible implementation would return
-        {
-            "changepoint_matrix": jnp.array([[1, 0], [0, 1]]),
-        }
-
-        """
-        ...
-
-    @abstractmethod
-    def compute_trend(self, **kwargs):
-        """
-        Computes
-        """
-        ...
-
-    def _index_to_scaled_timearray(self, idx):
-        t_days = convert_index_to_days_since_epoch(idx)
-        return (t_days) / self.t_scale - self.t_start
-
-    def __call__(self, **kwargs):
-        return self.compute_trend(**kwargs)
-
-
+__all__ = ["PiecewiseLinearTrend", "PiecewiseLogisticTrend"]
 
 class PiecewiseLinearTrend(TrendModel):
 
@@ -73,15 +30,55 @@ class PiecewiseLinearTrend(TrendModel):
         self.squeeze_if_single_series = squeeze_if_single_series
         super().__init__(**kwargs)
 
-
     def initialize(self, y: pd.DataFrame):
+        """
+        Initializes the piecewise trend model.
 
+        Args:
+            y (pd.DataFrame): The input data.
+
+        Returns:
+            None
+        """
         super().initialize(y)
         t_scaled = self._index_to_scaled_timearray(
             y.index.get_level_values(-1).unique()
         )
         self._setup_changepoints(t_scaled)
         self._setup_changepoint_prior_vectors(y)
+
+    def prepare_input_data(self, idx: pd.PeriodIndex) -> dict:
+        """
+        Prepares the input data for the piecewise trend model.
+
+        Args:
+            idx (pd.PeriodIndex): The index of the data.
+
+        Returns:
+            dict: A dictionary containing the prepared input data.
+        """
+        return {"changepoint_matrix": self.get_changepoint_matrix(idx)}
+
+    def get_changepoint_matrix(self, idx: pd.PeriodIndex) -> jnp.ndarray:
+        """
+        Returns the changepoint matrix for the given index.
+
+        Args:
+            idx (pd.PeriodIndex): The index for which to compute the changepoint matrix.
+
+        Returns:
+            jnp.ndarray: The changepoint matrix.
+
+        """
+        t_scaled = self._index_to_scaled_timearray(idx)
+        changepoint_matrix = self._get_multivariate_changepoint_matrix(t_scaled)
+
+        # If only one series, remove the first dimension
+        if changepoint_matrix.shape[0] == 1:
+            if self.squeeze_if_single_series:
+                changepoint_matrix = changepoint_matrix[0]
+
+        return changepoint_matrix
 
     @property
     def n_changepoint_per_series(self):
@@ -101,7 +98,7 @@ class PiecewiseLinearTrend(TrendModel):
         """
         return sum(self.n_changepoint_per_series)
 
-    def _get_multivariate_changepoint_matrix(self, t_scaled):
+    def _get_multivariate_changepoint_matrix(self, t_scaled) -> jnp.ndarray:
         """
         Get the changepoint matrix. The changepoint matrix has shape (n_series, n_timepoints, total number of changepoints for all series).
         A mask is applied so that for index i at dim 0, only the changepoints for series i are non-zero at dim -1.
@@ -116,7 +113,7 @@ class PiecewiseLinearTrend(TrendModel):
         changepoint_design_tensor = []
         changepoint_mask_tensor = []
         for i, n_changepoints in enumerate(self.n_changepoint_per_series):
-            A = get_changepoint_matrix(t_scaled, changepoint_ts)
+            A = _get_changepoint_matrix(t_scaled, changepoint_ts)
 
             start_idx = sum(self.n_changepoint_per_series[:i])
             end_idx = start_idx + n_changepoints
@@ -130,23 +127,23 @@ class PiecewiseLinearTrend(TrendModel):
         changepoint_mask_tensor = np.stack(changepoint_mask_tensor, axis=0)
         return changepoint_design_tensor * changepoint_mask_tensor
 
-    def _setup_changepoints(self, t_scaled):
+    def _setup_changepoints(self, t_scaled) -> None:
         """
-        Setup changepoint variables and transformer.
+        Setup changepoint variables
 
         This function has the collateral effect of setting the following attributes:
         - self._changepoint_ts
 
         Args:
-            t_arrays (ndarray): Transformed time index.
+            t_scaled (ndarray): Transformed time index.
 
         Returns:
             None
         """
-        changepoint_intervals = to_list_if_scalar(
+        changepoint_intervals = _to_list_if_scalar(
             self.changepoint_interval, self.n_series
         )
-        changepoint_ranges = to_list_if_scalar(
+        changepoint_ranges = _to_list_if_scalar(
             self.changepoint_range or -self.changepoint_interval, self.n_series
         )
 
@@ -155,7 +152,7 @@ class PiecewiseLinearTrend(TrendModel):
             changepoint_intervals, changepoint_ranges
         ):
             changepoint_ts.append(
-                get_changepoint_timeindexes(
+                _get_changepoint_timeindexes(
                     t_scaled,
                     changepoint_interval=changepoint_interval,
                     changepoint_range=changepoint_range,
@@ -164,33 +161,35 @@ class PiecewiseLinearTrend(TrendModel):
 
         self._changepoint_ts = changepoint_ts
 
-    def _setup_changepoint_prior_vectors(self, y: pd.DataFrame):
+    def _setup_changepoint_prior_vectors(self, y: pd.DataFrame) -> None:
+        """
+        Sets up the changepoint prior vectors for the model.
+
+        Args:
+            y (pd.DataFrame): The input DataFrame containing the time series data.
+
+        Returns:
+            None
+        """
         self.global_rates, self.offset_loc = self._suggest_global_trend_and_offset(y)
         self._changepoint_prior_loc, self._changepoint_prior_scale = (
             self._get_changepoint_prior_vectors(global_rates=self.global_rates)
         )
 
-    def get_changepoint_matrix(self, idx: pd.PeriodIndex):
-
-        t_scaled = self._index_to_scaled_timearray(idx)
-        changepoint_matrix = self._get_multivariate_changepoint_matrix(t_scaled)
-
-        # If only one series, remove the first dimension
-        if changepoint_matrix.shape[0] == 1:
-            if self.squeeze_if_single_series:
-                changepoint_matrix = changepoint_matrix[0]
-
-        return changepoint_matrix
-
     def _get_changepoint_prior_vectors(
         self,
         global_rates: jnp.array,
-    ):
+    ) -> Tuple[jnp.array, jnp.array]:
         """
-
         Returns the prior vectors for the changepoint coefficients.
+
+        Args:
+            global_rates (jnp.array): The global rates for each series.
+
         Returns:
-            None
+            Tuple[jnp.array, jnp.array]: A tuple containing the changepoint prior
+            location vector and the changepoint prior scale vector.
+
         """
 
         n_series = len(self.n_changepoint_per_series)
@@ -205,7 +204,7 @@ class PiecewiseLinearTrend(TrendModel):
                 np.ones(n_changepoint) * cur_changepoint_prior_scale
                 for n_changepoint, cur_changepoint_prior_scale in zip(
                     self.n_changepoint_per_series,
-                    to_list_if_scalar(self.changepoint_prior_scale, n_series),
+                    _to_list_if_scalar(self.changepoint_prior_scale, n_series),
                 )
             ]
         )
@@ -223,17 +222,24 @@ class PiecewiseLinearTrend(TrendModel):
             changepoint_prior_scale_vector
         )
 
-    def prepare_input_data(self, idx: pd.PeriodIndex) -> dict:
+    def _suggest_global_trend_and_offset(
+        self, y: pd.DataFrame
+    ) -> Tuple[jnp.array, jnp.array]:
+        """
+        Suggests the global trend and offset for the given time series data.
 
-        return {"changepoint_matrix": self.get_changepoint_matrix(idx)}
+        Args:
+            y (pd.DataFrame): The time series data.
 
-    def _suggest_global_trend_and_offset(self, y: pd.DataFrame):
+        Returns:
+            Tuple[jnp.array, jnp.array]: A tuple containing the global trend and offset.
 
+        """
         t = self._index_to_scaled_timearray(y.index.get_level_values(-1).unique())
 
         y_array = series_to_tensor(y)
 
-        global_rate = enforce_array_if_zero_dim(
+        global_rate = _enforce_array_if_zero_dim(
             (y_array[:, -1].squeeze() - y_array[:, 0].squeeze())
             / (t[0].squeeze() - t[-1].squeeze())
         )
@@ -241,14 +247,27 @@ class PiecewiseLinearTrend(TrendModel):
 
         return global_rate, offset_loc
 
-    def compute_trend(self, changepoint_matrix: jnp.ndarray):
+    def compute_trend(self, changepoint_matrix: jnp.ndarray) -> jnp.ndarray:
+        """
+        Computes the trend based on the given changepoint matrix.
 
+        Args:
+            changepoint_matrix (jnp.ndarray): The changepoint matrix.
+
+        Returns:
+            jnp.ndarray: The computed trend.
+
+        Raises:
+            None
+
+        """
         offset = numpyro.sample(
             "offset", dist.Normal(self.offset_loc, self.offset_prior_scale)
         )
 
         changepoint_coefficients = numpyro.sample(
-            "changepoint_coefficients", dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale)
+            "changepoint_coefficients",
+            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
         )
 
         # If multivariate
@@ -258,21 +277,21 @@ class PiecewiseLinearTrend(TrendModel):
 
         trend = (changepoint_matrix) @ changepoint_coefficients + offset
 
-        if trend.ndim == 1:
+        if trend.ndim == 1 or (trend.ndim == 3 and self.n_series == 1):
             trend = trend.reshape((-1, 1))
+
         return trend
 
 
-class PiecewiseLogisticTrend(PiecewiseLinearTrend): 
+class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
     def __init__(
         self,
-        
         changepoint_interval: int,
         changepoint_range: int,
         changepoint_prior_scale: float,
         offset_prior_scale=10,
-        capacity_prior : dist.Distribution = None,
+        capacity_prior: dist.Distribution = None,
         **kwargs
     ):
 
@@ -281,9 +300,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
                 dist.HalfNormal(
                     0.2,
                 ),
-                dist.transforms.AffineTransform(
-                    loc=1.05, scale=1
-                ),
+                dist.transforms.AffineTransform(loc=1.05, scale=1),
             )
 
         self.capacity_prior = capacity_prior
@@ -297,9 +314,22 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             **kwargs
         )
 
-    def _suggest_global_trend_and_offset(self, y: pd.DataFrame):
+    def _suggest_global_trend_and_offset(
+        self, y: pd.DataFrame
+    ) -> Tuple[jnp.array, jnp.array]:
+        """
+        Suggests the global trend and offset for the given time series data.
 
-        t_arrays = self._index_to_scaled_timearray(y.index.get_level_values(-1).unique())
+        Args:
+            y (pd.DataFrame): The input time series data.
+
+        Returns:
+            Tuple[jnp.array, jnp.array]: A tuple containing the suggested global rates and offset.
+        """
+
+        t_arrays = self._index_to_scaled_timearray(
+            y.index.get_level_values(-1).unique()
+        )
         y_arrays = series_to_tensor(y)
 
         if hasattr(self.capacity_prior, "loc"):
@@ -307,30 +337,40 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         else:
             capacity_prior_loc = 1.05
 
-        global_rates, offset = suggest_logistic_rate_and_offset(
-                t=t_arrays.squeeze(),
-                y=y_arrays.squeeze(),
-                capacities=capacity_prior_loc,
+        global_rates, offset = _suggest_logistic_rate_and_offset(
+            t=t_arrays.squeeze(),
+            y=y_arrays.squeeze(),
+            capacities=capacity_prior_loc,
         )
 
         return global_rates, offset
 
-    def compute_trend(self, changepoint_matrix: jnp.ndarray):
+    def compute_trend(self, changepoint_matrix: jnp.ndarray) -> jnp.ndarray:
+        """
+        Computes the trend for the given changepoint matrix.
 
+        Args:
+            changepoint_matrix (jnp.ndarray): The changepoint matrix.
+
+        Returns:
+            jnp.ndarray: The computed trend.
+
+        Raises:
+            None
+
+        """
         with numpyro.plate("series", self.n_series, dim=-3):
-            capacity = numpyro.sample(
-                "capacity", self.capacity_prior
-            )
-        
+            capacity = numpyro.sample("capacity", self.capacity_prior)
+
         trend = super().compute_trend(changepoint_matrix)
         if self.n_series == 1:
             capacity = capacity.squeeze()
-            
+
         trend = capacity / (1 + jnp.exp(-trend))
         return trend
 
 
-def to_list_if_scalar(x, size=1):
+def _to_list_if_scalar(x, size=1):
     """
     Converts a scalar value to a list of the same value repeated `size` times.
 
@@ -346,7 +386,7 @@ def to_list_if_scalar(x, size=1):
     return x
 
 
-def enforce_array_if_zero_dim(x):
+def _enforce_array_if_zero_dim(x):
     """
     Reshapes the input array `x` to have at least one dimension if it has zero dimensions.
 
@@ -362,8 +402,8 @@ def enforce_array_if_zero_dim(x):
     return x
 
 
-def suggest_logistic_rate_and_offset(
-    t: np.ndarray, y: np.ndarray, capacities: float or np.ndarray
+def _suggest_logistic_rate_and_offset(
+    t: np.ndarray, y: np.ndarray, capacities: Union[float, np.ndarray]
 ):
     """
     Suggests the logistic rate and offset based on the given time series data.
@@ -401,8 +441,52 @@ def suggest_logistic_rate_and_offset(
     L0 = np.log(r0 - 1)
     L1 = np.log(r1 - 1)
 
-    
     k = (L1 - L0) / T
-    m = - (L1 + k * t1)
+    m = -(L1 + k * t1)
 
     return k, m
+
+
+def _get_changepoint_matrix(t: jnp.ndarray, changepoint_t: jnp.array) -> jnp.ndarray:
+    """Generates a changepoint matrix based on the time indexes and changepoint time indexes.
+
+    Args:
+        t (jnp.ndarray): array with timepoints of shape (n, 1) preferably
+        changepoint_t (jnp.array): array with changepoint timepoints of shape (n_changepoints,)
+
+    Returns:
+        jnp.ndarray: changepoint matrix - already with discontinuities at changepoits hanlded
+    """
+
+    expanded_ts = jnp.tile(t.reshape((-1, 1)), (1, len(changepoint_t)))
+    A = (expanded_ts >= changepoint_t.reshape((1, -1))).astype(int) * expanded_ts
+    cutoff_ts = changepoint_t.reshape((1, -1))
+    A = jnp.clip(A - cutoff_ts + 1, 0, None)
+    return A
+
+
+def _get_changepoint_timeindexes(
+    t: jnp.ndarray, changepoint_interval: int, changepoint_range: float = 0.90
+) -> jnp.array:
+    """
+    Returns an array of time indexes for changepoints based on the given parameters.
+
+    Args:
+        t (jnp.ndarray): The array of time values.
+        changepoint_interval (int): The interval between changepoints.
+        changepoint_range (float, optional): The range of changepoints. Defaults to 0.90.
+            If greater than 1, it is interpreted as then number of timepoints.
+            If less than zero, it is interpreted as number of timepoints from the end of the time series.
+
+    Returns:
+        jnp.array: An array of time indexes for changepoints.
+    """
+    if changepoint_range < 1 and changepoint_range > 0:
+        max_t = t.max() * changepoint_range
+    elif changepoint_range >= 1:
+        max_t = changepoint_range
+    else:
+        max_t = t.max() + changepoint_range
+
+    changepoint_t = jnp.arange(0, max_t, changepoint_interval)
+    return changepoint_t

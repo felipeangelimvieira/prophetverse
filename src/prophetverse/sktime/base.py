@@ -1,9 +1,12 @@
 import itertools
+import logging
+import re
+from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import jax
 import jax.numpy as jnp
+import numpy as np
 import numpyro
 import numpyro.distributions as dist
 import pandas as pd
@@ -11,13 +14,12 @@ from numpyro import sample
 from numpyro.contrib.control_flow import scan
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
-from collections import OrderedDict
-from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine, InferenceEngine
-from prophetverse.effects import LinearEffect
+
+from prophetverse.effects import AbstractEffect, LinearEffect
+from prophetverse.engine import (InferenceEngine, MAPInferenceEngine,
+                                 MCMCInferenceEngine)
 from prophetverse.utils.frame_to_array import series_to_tensor
-from prophetverse.effects import AbstractEffect
-import re
-import logging
+
 
 class BaseBayesianForecaster(BaseForecaster):
     """
@@ -69,8 +71,8 @@ class BaseBayesianForecaster(BaseForecaster):
     def optimizer(self):
         if self.optimizer_name.startswith('optax'):
 
-            from numpyro.optim import optax_to_numpyro
             import optax
+            from numpyro.optim import optax_to_numpyro
             scheduler = optax.cosine_decay_schedule(**self.optimizer_kwargs)
 
             opt = optax_to_numpyro(
@@ -291,22 +293,24 @@ class BaseBayesianForecaster(BaseForecaster):
         if self._y.index.nlevels == 1:
             return periodindex
 
-        base_levels = self._y.index.droplevel(-1).unique().tolist()
-
-        # import Iterable
-        from collections.abc import Iterable
+        series_id_tuples = self._y.index.droplevel(-1).unique().tolist()
 
         # Check if base_levels 0 is a iterable:
-        if not isinstance(base_levels[0], tuple):
-            base_levels = [(x,) for x in base_levels]
+        if not isinstance(series_id_tuples[0], tuple):
+            series_id_tuples = [(x,) for x in series_id_tuples]
+
+        series_id_tuples = self._filter_series_tuples(series_id_tuples)
 
         return pd.Index(
             map(
                 lambda x: (*x[0], x[1]),
-                itertools.product(base_levels, periodindex),
+                itertools.product(series_id_tuples, periodindex),
             ),
             name=self._y.index.names,
         )
+
+    def _filter_series_tuples(self, levels : List[Tuple])-> List[Tuple]:
+        return levels
 
     def fh_to_index(self, fh: ForecastingHorizon, y: pd.DataFrame = None):
         """
@@ -334,7 +338,6 @@ class BaseBayesianForecaster(BaseForecaster):
 
     def plot_trace(self, *, figsize=(15,25), compact=True, var_names=None, **kwargs):
         import arviz as az
-        
 
         if var_names is None:
             var_names = self.var_names
@@ -350,31 +353,6 @@ class BaseBayesianForecaster(BaseForecaster):
     @property
     def site_names(self) -> list[Any]:
         return list(self.posterior_samples_.keys())
-
-
-def init_params(distributions) -> dict:
-    """
-    Initializes the model parameters.
-    """
-
-    params = {}
-
-    for coefficient_name, distribution in distributions.items():
-
-        if not isinstance(distribution, OrderedDict):
-            params[coefficient_name] = numpyro.sample(coefficient_name, distribution)
-        else:
-            coefficients = []
-            for (
-                inner_coefficient_name,
-                coefficient_distribution,
-            ) in distribution.items():
-                coefficients.append(
-                    numpyro.sample(inner_coefficient_name, coefficient_distribution)
-                )
-            params[coefficient_name] = jnp.concatenate(coefficients, axis=0)
-
-    return params
 
 
 class ExogenousEffectMixin:

@@ -1,9 +1,11 @@
 from typing import Callable
-import numpyro
-from numpyro.infer.initialization import init_to_mean
-from numpyro.infer import SVI, TraceEnum_ELBO, init_to_value, Trace_ELBO, MCMC, NUTS, Predictive
-from numpyro.infer.autoguide import AutoDelta
+
 import jax
+import numpyro
+from numpyro.infer import (MCMC, NUTS, SVI, Predictive, Trace_ELBO,
+                           TraceEnum_ELBO, init_to_value)
+from numpyro.infer.autoguide import AutoDelta
+from numpyro.infer.initialization import init_to_mean
 
 
 class InferenceEngine:
@@ -191,8 +193,8 @@ class MCMCInferenceEngine(InferenceEngine):
             Dict[str, np.ndarray]: The predictive samples.
 
         """
-        sites = set(self.posterior_samples_.keys()).union(["obs"])
-        predictive = Predictive(self.model, self.posterior_samples_, return_sites=sites)
+        
+        predictive = Predictive(self.model, self.posterior_samples_)
 
         self.samples_predictive_ = predictive(self.rng_key, **kwargs)
         self.samples_ = self.mcmc_.get_samples()

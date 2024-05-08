@@ -88,7 +88,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=100_000,
+        optimizer_steps=1_000,
         exogenous_effects=None,
         default_effect=None,
         rng_key=None,
@@ -142,11 +142,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 
-        if self.optimizer_kwargs is None:
-            self.optimizer_kwargs = {"step_size": 1e-4}
-
-        if self.rng_key is None:
-            self.rng_key = random.PRNGKey(24)
+    
 
     def _get_fit_data(self, y, X, fh):
         """
@@ -160,6 +156,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             dict: Dictionary of data for the Numpyro model.
         """
+
         fh = y.index.get_level_values(-1).unique()
 
         ## Changepoints and trend

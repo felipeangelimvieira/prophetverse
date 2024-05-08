@@ -100,14 +100,14 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         feature_transformer: BaseTransformer = None,
         exogenous_effects=None,
         default_effect=None,
-        shared_features=[],
+        shared_features=None,
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=100_000,
+        optimizer_steps=1_000,
         noise_scale=0.05,
         correlation_matrix_concentration=1.0,
         rng_key=None,
@@ -159,12 +159,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 
-        if self.optimizer_kwargs is None:
-            self.optimizer_kwargs = {"step_size": 1e-4}
-
-        if self.rng_key is None:
-            self.rng_key = random.PRNGKey(24)
-
+    
     def _get_fit_data(self, y, X, fh):
         """
         Prepare the data for the NumPyro model.
@@ -178,6 +173,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             dict: A dictionary containing the model data.
         """
 
+        
         # Handling series without __total indexes
         self.aggregator_ = Aggregator()
         self.original_y_indexes_ = y.index
@@ -215,7 +211,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                     ),
                 )
             )
-        
+
         elif isinstance(self.trend, TrendModel):
             self.trend_model_ = self.trend
         else:
@@ -236,9 +232,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self._has_exogenous_variables = X is not None and not X.columns.empty
 
         if self._has_exogenous_variables:
-
+            shared_features = self.shared_features
+            if shared_features is None:
+                shared_features = []
+                
             self.expand_columns_transformer_ = ExpandColumnPerLevel(
-                X.columns.difference(self.shared_features)
+                X.columns.difference(shared_features)
             ).fit(X)
             X = X.loc[y.index]
             X = self.expand_columns_transformer_.transform(X)

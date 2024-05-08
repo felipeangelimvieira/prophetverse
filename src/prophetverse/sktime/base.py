@@ -31,7 +31,7 @@ class BaseBayesianForecaster(BaseForecaster):
         num_samples (int): Number of MCMC samples to draw.
         num_warmup (int): Number of warmup steps for MCMC.
         num_chains (int): Number of MCMC chains to run.
-        
+
         *args: Additional positional arguments.
         **kwargs: Additional keyword arguments.
     """
@@ -65,26 +65,38 @@ class BaseBayesianForecaster(BaseForecaster):
         self.optimizer_kwargs = optimizer_kwargs
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
-        self.predictive_samples_ = None
-
+        
     @property
     def optimizer(self):
-        if self.optimizer_name.startswith('optax'):
+        optimizer_kwargs = self.optimizer_kwargs
+        optimizer_name = self.optimizer_name
+        rng_key = self.rng_key
+
+        if rng_key is None:
+            rng_key = jax.random.PRNGKey(24)
+
+        if optimizer_kwargs is None:
+            optimizer_kwargs = {"step_size": 1e-4}
+        if optimizer_name is None:
+            optimizer_name = "Adam"
+
+        if optimizer_name.startswith("optax"):
 
             import optax
             from numpyro.optim import optax_to_numpyro
-            scheduler = optax.cosine_decay_schedule(**self.optimizer_kwargs)
+
+            scheduler = optax.cosine_decay_schedule(**optimizer_kwargs)
 
             opt = optax_to_numpyro(
                 optax.chain(
-                    
                     optax.scale_by_adam(),
                     optax.scale_by_schedule(scheduler),
-                    optax.scale(-1.0))
+                    optax.scale(-1.0),
+                )
             )
             return opt
 
-        return getattr(numpyro.optim, self.optimizer_name)(**self.optimizer_kwargs)
+        return getattr(numpyro.optim, optimizer_name)(**optimizer_kwargs)
 
     def _get_fit_data(self, y, X, fh) -> Dict[str, Any]:
         """
@@ -146,18 +158,28 @@ class BaseBayesianForecaster(BaseForecaster):
         """
 
         self._set_y_scales(y)
-        y  = self._scale_y(y)
+        y = self._scale_y(y)
 
         data = self._get_fit_data(y, X, fh)
 
         self.distributions_ = data.get("distributions", {})
 
+        rng_key = self.rng_key
+        if rng_key is None:
+            rng_key = jax.random.PRNGKey(24)
+
         if self.inference_method == "mcmc":
-            self.inference_engine_ = MCMCInferenceEngine(self.model, num_samples=self.mcmc_samples, num_warmup=self.mcmc_warmup, num_chains=self.mcmc_chains, rng_key=self.rng_key)
+            self.inference_engine_ = MCMCInferenceEngine(
+                self.model,
+                num_samples=self.mcmc_samples,
+                num_warmup=self.mcmc_warmup,
+                num_chains=self.mcmc_chains,
+                rng_key=rng_key,
+            )
         elif self.inference_method == "map":
             self.inference_engine_ = MAPInferenceEngine(
                 self.model,
-                rng_key=self.rng_key,
+                rng_key=rng_key,
                 optimizer=self.optimizer,
                 num_steps=self.optimizer_steps,
             )
@@ -181,7 +203,6 @@ class BaseBayesianForecaster(BaseForecaster):
             pd.DataFrame: Point forecasts for the forecasting horizon.
         """
         predictive_samples = self.predict_samples(fh=fh, X=X)
-        self.forecast_samples_ = predictive_samples
         y_pred = predictive_samples.mean(axis=1).to_frame(self._y.columns[0])
 
         return y_pred
@@ -193,7 +214,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         fh_as_index = self.fh_to_index(fh)
 
-        predict_data = self._get_predict_data(X=X,fh= fh)
+        predict_data = self._get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
         out = pd.DataFrame(
@@ -205,11 +226,7 @@ class BaseBayesianForecaster(BaseForecaster):
         ).sort_index()
         return self._inv_scale_y(out)
 
-    def predict_samples(
-        self,
-        fh,
-        X=None
-):
+    def predict_samples(self, fh, X=None):
         """
         Generate samples from the posterior predictive distribution.
 
@@ -224,10 +241,10 @@ class BaseBayesianForecaster(BaseForecaster):
 
         predict_data = self._get_predict_data(X=X, fh=fh)
 
-        self.predictive_samples_ = self.inference_engine_.predict(**predict_data)
+        predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
-        observation_site = self.predictive_samples_["obs"]
-        n_samples = self.predictive_samples_["obs"].shape[0]
+        observation_site = predictive_samples_["obs"]
+        n_samples = predictive_samples_["obs"].shape[0]
         preds = pd.DataFrame(
             data=observation_site.T.reshape((-1, n_samples)),
             columns=list(range(n_samples)),
@@ -240,7 +257,9 @@ class BaseBayesianForecaster(BaseForecaster):
         if y.index.nlevels == 1:
             self._scale = y.abs().max().values[0]
         else:
-            self._scale = y.groupby(level=list(range(y.index.nlevels - 1))).agg(lambda x: np.abs(x).max())
+            self._scale = y.groupby(level=list(range(y.index.nlevels - 1))).agg(
+                lambda x: np.abs(x).max()
+            )
 
     def _scale_y(self, y):
         if y.index.nlevels == 1:
@@ -309,7 +328,7 @@ class BaseBayesianForecaster(BaseForecaster):
             name=self._y.index.names,
         )
 
-    def _filter_series_tuples(self, levels : List[Tuple])-> List[Tuple]:
+    def _filter_series_tuples(self, levels: List[Tuple]) -> List[Tuple]:
         return levels
 
     def fh_to_index(self, fh: ForecastingHorizon, y: pd.DataFrame = None):
@@ -336,7 +355,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         return list(self.distributions_.keys())
 
-    def plot_trace(self, *, figsize=(15,25), compact=True, var_names=None, **kwargs):
+    def plot_trace(self, *, figsize=(15, 25), compact=True, var_names=None, **kwargs):
         import arviz as az
 
         if var_names is None:
@@ -357,30 +376,27 @@ class BaseBayesianForecaster(BaseForecaster):
 
 class ExogenousEffectMixin:
 
-    def __init__(self,
-                 
-                 exogenous_effects: List[AbstractEffect],
-                 default_effect = None,
-                 **kwargs):
+    def __init__(
+        self, exogenous_effects: List[AbstractEffect], default_effect=None, **kwargs
+    ):
 
-        
         self.exogenous_effects = exogenous_effects
         self.default_effect = default_effect
         super().__init__(**kwargs)
-        
-        if self.default_effect is None:
-            self.default_effect = LinearEffect(
-                id="default_exog",
-                prior=(dist.Normal, 0, 1),
-                effect_mode="additive",
-            )
 
     def _set_custom_effects(self, feature_names):
 
         effects_and_columns = {}
         columns_with_effects = set()
         exogenous_effects = self.exogenous_effects or {}
-        
+
+        default_effect = self.default_effect
+        if default_effect is None:
+            default_effect = LinearEffect(
+                id="default_exog",
+                prior=(dist.Normal, 0, 1),
+                effect_mode="additive",
+            )
 
         for effect in exogenous_effects:
 
@@ -415,7 +431,7 @@ class ExogenousEffectMixin:
                 {
                     "default": (
                         features_without_effects,
-                        self.default_effect,
+                        default_effect,
                     )
                 }
             )
@@ -429,16 +445,18 @@ class ExogenousEffectMixin:
             # If no columns are found, skip
             if len(columns) == 0:
                 continue
-            
+
             if X.index.nlevels == 1:
                 array = jnp.array(X[columns].values)
             else:
                 array = series_to_tensor(X[columns])
 
-            out[effect_name] = array 
+            out[effect_name] = array
 
         return out
 
     @property
     def exogenous_effect_dict(self):
-        return {k: v[1] for k, v in self._exogenous_effects_and_columns.items() if len(v[0])}
+        return {
+            k: v[1] for k, v in self._exogenous_effects_and_columns.items() if len(v[0])
+        }

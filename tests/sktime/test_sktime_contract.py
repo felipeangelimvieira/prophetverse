@@ -1,7 +1,6 @@
 """Test the sktime contract for Prophet and HierarchicalProphet."""
 
 import pytest
-from skbase.utils.deep_equals._deep_equals import deep_equals_custom
 from sktime.utils.estimator_checks import check_estimator
 
 from prophetverse.sktime import HierarchicalProphet, Prophet
@@ -13,5 +12,3 @@ PROPHET_MODELS = [Prophet, HierarchicalProphet]
 def test_sktime_contract(model):
     """Test the sktime contract for Prophet and HierarchicalProphet."""
     check_estimator(model, raise_exceptions=True)
-    
-    

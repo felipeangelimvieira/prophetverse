@@ -95,6 +95,11 @@ def convert_index_to_days_since_epoch(idx: pd.Index) -> np.array:
     np.ndarray: The converted array of days since epoch.
     """
     t = idx
+    
+    if not (isinstance(t, pd.PeriodIndex) or isinstance(t, pd.DatetimeIndex)):
+        return t.values
+    
+    
     if isinstance(t, pd.PeriodIndex):
         t = t.to_timestamp()
 

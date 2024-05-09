@@ -72,13 +72,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         "ignores-exogeneous-X": False,  # does estimator ignore the exogeneous X?
         "handles-missing-data": False,  # can estimator handle missing data?
         "y_inner_mtype": [
-            "pd.Series",
-            "pd_multiindex_hier",
             "pd-multiindex",
+            "pd_multiindex_hier",
         ],
         "X_inner_mtype": [
-            "pd_multiindex_hier",
             "pd-multiindex",
+            "pd_multiindex_hier",
         ],  # which types do _fit, _predict, assume for X?
         "requires-fh-in-fit": False,  # is forecasting horizon already required in fit?
         "X-y-must-have-same-index": False,  # can estimator handle different X/y index?
@@ -159,7 +158,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
 
-    
     def _get_fit_data(self, y, X, fh):
         """
         Prepare the data for the NumPyro model.
@@ -173,7 +171,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             dict: A dictionary containing the model data.
         """
 
-        
         # Handling series without __total indexes
         self.aggregator_ = Aggregator()
         self.original_y_indexes_ = y.index
@@ -235,7 +232,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             shared_features = self.shared_features
             if shared_features is None:
                 shared_features = []
-                
+
             self.expand_columns_transformer_ = ExpandColumnPerLevel(
                 X.columns.difference(shared_features)
             ).fit(X)

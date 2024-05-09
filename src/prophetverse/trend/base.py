@@ -1,11 +1,11 @@
 
 
-from prophetverse.utils.frame_to_array import (
-    convert_index_to_days_since_epoch,
-    
-)
-import pandas as pd
 from abc import ABC, abstractmethod
+
+import pandas as pd
+
+from prophetverse.utils.frame_to_array import convert_index_to_days_since_epoch
+
 
 class TrendModel(ABC):
     """
@@ -79,17 +79,18 @@ class TrendModel(ABC):
         ...
 
     def _index_to_scaled_timearray(self, idx):
-            """
-            Converts the index to a scaled time array.
+        """
+        Converts the index to a scaled time array.
 
-            Args:
-                idx (int): The index to be converted.
+        Args:
+            idx (int): The index to be converted.
 
-            Returns:
-                float: The scaled time array value.
-            """
-            t_days = convert_index_to_days_since_epoch(idx)
-            return (t_days) / self.t_scale - self.t_start
+        Returns:
+            float: The scaled time array value.
+        """
+        
+        t_days = convert_index_to_days_since_epoch(idx)
+        return (t_days) / self.t_scale - self.t_start
 
     def __call__(self, **kwargs):
         return self.compute_trend(**kwargs)

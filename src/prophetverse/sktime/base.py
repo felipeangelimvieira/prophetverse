@@ -39,6 +39,7 @@ class BaseBayesianForecaster(BaseForecaster):
     _tags = {
         "capability:pred_int": True,
         "capability:pred_int:insample": True,
+        "enforce_index_type": [pd.Period, pd.DatetimeIndex],
     }
 
     def __init__(
@@ -66,7 +67,7 @@ class BaseBayesianForecaster(BaseForecaster):
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
         
-    @property
+    
     def optimizer(self):
         optimizer_kwargs = self.optimizer_kwargs
         optimizer_name = self.optimizer_name
@@ -180,7 +181,7 @@ class BaseBayesianForecaster(BaseForecaster):
             self.inference_engine_ = MAPInferenceEngine(
                 self.model,
                 rng_key=rng_key,
-                optimizer=self.optimizer,
+                optimizer_factory=self.optimizer,
                 num_steps=self.optimizer_steps,
             )
         else:

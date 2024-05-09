@@ -70,15 +70,18 @@ class MAPInferenceEngine(InferenceEngine):
     def __init__(
         self,
         model: Callable,
-        optimizer: numpyro.optim._NumPyroOptim = None,
+        optimizer_factory: numpyro.optim._NumPyroOptim = None,
         num_steps=10000,
         rng_key=None,
     ):
-        if optimizer is None:
-            optimizer = numpyro.optim.Adam(step_size=0.001)
-        self.optimizer = optimizer
+        if optimizer_factory is None:
+            optimizer_factory = self.default_optimizer_factory
+        self.optimizer_factory = optimizer_factory
         self.num_steps = num_steps
         super().__init__(model, rng_key)
+
+    def default_optimizer_factory(self):
+        return numpyro.optim.Adam(step_size=0.001)
 
     def infer(self, **kwargs):
         """
@@ -91,8 +94,8 @@ class MAPInferenceEngine(InferenceEngine):
             self: The updated MAPInferenceEngine object.
         """
         self.guide_ = AutoDelta(self.model, init_loc_fn=init_to_mean())
-        self.svi_ = SVI(self.model, self.guide_, self.optimizer, loss=Trace_ELBO())
-        self.run_results_ = self.svi_.run(
+        svi_ = SVI(self.model, self.guide_, self.optimizer_factory(), loss=Trace_ELBO())
+        self.run_results_ = svi_.run(
             rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
         )
         self.posterior_samples_ = self.guide_.sample_posterior(self.rng_key, params=self.run_results_.params, **kwargs)

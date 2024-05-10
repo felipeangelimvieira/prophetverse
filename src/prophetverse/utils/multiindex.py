@@ -15,9 +15,9 @@ def reindex_time_series(df, new_time_index):
     Returns:
     pd.DataFrame: A DataFrame with the updated time index.
     """
-    # Ensure the input DataFrame has a multi-index
-    if not isinstance(df.index, pd.MultiIndex):
-        raise ValueError("DataFrame must have a multi-level index")
+    
+    if df.index.nlevels == 1:
+        return df.reindex(new_time_index)
 
     # Extract the current indices except for the time index
     levels = df.index.levels[:-1]

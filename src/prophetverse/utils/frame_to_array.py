@@ -66,6 +66,9 @@ def loc_bottom_series(y):
     Returns:
     pd.DataFrame: The bottom series.
     """
+    
+    if y.index.nlevels == 1:
+        return y
     return get_multiindex_loc(y, get_bottom_series_idx(y))
 
 

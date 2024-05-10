@@ -161,6 +161,7 @@ class BaseBayesianForecaster(BaseForecaster):
         self._set_y_scales(y)
         y = self._scale_y(y)
 
+        self.internal_y_indexes_ = y.index
         data = self._get_fit_data(y, X, fh)
 
         self.distributions_ = data.get("distributions", {})
@@ -313,7 +314,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if self._y.index.nlevels == 1:
             return periodindex
 
-        series_id_tuples = self._y.index.droplevel(-1).unique().tolist()
+        series_id_tuples = self.internal_y_indexes_.droplevel(-1).unique().tolist()
 
         # Check if base_levels 0 is a iterable:
         if not isinstance(series_id_tuples[0], tuple):
@@ -326,7 +327,7 @@ class BaseBayesianForecaster(BaseForecaster):
                 lambda x: (*x[0], x[1]),
                 itertools.product(series_id_tuples, periodindex),
             ),
-            name=self._y.index.names,
+            name=self.internal_y_indexes_.names,
         )
 
     def _filter_series_tuples(self, levels: List[Tuple]) -> List[Tuple]:

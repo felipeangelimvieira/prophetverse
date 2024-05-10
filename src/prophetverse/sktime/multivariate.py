@@ -72,10 +72,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         "ignores-exogeneous-X": False,  # does estimator ignore the exogeneous X?
         "handles-missing-data": False,  # can estimator handle missing data?
         "y_inner_mtype": [
+            'pd.DataFrame',
             "pd-multiindex",
             "pd_multiindex_hier",
         ],
         "X_inner_mtype": [
+            'pd.DataFrame',
             "pd-multiindex",
             "pd_multiindex_hier",
         ],  # which types do _fit, _predict, assume for X?
@@ -91,7 +93,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
     def __init__(
         self,
         changepoint_interval=25,
-        changepoint_range=None,
+        changepoint_range=0.8,
         changepoint_prior_scale=0.1,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
@@ -175,14 +177,10 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.aggregator_ = Aggregator()
         self.original_y_indexes_ = y.index
         y = self.aggregator_.fit_transform(y)
-        self.full_y_indexes_ = y.index
-
-        # Hierarchy matrix (S Matrix)
-        self.hierarchy_matrix = jnp.array(_get_s_matrix(y).values)
 
         # Updating internal _y of sktime because BaseBayesianForecaster uses it to convert
         # Forecast Horizon into multiindex correcly
-        self._y = y
+        self.internal_y_indexes_ = y.index
 
         # Convert inputs to array, including the time index
         y_bottom = loc_bottom_series(y)
@@ -194,6 +192,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
+                squeeze_if_single_series=False,
             )
 
         elif self.trend == "logistic":
@@ -206,7 +205,8 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                     dist.transforms.AffineTransform(
                         loc=self.capacity_prior_loc, scale=1
                     ),
-                )
+                ),
+                squeeze_if_single_series=False,
             )
 
         elif isinstance(self.trend, TrendModel):
@@ -234,9 +234,9 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                 shared_features = []
 
             self.expand_columns_transformer_ = ExpandColumnPerLevel(
-                X.columns.difference(shared_features)
+                X.columns.difference(shared_features).to_list()
             ).fit(X)
-            X = X.loc[y.index]
+            X = X.loc[y_bottom.index]
             X = self.expand_columns_transformer_.transform(X)
 
             self._set_custom_effects(feature_names=X.columns)
@@ -252,6 +252,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             "exogenous_effects": self.exogenous_effect_dict,
             "correlation_matrix_concentration": self.correlation_matrix_concentration,
             "noise_scale": self.noise_scale,
+            "is_single_series" : self.n_series == 1
         }
 
         return dict(
@@ -317,7 +318,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         """
 
         fh_dates = fh.to_absolute(
-            cutoff=self.full_y_indexes_.get_level_values(-1).max()
+            cutoff=self.internal_y_indexes_.get_level_values(-1).max()
         )
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
@@ -333,6 +334,8 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                 X = self.aggregator_.transform(X)
 
             X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
+
+            assert X.index.get_level_values(-1).nunique() == fh_as_index.nunique(), "Missing exogenous variables for some series or dates."
             if self.feature_transformer is not None:
                 X = self.feature_transformer.transform(X)
             X = self.expand_columns_transformer_.transform(X)
@@ -349,6 +352,10 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
 
     def _filter_series_tuples(self, levels: List[Tuple]) -> List[Tuple]:
 
+        # Make it a tuple for consistency
+        if not isinstance(levels[0], (tuple, list)):
+            levels = [(idx,) for idx in levels]
+
         bottom_levels = [idx for idx in levels if idx[-1] != "__total"]
         return bottom_levels
 
@@ -359,4 +366,6 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             int: Number of series.
         """
-        return self.hierarchy_matrix.shape[1]
+        if self.internal_y_indexes_.nlevels == 1:
+            return 1
+        return len(self._filter_series_tuples(self.internal_y_indexes_.droplevel(-1).unique().tolist()))

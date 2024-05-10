@@ -56,7 +56,7 @@ class AbstractEffect(ABC):
         """
         data = {}
         for effect in effects:
-            data[effect.id] = X[effect.match_columns(X)]
+            data[effect.id] = X[effect.match_columns(X.columns)]
         return data
 
     def sample(self, name : str, *args, **kwargs):

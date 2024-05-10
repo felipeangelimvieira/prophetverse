@@ -16,6 +16,7 @@ def multivariate_model(
     exogenous_effects: Dict[str, AbstractEffect] = None,
     noise_scale=0.05,
     correlation_matrix_concentration=1.0,
+    is_single_series=False,
 ):
     """
     Defines the Numpyro multivariate model.
@@ -56,7 +57,7 @@ def multivariate_model(
     if y is not None:
         y = y.squeeze(-1).T
 
-    if correlation_matrix_concentration is None:
+    if is_single_series:
 
         with numpyro.plate("time", mean.shape[-1], dim=-2):
             numpyro.sample(

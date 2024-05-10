@@ -68,7 +68,7 @@ class PiecewiseLinearTrend(TrendModel):
 
         Returns:
             jnp.ndarray: The changepoint matrix.
-
+f
         """
         t_scaled = self._index_to_scaled_timearray(idx)
         changepoint_matrix = self._get_multivariate_changepoint_matrix(t_scaled)
@@ -144,7 +144,7 @@ class PiecewiseLinearTrend(TrendModel):
             self.changepoint_interval, self.n_series
         )
         changepoint_ranges = _to_list_if_scalar(
-            self.changepoint_range or -self.changepoint_interval, self.n_series
+            self.changepoint_range, self.n_series
         )
 
         changepoint_ts = []
@@ -158,6 +158,11 @@ class PiecewiseLinearTrend(TrendModel):
                     changepoint_range=changepoint_range,
                 )
             )
+            
+            if len(changepoint_ts[-1]) == 0:
+                raise ValueError(
+                    f"No changepoints were generated. Try increasing the changing the changepoint_range. There are {len(t_scaled)} timepoints in the series, changepoint_range is {changepoint_range} and changepoint_interval is {changepoint_interval}.")
+                
 
         self._changepoint_ts = changepoint_ts
 
@@ -277,7 +282,7 @@ class PiecewiseLinearTrend(TrendModel):
 
         trend = (changepoint_matrix) @ changepoint_coefficients + offset
 
-        if trend.ndim == 1 or (trend.ndim == 3 and self.n_series == 1):
+        if trend.ndim == 1 or (trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series):
             trend = trend.reshape((-1, 1))
 
         return trend
@@ -310,7 +315,6 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             changepoint_range,
             changepoint_prior_scale,
             offset_prior_scale=offset_prior_scale,
-            squeeze_if_single_series=False,
             **kwargs
         )
 

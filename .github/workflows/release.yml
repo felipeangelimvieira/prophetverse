@@ -20,32 +20,31 @@ jobs:
         run: pip install poetry
 
       - name: Extract tag version
-        id: get_tag_version
-        run: echo "::set-output name=tag_version::${GITHUB_REF#refs/tags/v}"
+        run: echo "TAG_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
       - name: Extract tag version without pre-release identifiers
-        id: get_tag_version_clean
         run: |
-          # This extracts the version number and removes any pre-release identifiers like '-rc1'
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          CLEAN_TAG_VERSION="${TAG_VERSION%%-*}"
-          echo "::set-output name=clean_tag_version::$CLEAN_TAG_VERSION"
+          CLEAN_TAG_VERSION=$(echo $TAG_VERSION | awk -F- '{print $1}')
+          echo $CLEAN_TAG_VERSION
+          echo "CLEAN_TAG_VERSION=$CLEAN_TAG_VERSION" >> $GITHUB_ENV
 
       - name: Get current package version
-        id: get_package_version
-        run: echo "::set-output name=package_version::$(poetry version --short)"
+        run: |
+          PACKAGE_VERSION=$(poetry version --short)
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
       - name: Verify versions match
         run: |
-          if [ "${{ steps.get_tag_version.outputs.clean_tag_version }}" != "${{ steps.get_package_version.outputs.package_version }}" ]; then
+          if [ "$CLEAN_TAG_VERSION" != "$PACKAGE_VERSION" ]; then
             echo "Error: Tag version does not match the pyproject.toml version"
             exit 1
           fi
 
       - name: Set version to match the release tag
         run: |
-          echo "Setting package version to ${{ steps.get_tag_version.outputs.clean_tag_version }}"
-          poetry version "${{ steps.get_tag_version.outputs.clean_tag_version }}""
+          echo "Setting package version to $CLEAN_TAG_VERSION"
+          poetry version "$CLEAN_TAG_VERSION"
 
       - name: Publish to PyPI
         env:

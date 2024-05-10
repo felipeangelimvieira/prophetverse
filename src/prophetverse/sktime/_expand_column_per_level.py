@@ -40,18 +40,25 @@ class ExpandColumnPerLevel(BaseTransformer):
         Returns:
         - self (ExpandColumnPerLevel): The fitted transformer object.
         """
-        regex_patterns = [re.compile(pattern) for pattern in self.columns_regex]
+        regex_patterns = [re.compile(str(pattern)) for pattern in self.columns_regex]
         self.matched_columns_ = set(
             [
                 col
                 for col in X.columns
                 for pattern in regex_patterns
-                if pattern.match(col)
+                if pattern.match(str(col))
             ]
         )
 
         self.new_columns_ = {}
         # Ensure identifiers are tuples
+        if X.index.nlevels == 1:
+            self.skip_transform_ = True
+            self.series_identifiers_ = None
+            self.new_columns_ = {col: col for col in self.matched_columns_}
+            return self 
+        
+        self.skip_transform_ = False
         self.series_identifiers_ = [
             idx if isinstance(idx, tuple) else (idx,)
             for idx in X.index.droplevel(-1).unique()
@@ -86,6 +93,9 @@ class ExpandColumnPerLevel(BaseTransformer):
         Returns:
         - X_transformed (pd.DataFrame): The transformed data with expanded columns.
         """
+        if self.skip_transform_:
+            return X
+        
         if not isinstance(X.index, pd.MultiIndex):
             raise ValueError("Input must have a multi-level index")
         X_original = X.copy()

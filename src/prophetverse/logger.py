@@ -1,3 +1,3 @@
 import logging
 
-logger = logging.getLogger("hierarchical_prophet")
+logger = logging.getLogger("prophetverse")

@@ -125,8 +125,9 @@ def univariate_model(
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2) as time_plate:
-        numpyro.sample(
+        s = numpyro.sample(
             "obs",
             dist.Normal(mean.reshape((-1, 1)), noise_scale),
             obs=y,
         )
+        s

@@ -1,9 +1,11 @@
 from typing import Callable
-import numpyro
-from numpyro.infer.initialization import init_to_mean
-from numpyro.infer import SVI, TraceEnum_ELBO, init_to_value, Trace_ELBO, MCMC, NUTS, Predictive
-from numpyro.infer.autoguide import AutoDelta
+
 import jax
+import numpyro
+from numpyro.infer import (MCMC, NUTS, SVI, Predictive, Trace_ELBO,
+                           TraceEnum_ELBO, init_to_value)
+from numpyro.infer.autoguide import AutoDelta
+from numpyro.infer.initialization import init_to_mean
 
 
 class InferenceEngine:
@@ -68,15 +70,18 @@ class MAPInferenceEngine(InferenceEngine):
     def __init__(
         self,
         model: Callable,
-        optimizer: numpyro.optim._NumPyroOptim = None,
+        optimizer_factory: numpyro.optim._NumPyroOptim = None,
         num_steps=10000,
         rng_key=None,
     ):
-        if optimizer is None:
-            optimizer = numpyro.optim.Adam(step_size=0.001)
-        self.optimizer = optimizer
+        if optimizer_factory is None:
+            optimizer_factory = self.default_optimizer_factory
+        self.optimizer_factory = optimizer_factory
         self.num_steps = num_steps
         super().__init__(model, rng_key)
+
+    def default_optimizer_factory(self):
+        return numpyro.optim.Adam(step_size=0.001)
 
     def infer(self, **kwargs):
         """
@@ -89,8 +94,8 @@ class MAPInferenceEngine(InferenceEngine):
             self: The updated MAPInferenceEngine object.
         """
         self.guide_ = AutoDelta(self.model, init_loc_fn=init_to_mean())
-        self.svi_ = SVI(self.model, self.guide_, self.optimizer, loss=Trace_ELBO())
-        self.run_results_ = self.svi_.run(
+        svi_ = SVI(self.model, self.guide_, self.optimizer_factory(), loss=Trace_ELBO())
+        self.run_results_ = svi_.run(
             rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
         )
         self.posterior_samples_ = self.guide_.sample_posterior(self.rng_key, params=self.run_results_.params, **kwargs)
@@ -191,8 +196,8 @@ class MCMCInferenceEngine(InferenceEngine):
             Dict[str, np.ndarray]: The predictive samples.
 
         """
-        sites = set(self.posterior_samples_.keys()).union(["obs"])
-        predictive = Predictive(self.model, self.posterior_samples_, return_sites=sites)
+        
+        predictive = Predictive(self.model, self.posterior_samples_)
 
         self.samples_predictive_ = predictive(self.rng_key, **kwargs)
         self.samples_ = self.mcmc_.get_samples()

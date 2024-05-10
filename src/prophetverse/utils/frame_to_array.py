@@ -9,6 +9,15 @@ from sktime.transformations.hierarchical.reconcile import _get_s_matrix
 
 NANOSECONDS_TO_SECONDS = 1000 * 1000 * 1000
 
+__all__ = [
+    "get_bottom_series_idx",
+    "get_multiindex_loc",
+    "loc_bottom_series",
+    "iterate_all_series",
+    "convert_index_to_days_since_epoch",
+    "series_to_tensor",
+    "convert_dataframe_to_tensors",
+]
 
 def get_bottom_series_idx(y):
     """
@@ -57,6 +66,9 @@ def loc_bottom_series(y):
     Returns:
     pd.DataFrame: The bottom series.
     """
+    
+    if y.index.nlevels == 1:
+        return y
     return get_multiindex_loc(y, get_bottom_series_idx(y))
 
 
@@ -86,6 +98,11 @@ def convert_index_to_days_since_epoch(idx: pd.Index) -> np.array:
     np.ndarray: The converted array of days since epoch.
     """
     t = idx
+    
+    if not (isinstance(t, pd.PeriodIndex) or isinstance(t, pd.DatetimeIndex)):
+        return t.values
+    
+    
     if isinstance(t, pd.PeriodIndex):
         t = t.to_timestamp()
 
@@ -105,6 +122,10 @@ def series_to_tensor(y):
     names = []
     array = []
     series_len = None
+    
+    if y.index.nlevels== 1:
+        return jnp.array(y.values).reshape((1, -1, len(y.columns)))
+    
     for idx, series in iterate_all_series(y):
         if series_len is None:
             series_len = len(series)

@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-from prophetverse.sktime._expand_column_per_level import (
-    ExpandColumnPerLevel,
-) 
+
+from prophetverse.sktime._expand_column_per_level import ExpandColumnPerLevel
 
 
 def create_test_dataframe():
@@ -55,16 +54,6 @@ def test_transform_expands_columns():
     ]
     assert all(col in X_transformed.columns for col in expected_columns)
 
-
-def test_transform_without_multiindex_raises_error():
-    """
-    Test that the transform method raises an error if the input DataFrame does not have a multi-level index.
-    """
-    X = pd.DataFrame({"value1": [1, 2, 3, 4], "value2": [4, 3, 2, 1]})
-    transformer = ExpandColumnPerLevel(columns_regex=["value"])
-
-    with pytest.raises(ValueError):
-        transformer.transform(X)
 
 
 def test_transform_preserves_original_data():

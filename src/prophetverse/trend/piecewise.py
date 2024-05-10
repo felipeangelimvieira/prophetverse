@@ -5,6 +5,7 @@ import numpy as np
 import numpyro
 import numpyro.distributions as dist
 import pandas as pd
+from sktime.transformations.series.detrend import Detrender
 
 from prophetverse.utils.frame_to_array import series_to_tensor
 
@@ -21,6 +22,7 @@ class PiecewiseLinearTrend(TrendModel):
         changepoint_prior_scale: dist.Distribution,
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
+        remove_seasonality_before_suggesting_initial_vals: bool = True,
         **kwargs
     ):
         self.changepoint_interval = changepoint_interval
@@ -28,6 +30,9 @@ class PiecewiseLinearTrend(TrendModel):
         self.changepoint_prior_scale = changepoint_prior_scale
         self.offset_prior_scale = offset_prior_scale
         self.squeeze_if_single_series = squeeze_if_single_series
+        self.remove_seasonality_before_suggesting_initial_vals = (
+            remove_seasonality_before_suggesting_initial_vals
+        )
         super().__init__(**kwargs)
 
     def initialize(self, y: pd.DataFrame):
@@ -158,11 +163,10 @@ f
                     changepoint_range=changepoint_range,
                 )
             )
-            
+
             if len(changepoint_ts[-1]) == 0:
                 raise ValueError(
                     f"No changepoints were generated. Try increasing the changing the changepoint_range. There are {len(t_scaled)} timepoints in the series, changepoint_range is {changepoint_range} and changepoint_interval is {changepoint_interval}.")
-                
 
         self._changepoint_ts = changepoint_ts
 
@@ -176,6 +180,11 @@ f
         Returns:
             None
         """
+
+        if self.remove_seasonality_before_suggesting_initial_vals:
+            detrender = Detrender()
+            y = y - detrender.fit_transform(y)
+
         self.global_rates, self.offset_loc = self._suggest_global_trend_and_offset(y)
         self._changepoint_prior_loc, self._changepoint_prior_scale = (
             self._get_changepoint_prior_vectors(global_rates=self.global_rates)
@@ -266,8 +275,20 @@ f
             None
 
         """
+        
+        if isinstance(self.changepoint_prior_scale, (list, tuple)):
+            offset_scale = [x * self.offset_prior_scale for x in self.changepoint_prior_scale]
+        elif isinstance(self.changepoint_prior_scale, (int, float)):
+            offset_scale = self.changepoint_prior_scale * self.offset_prior_scale
+        else:
+            raise ValueError(f"Invalid type for changepoint_prior_scale {self.changepoint_prior_scale}")
+        
         offset = numpyro.sample(
-            "offset", dist.Normal(self.offset_loc, self.offset_prior_scale)
+            "offset",
+            dist.Normal(
+                self.offset_loc,
+                offset_scale
+            ),
         )
 
         changepoint_coefficients = numpyro.sample(

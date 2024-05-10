@@ -25,7 +25,8 @@ jobs:
       - name: Extract tag version without pre-release identifiers
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          CLEAN_TAG_VERSION="${TAG_VERSION%%-*}"
+          CLEAN_TAG_VERSION=$(echo $TAG_VERSION | awk -F- '{print $1}')
+          echo $CLEAN_TAG_VERSION
           echo "CLEAN_TAG_VERSION=$CLEAN_TAG_VERSION" >> $GITHUB_ENV
 
       - name: Get current package version

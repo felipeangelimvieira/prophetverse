@@ -9,13 +9,14 @@
 [![codecov](https://codecov.io/gh/felipeangelimvieira/prophetverse/graph/badge.svg?token=O37PGJI3ZX)](https://codecov.io/gh/felipeangelimvieira/prophetverse)
 
 
-This library was created to make a numpyro-based Prophet model for timeseries forecasting, allowing the user to provide custom priors for specific groups of exogenous variables. In addition, it offers a multivariate implementation for hierarchical forecasting, with potentially shared coefficients between timeseries. All implementations (hierarchical and univariate) are based on sktime interface.
+This library was created to provide new versions of the Prophet model for timeseries forecasting. Implemented with numpyro, it allows to provide custom priors for specific groups of exogenous variables, and also offers a multivariate implementation for hierarchical forecasting, with potentially shared coefficients between timeseries. All implementations are based on sktime interface.
 
-The idea was not to fully reproduce Prophet, but to provide an extension with some extra features.
 
 ### Features
 
 ✅ Univariate and multivariate forecasting
+
+✅ Gamma-likelihood and Negative Binomial likelihood for count data
 
 ✅ Custom prior distributions for exogenous variables
 
@@ -49,24 +50,34 @@ poetry add prophetverse
 
 The main differences with the original Prophet model are:
 
-1. The logistic version of the trend. In the original paper, the logistic growth is:
+### Logistic trend
 
-```math
-trend = \frac{C}{1 + \exp(-k(t - m))}
-```
+In this implementation, the capacity is modelled as a random variable, and it's assumed constant. In the original model, it was needed to pass the capacity as hyperparameter - but we often don't know what the maximum value is. One example is forecasting the number of new users of a product. We may not know surely what the maximum number of new users is, and may be particularly interested in it.
 
-where $C$ is the capacity, $k$ is the growth rate and $m$ is the timeoffset. In this implementation, we implement a similar and equivalent model, but with a different parameterization:
+### Gamma and Negative Binomial likelihoods
 
-```math
-trend = \frac{C}{1 + \exp(-(kt + m'))}
-```
+The original model only supports Gaussian likelihood. This implementation supports Gamma and Negative Binomial likelihoods, which are useful for count data. 
 
-which are equivalent. The priors for those parameters $k$ and $m'$ are chosen in a data driven way, so that they match the maximum and minimum value of the series.
+### Custom priors
 
-2. The capacity is also modelled as a random variable, and it's assumed constant. The user can pass the capacity prior as a parameter.
-3. One can set different prior distributions for the parameters of the model. The parameters also may be different for different groups of variables, which allows to force positive coefficients for some groups and not for others (with HalfNormal prior, for example).
-4. Changepoint interval is used instead of changepoint number. Motivation: as the timeseries evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations, but too little for a series with 1000 observations. The changepoint interval may avoid this problem.
-5. The exogenous variable inputs are not scaled. They should be scaled prior to the model fitting, with sktime transfomers for example.
-6. The fourier terms for seasonality must be passed as exogenous variables in `feature_transformer` argument.
+One can set different prior distributions for the parameters of the model, and also custom relations between the exogenous variables and their effect on the mean. For example, one may want to force a positive effect of a variable on the mean, and use a HalfNormal prior for the coefficient and a `prophetverse.effects.LinearEffect` for the effect (see examples for more details).
 
-For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are infered simultaneously, and a multivariate normal likelihood is used (LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.
+I believe this is one of the most important features of this library. It opens the door to a lot of applications, such as Marketing Mix Modeling, which has the objective of understanding the effect of different marketing channels on sales. A saturating effect, such as a Hill Function, can be used to model the diminishing returns of a given channel.
+
+### Changepoints
+
+Changepoint interval is used instead of changepoint number. Motivation: as the timeseries evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations, but too little for a series with 1000 observations. The changepoint interval may avoid this problem and avoid the need of tuning this hyperparameter frequently.
+
+### Scaling
+
+The timeseries is scaled internally as it is in the original model to provide more stable hyperparameters. However, exogenous variables must be scaled by the user. For that, you can use sktime's transformers and pass them to the `feature_transformer` argument of the model. 
+
+### Seasonality
+
+The fourier terms for seasonality must be passed as exogenous variables in `feature_transformer` argument, see [FourierFeatures](https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.transformations.series.fourier.FourierFeatures.html) for a ready-to-use transformer. Also, check the examples in this documentation.
+
+### Multivariate model
+
+For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are infered simultaneously, and a multivariate normal likelihood is used (with LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.
+
+This model is also useful if you want to share coefficients of exogenous variables between timeseries. For example, if you have a dataset with multiple timeseries of sales of different products, you may want to share the effect of a given marketing channel between them. This is also possible with this implementation.

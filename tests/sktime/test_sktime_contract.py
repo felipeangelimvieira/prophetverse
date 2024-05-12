@@ -13,9 +13,10 @@ from skbase.utils.deep_equals._deep_equals import (_coerce_list, _dict_equals,
                                                    _tuple_equals)
 from sktime.utils.estimator_checks import check_estimator
 
-from prophetverse.sktime import HierarchicalProphet, Prophet
+from prophetverse.sktime import (HierarchicalProphet, Prophet, ProphetGamma,
+                                 ProphetNegBinomial)
 
-PROPHET_MODELS = [Prophet, HierarchicalProphet]
+PROPHET_MODELS = [Prophet, ProphetGamma, ProphetNegBinomial, HierarchicalProphet]
 
 @pytest.mark.skip(reason="Waiting for skbase update")
 @pytest.mark.parametrize("model", PROPHET_MODELS)

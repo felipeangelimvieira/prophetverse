@@ -7,12 +7,18 @@ from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
                                                 _make_hierarchical)
 
-from prophetverse.sktime.univariate import Prophet
-from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.effects import LinearEffect
+from prophetverse.sktime.seasonality import seasonal_transformer
+from prophetverse.sktime.univariate import (Prophet, ProphetGamma,
+                                            ProphetNegBinomial)
+
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
-
+MODELS = [
+    Prophet,
+    ProphetGamma,
+    ProphetNegBinomial,
+]
 
 def _make_random_X(y):
     return pd.DataFrame(np.random.rand(len(y), 3), columns=["x1", "x2", "x3"], index=y.index)
@@ -51,14 +57,16 @@ HYPERPARAMS = [
         trend="linear",
     ),
     dict(trend="logistic"),
+    dict(trend="flat"),
     dict(inference_method="mcmc"),
 ]
 
 
+@pytest.mark.parametrize("model_class", MODELS)
 @pytest.mark.parametrize("hierarchy_levels", [(1,), (2,), (2, 1)])
 @pytest.mark.parametrize("make_X", [_make_random_X, _make_None_X, _make_empty_X])
 @pytest.mark.parametrize("hyperparams", HYPERPARAMS)
-def test_prophet2_fit_with_different_nlevels(hierarchy_levels, make_X, hyperparams):
+def test_prophet2_fit_with_different_nlevels(model_class, hierarchy_levels, make_X, hyperparams):
     y = _make_hierarchical(hierarchy_levels=hierarchy_levels)
     # convert level -1 to pd.periodIndex
     y.index = y.index.set_levels(y.index.levels[-1].to_period("D"), level=-1)
@@ -68,7 +76,9 @@ def test_prophet2_fit_with_different_nlevels(hierarchy_levels, make_X, hyperpara
     )
     fh = list(range(-5, 3))
     y_train = y.loc[y.index.get_level_values(-1) < "2000-01-10"]
-    forecaster = Prophet(**hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = model_class(
+        **hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
     forecaster.fit(y_train, X)
     y_pred = forecaster.predict(X=X, fh=fh)
 

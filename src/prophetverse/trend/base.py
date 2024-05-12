@@ -94,3 +94,7 @@ class TrendModel(ABC):
 
     def __call__(self, **kwargs):
         return self.compute_trend(**kwargs)
+
+        
+        
+        

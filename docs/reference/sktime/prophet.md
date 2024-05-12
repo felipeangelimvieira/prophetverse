@@ -1,3 +1,3 @@
 # Univariate Prophet
 
-::: prophetverse.sktime.univariate
+::: prophetverse.sktime.univariate.Prophet

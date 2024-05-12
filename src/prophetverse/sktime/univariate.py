@@ -281,28 +281,27 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
 
 
 class ProphetGamma(Prophet):
-    """
-    A subclass of Prophet that models time series data with a gamma likelihood. Useful for positive only timeseries.
+    """A subclass of Prophet that models time series data with a gamma likelihood. Useful for positive only timeseries.
 
-    Parameters:
-    - changepoint_interval (int): The number of points between potential changepoints. Default is 25.
-    - changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.
-    - changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.
-    - feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.
-    - capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.
-    - capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.
-    - noise_scale (float): Scale parameter for the observation noise. Default is 0.05.
-    - trend (str): Type of trend component. Default is "logistic".
-    - mcmc_samples (int): Number of MCMC samples. Default is 2000.
-    - mcmc_warmup (int): Number of MCMC warmup steps. Default is 200.
-    - mcmc_chains (int): Number of MCMC chains. Default is 4.
-    - inference_method (str): Method for inference. Default is "map".
-    - optimizer_name (str): Name of the optimizer. Default is "Adam".
-    - optimizer_kwargs (dict): Additional keyword arguments for the optimizer. Default is None.
-    - optimizer_steps (int): Number of optimizer steps. Default is 1000.
-    - exogenous_effects (list): List of exogenous effects. Default is None.
-    - default_effect (object): Default effect for exogenous features. Default is None.
-    - rng_key (jax.random.PRNGKey): Random number generator key. Default is None.
+    Args:
+        changepoint_interval (int): The number of points between potential changepoints. Default is 25.
+        changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.
+        changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.
+        feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.
+        capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.
+        capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.
+        noise_scale (float): Scale parameter for the observation noise. Default is 0.05.
+        trend (str): Type of trend component. Default is "logistic".
+        mcmc_samples (int): Number of MCMC samples. Default is 2000.
+        mcmc_warmup (int): Number of MCMC warmup steps. Default is 200.
+        mcmc_chains (int): Number of MCMC chains. Default is 4.
+        inference_method (str): Method for inference. Default is "map".
+        optimizer_name (str): Name of the optimizer. Default is "Adam".
+        optimizer_kwargs (dict): Additional keyword arguments for the optimizer. Default is None.
+        optimizer_steps (int): Number of optimizer steps. Default is 1000.
+        exogenous_effects (list): List of exogenous effects. Default is None.
+        default_effect (object): Default effect for exogenous features. Default is None.
+        rng_key (jax.random.PRNGKey): Random number generator key. Default is None.
     """
 
     def __init__(
@@ -354,25 +353,25 @@ class ProphetNegBinomial(Prophet):
     """
     A subclass of Prophet that models time series data with a negative binomial likelihood. Useful for count data.
 
-    Parameters:
-    - changepoint_interval (int): The number of points between potential changepoints. Default is 25.
-    - changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.
-    - changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.
-    - feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.
-    - capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.
-    - capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.
-    - noise_scale (float): Scale parameter for the observation noise. Default is 0.05.
-    - trend (str): Type of trend component. Default is "logistic".
-    - mcmc_samples (int): Number of MCMC samples. Default is 2000.
-    - mcmc_warmup (int): Number of MCMC warmup steps. Default is 200.
-    - mcmc_chains (int): Number of MCMC chains. Default is 4.
-    - inference_method (str): Method for inference. Default is "map".
-    - optimizer_name (str): Name of the optimizer. Default is "Adam".
-    - optimizer_kwargs (dict): Additional keyword arguments for the optimizer. Default is None.
-    - optimizer_steps (int): Number of optimizer steps. Default is 1000.
-    - exogenous_effects (list): List of exogenous effects. Default is None.
-    - default_effect (object): Default effect for exogenous features. Default is None.
-    - rng_key (jax.random.PRNGKey): Random number generator key. Default is None.
+    Args:
+        changepoint_interval (int): The number of points between potential changepoints. Default is 25.
+        changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.
+        changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.
+        feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.
+        capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.
+        capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.
+        noise_scale (float): Scale parameter for the observation noise. Default is 0.05.
+        trend (str): Type of trend component. Default is "logistic".
+        mcmc_samples (int): Number of MCMC samples. Default is 2000.
+        mcmc_warmup (int): Number of MCMC warmup steps. Default is 200.
+        mcmc_chains (int): Number of MCMC chains. Default is 4.
+        inference_method (str): Method for inference. Default is "map".
+        optimizer_name (str): Name of the optimizer. Default is "Adam".
+        optimizer_kwargs (dict): Additional keyword arguments for the optimizer. Default is None.
+        optimizer_steps (int): Number of optimizer steps. Default is 1000.
+        exogenous_effects (list): List of exogenous effects. Default is None.
+        default_effect (object): Default effect for exogenous features. Default is None.
+        rng_key (jax.random.PRNGKey): Random number generator key. Default is None.
     """
 
     def __init__(

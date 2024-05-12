@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist
 
+from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects import AbstractEffect
 from prophetverse.trend.base import TrendModel
 
@@ -106,7 +107,117 @@ def univariate_model(
         exogenous_effects (dict): Dictionary containing the exogenous effects.
         noise_scale (float): Noise scale.
     """
-        
+
+    mean = _compute_mean_univariate(
+        trend_model=trend_model,
+        trend_data=trend_data,
+        data=data,
+        exogenous_effects=exogenous_effects,
+    )
+
+    noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
+
+    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
+        numpyro.sample(
+            "obs",
+            dist.Normal(mean.reshape((-1, 1)), noise_scale),
+            obs=y,
+        )
+
+
+def univariate_gamma_model(
+    y,
+    trend_model: TrendModel,
+    trend_data: Dict[str, jnp.ndarray],
+    data: Dict[str, jnp.ndarray] = None,
+    exogenous_effects: Dict[str, AbstractEffect] = None,
+    noise_scale=0.5,
+):
+    """
+    Defines the Prophet-like model for univariate timeseries.
+
+    Args:
+        y (jnp.ndarray): Array of time series data.
+        trend_model (TrendModel): Trend model.
+        trend_data (dict): Dictionary containing the data needed for the trend model.
+        data (dict): Dictionary containing the exogenous data.
+        exogenous_effects (dict): Dictionary containing the exogenous effects.
+        noise_scale (float): Noise scale.
+    """
+
+    mean = _compute_mean_univariate(
+        trend_model=trend_model,
+        trend_data=trend_data,
+        data=data,
+        exogenous_effects=exogenous_effects,
+    )
+
+    mean = _to_positive(mean, 1e-5)
+
+    noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
+
+    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
+        numpyro.sample(
+            "obs",
+            GammaReparametrized(mean.reshape((-1, 1)), noise_scale),
+            obs=y,
+        )
+
+
+def univariate_negbinomial_model(
+    y,
+    trend_model: TrendModel,
+    trend_data: Dict[str, jnp.ndarray],
+    data: Dict[str, jnp.ndarray] = None,
+    exogenous_effects: Dict[str, AbstractEffect] = None,
+    noise_scale=0.5,
+    scale=1,
+):
+    """
+    Defines the Prophet-like model for univariate timeseries.
+
+    Args:
+        y (jnp.ndarray): Array of time series data.
+        trend_model (TrendModel): Trend model.
+        trend_data (dict): Dictionary containing the data needed for the trend model.
+        data (dict): Dictionary containing the exogenous data.
+        exogenous_effects (dict): Dictionary containing the exogenous effects.
+        noise_scale (float): Noise scale.
+    """
+
+    mean = _compute_mean_univariate(
+        trend_model=trend_model,
+        trend_data=trend_data,
+        data=data,
+        exogenous_effects=exogenous_effects,
+    )
+    
+    
+    
+    mean = _to_positive(mean, 1e-5)
+    
+    mean = mean*scale
+    
+    noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
+
+    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
+        numpyro.sample(
+            "obs",
+            dist.NegativeBinomial2(mean.reshape((-1, 1)), noise_scale * scale),
+            obs=y,
+        )
+
+
+def _to_positive(x, threshold):
+    return jnp.where(x < threshold, jnp.exp(x - threshold) * threshold, x)
+
+
+def _compute_mean_univariate(
+    trend_model: TrendModel,
+    trend_data: Dict[str, jnp.ndarray], 
+    data: Dict[str, jnp.ndarray] = None,
+    exogenous_effects: Dict[str, AbstractEffect] = None,
+    ):
     trend = trend_model(**trend_data)
 
     numpyro.deterministic("trend", trend)
@@ -121,13 +232,4 @@ def univariate_model(
             effect = exog_effect(trend=trend, data=exog_data)
             numpyro.deterministic(key, effect)
             mean += effect
-
-    noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
-
-    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
-        s = numpyro.sample(
-            "obs",
-            dist.Normal(mean.reshape((-1, 1)), noise_scale),
-            obs=y,
-        )
-        s
+    return mean

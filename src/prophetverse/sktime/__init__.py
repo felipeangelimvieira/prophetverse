@@ -1,2 +1,2 @@
 from .multivariate import HierarchicalProphet
-from .univariate import Prophet
+from .univariate import *

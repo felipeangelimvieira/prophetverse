@@ -12,13 +12,13 @@ from jax import random
 from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 
-from prophetverse.models import univariate_model
+from prophetverse.models import univariate_gamma_model, univariate_model
 from prophetverse.sktime.base import (BaseBayesianForecaster,
                                       ExogenousEffectMixin)
 from prophetverse.trend.piecewise import (PiecewiseLinearTrend,
                                           PiecewiseLogisticTrend, TrendModel)
 
-__all__ = ["Prophet"]
+__all__ = ["Prophet", "ProphetGamma"]
 
 
 class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
@@ -70,7 +70,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
     _tags = {
         "requires-fh-in-fit": False,
         "y_inner_mtype": "pd.DataFrame",
-    }
+    } 
 
     def __init__(
         self,
@@ -141,8 +141,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_loc must be greater than 0.")
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
-
-    
 
     def _get_fit_data(self, y, X, fh):
         """
@@ -261,3 +259,53 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             trend_data=trend_data,
             **self.fit_and_predict_data_,
         )
+
+
+class ProphetGamma(Prophet):
+
+    def __init__(
+        self,
+        changepoint_interval=25,
+        changepoint_range=0.8,
+        changepoint_prior_scale=0.001,
+        feature_transformer=None,
+        capacity_prior_scale=0.2,
+        capacity_prior_loc=1.1,
+        noise_scale=0.05,
+        trend="logistic",
+        mcmc_samples=2000,
+        mcmc_warmup=200,
+        mcmc_chains=4,
+        inference_method="map",
+        optimizer_name="Adam",
+        optimizer_kwargs=None,
+        optimizer_steps=1_000,
+        exogenous_effects=None,
+        default_effect=None,
+        rng_key=None,
+    ):
+        
+        if trend == "linear":
+            raise ValueError("trend must be 'logistic' for the ProphetGamma model, or a custom TrendModel with guaranteed positive values.")
+        
+        super().__init__(
+            changepoint_interval=changepoint_interval,
+            changepoint_range=changepoint_range,
+            changepoint_prior_scale=changepoint_prior_scale,
+            feature_transformer=feature_transformer,
+            capacity_prior_scale=capacity_prior_scale,
+            capacity_prior_loc=capacity_prior_loc,
+            noise_scale=noise_scale,
+            trend=trend,
+            mcmc_samples=mcmc_samples,
+            mcmc_warmup=mcmc_warmup,
+            mcmc_chains=mcmc_chains,
+            inference_method=inference_method,
+            optimizer_name=optimizer_name,
+            optimizer_kwargs=optimizer_kwargs,
+            optimizer_steps=optimizer_steps,
+            exogenous_effects=exogenous_effects,
+            default_effect=default_effect,
+            rng_key=rng_key)
+        
+        self.model = univariate_gamma_model

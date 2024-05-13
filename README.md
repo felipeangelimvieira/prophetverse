@@ -45,14 +45,13 @@ Or with poetry:
 poetry add prophetverse
 ```
 
-
 ## Differences between this Prophet and the original one
 
 The main differences with the original Prophet model are:
 
 ### Logistic trend
 
-In this implementation, the capacity is modelled as a random variable, and it's assumed constant. In the original model, it was needed to pass the capacity as hyperparameter - but we often don't know what the maximum value is. One example is forecasting the number of new users of a product. We may not know surely what the maximum number of new users is, and may be particularly interested in it.
+In this implementation, the capacity is modeled as a random variable and is assumed to be constant. In the original model, it was necessary to pass the capacity as a hyperparameter, but we often don't know the maximum value. One example is forecasting the number of new users of a product. We may not know surely what the maximum number of new users is, and may be particularly interested in it.
 
 ### Gamma and Negative Binomial likelihoods
 
@@ -60,24 +59,24 @@ The original model only supports Gaussian likelihood. This implementation suppor
 
 ### Custom priors
 
-One can set different prior distributions for the parameters of the model, and also custom relations between the exogenous variables and their effect on the mean. For example, one may want to force a positive effect of a variable on the mean, and use a HalfNormal prior for the coefficient and a `prophetverse.effects.LinearEffect` for the effect (see examples for more details).
+Users can set different prior distributions for the model parameters and define custom relationships between the exogenous variables and their effects on the mean. For example, one may want to force a positive effect of a variable on the mean, and use a HalfNormal prior for the coefficient and a `prophetverse.effects.LinearEffect` for the effect (see examples for more details).
 
 I believe this is one of the most important features of this library. It opens the door to a lot of applications, such as Marketing Mix Modeling, which has the objective of understanding the effect of different marketing channels on sales. A saturating effect, such as a Hill Function, can be used to model the diminishing returns of a given channel.
 
 ### Changepoints
 
-Changepoint interval is used instead of changepoint number. Motivation: as the timeseries evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations, but too little for a series with 1000 observations. The changepoint interval may avoid this problem and avoid the need of tuning this hyperparameter frequently.
+The changepoint interval is used instead of the changepoint number. Motivation: as the time series evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations but too little for a series with 1000 observations. The changepoint interval may avoid this problem and avoid the need of tuning this hyperparameter frequently.
 
 ### Scaling
 
-The timeseries is scaled internally as it is in the original model to provide more stable hyperparameters. However, exogenous variables must be scaled by the user. For that, you can use sktime's transformers and pass them to the `feature_transformer` argument of the model. 
+The time series is scaled internally as it is in the original model to provide more stable hyperparameters. However, exogenous variables must be scaled by the user. For that, you can use sktime's transformers and pass them to the `feature_transformer` argument of the model. 
 
 ### Seasonality
 
-The fourier terms for seasonality must be passed as exogenous variables in `feature_transformer` argument, see [FourierFeatures](https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.transformations.series.fourier.FourierFeatures.html) for a ready-to-use transformer. Also, check the examples in this documentation.
+The Fourier terms for seasonality must be passed as exogenous variables in the `feature_transformer` argument, see [FourierFeatures](https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.transformations.series.fourier.FourierFeatures.html) for a ready-to-use transformer. Also, check the examples in this documentation.
 
 ### Multivariate model
 
-For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are infered simultaneously, and a multivariate normal likelihood is used (with LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.
+For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are inferred simultaneously, and a multivariate normal likelihood is used (with LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.
 
-This model is also useful if you want to share coefficients of exogenous variables between timeseries. For example, if you have a dataset with multiple timeseries of sales of different products, you may want to share the effect of a given marketing channel between them. This is also possible with this implementation.
+This model is also useful if you want to share coefficients of exogenous variables between time series. For example, if you have a dataset with multiple time series of sales of different products, you may want to share the effect of a given marketing channel between them. This is also possible with this implementation.

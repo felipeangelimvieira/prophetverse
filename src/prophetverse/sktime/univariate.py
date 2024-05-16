@@ -49,6 +49,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
                                    If an int, the range will be that number of points. A negative int indicates number of points
                                    counting from the end of the history.
         changepoint_prior_scale (float): Parameter controlling the flexibility of the automatic changepoint selection.
+        offset_prior_scale (float): Scale parameter for the prior distribution of the offset. The offset is the constant term in the piecewise trend equation. Default is 0.1.
         feature_transformer (BaseTransformer): Transformer object to generate Fourier terms, holiday or other features. Should be a sktime's Transformer
         capacity_prior_scale (float): Scale parameter for the prior distribution of the capacity.
         capacity_prior_loc (float): Location parameter for the prior distribution of the capacity.
@@ -79,6 +80,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         changepoint_interval=25,
         changepoint_range=0.8,
         changepoint_prior_scale=0.001,
+        offset_prior_scale=0.1,
         feature_transformer=None,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
@@ -102,6 +104,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
         self.changepoint_prior_scale = changepoint_prior_scale
+        self.offset_prior_scale = offset_prior_scale
         self.noise_scale = noise_scale
         self.feature_transformer = feature_transformer
         self.capacity_prior_scale = capacity_prior_scale
@@ -141,6 +144,8 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_scale must be greater than 0.")
         if self.capacity_prior_loc <= 0:
             raise ValueError("capacity_prior_loc must be greater than 0.")
+        if self.offset_prior_scale <= 0:
+            raise ValueError("offset_prior_scale must be greater than 0.")
         if self.trend not in ["linear", "logistic", "flat"] and not isinstance(self.trend, TrendModel):
             raise ValueError('trend must be either "linear" or "logistic".')
 
@@ -253,6 +258,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
             )
 
         elif self.trend == "logistic":
@@ -260,6 +266,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
                 capacity_prior=dist.TransformedDistribution(
                     dist.HalfNormal(self.capacity_prior_scale),
                     dist.transforms.AffineTransform(
@@ -287,6 +294,7 @@ class ProphetGamma(Prophet):
         changepoint_interval (int): The number of points between potential changepoints. Default is 25.
         changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.
         changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.
+        offset_prior_scale (float): Scale parameter for the prior distribution of the offset. Default is 0.1.
         feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.
         capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.
         capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.
@@ -309,6 +317,7 @@ class ProphetGamma(Prophet):
         changepoint_interval=25,
         changepoint_range=0.8,
         changepoint_prior_scale=0.001,
+        offset_prior_scale=0.1,
         feature_transformer=None,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
@@ -325,11 +334,12 @@ class ProphetGamma(Prophet):
         default_effect=None,
         rng_key=None,
     ):
-        
+
         super().__init__(
             changepoint_interval=changepoint_interval,
             changepoint_range=changepoint_range,
             changepoint_prior_scale=changepoint_prior_scale,
+            offset_prior_scale=offset_prior_scale,
             feature_transformer=feature_transformer,
             capacity_prior_scale=capacity_prior_scale,
             capacity_prior_loc=capacity_prior_loc,
@@ -357,6 +367,7 @@ class ProphetNegBinomial(Prophet):
         changepoint_interval (int): The number of points between potential changepoints. Default is 25.
         changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.
         changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.
+        offset_prior_scale (float): Scale parameter for the prior distribution of the offset. Default is 0.1.
         feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.
         capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.
         capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.
@@ -379,6 +390,7 @@ class ProphetNegBinomial(Prophet):
         changepoint_interval=25,
         changepoint_range=0.8,
         changepoint_prior_scale=0.001,
+        offset_prior_scale=0.1,
         feature_transformer=None,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
@@ -400,6 +412,7 @@ class ProphetNegBinomial(Prophet):
             changepoint_interval=changepoint_interval,
             changepoint_range=changepoint_range,
             changepoint_prior_scale=changepoint_prior_scale,
+            offset_prior_scale=offset_prior_scale,
             feature_transformer=feature_transformer,
             capacity_prior_scale=capacity_prior_scale,
             capacity_prior_loc=capacity_prior_loc,

@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Iterable, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -185,10 +185,11 @@ f
             detrender = Detrender()
             y = y - detrender.fit_transform(y)
 
-        self.global_rates, self.offset_loc = self._suggest_global_trend_and_offset(y)
+        self._global_rates, self._offset_prior_loc = self._suggest_global_trend_and_offset(y)
         self._changepoint_prior_loc, self._changepoint_prior_scale = (
-            self._get_changepoint_prior_vectors(global_rates=self.global_rates)
+            self._get_changepoint_prior_vectors(global_rates=self._global_rates)
         )
+        self._offset_prior_scale = self.offset_prior_scale
 
     def _get_changepoint_prior_vectors(
         self,
@@ -275,19 +276,12 @@ f
             None
 
         """
-        
-        if isinstance(self.changepoint_prior_scale, (list, tuple)):
-            offset_scale = [x * self.offset_prior_scale for x in self.changepoint_prior_scale]
-        elif isinstance(self.changepoint_prior_scale, (int, float)):
-            offset_scale = self.changepoint_prior_scale * self.offset_prior_scale
-        else:
-            raise ValueError(f"Invalid type for changepoint_prior_scale {self.changepoint_prior_scale}")
-        
+
         offset = numpyro.sample(
             "offset",
             dist.Normal(
-                self.offset_loc,
-                offset_scale
+                self._offset_prior_loc,
+                self._offset_prior_scale
             ),
         )
 

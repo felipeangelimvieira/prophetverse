@@ -48,6 +48,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                                    If an int, the range will be that number of points. A negative int indicates number of points
                                    counting from the end of the history.
         changepoint_prior_scale (float): Parameter controlling the flexibility of the automatic changepoint selection.
+        offset_prior_scale (float): Scale parameter for the prior distribution of the offset. Default is 0.1.
         capacity_prior_scale (float): Scale parameter for the capacity prior. Defaults to 0.2.
         capacity_prior_loc (float): Location parameter for the capacity prior. Defaults to 1.1.
         trend (str): Type of trend. Either "linear" or "logistic". Defaults to "linear".
@@ -95,6 +96,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         changepoint_interval=25,
         changepoint_range=0.8,
         changepoint_prior_scale=0.1,
+        offset_prior_scale=0.1,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
         trend="linear",
@@ -117,6 +119,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
         self.changepoint_prior_scale = changepoint_prior_scale
+        self.offset_prior_scale = offset_prior_scale
         self.noise_scale = noise_scale
         self.capacity_prior_scale = capacity_prior_scale
         self.capacity_prior_loc = capacity_prior_loc
@@ -156,6 +159,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_scale must be greater than 0.")
         if self.capacity_prior_loc <= 0:
             raise ValueError("capacity_prior_loc must be greater than 0.")
+        if self.offset_prior_scale <= 0:
+            raise ValueError("offset_prior_scale must be greater than 0.")
+        if self.correlation_matrix_concentration <= 0:
+            raise ValueError(
+                "correlation_matrix_concentration must be greater than 0."
+            )
 
         if self.trend not in ["linear", "logistic"]:
             raise ValueError('trend must be either "linear" or "logistic".')
@@ -192,6 +201,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
                 squeeze_if_single_series=False,
             )
 
@@ -200,6 +210,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
                 changepoint_interval=self.changepoint_interval,
                 changepoint_range=self.changepoint_range,
                 changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
                 capacity_prior=dist.TransformedDistribution(
                     dist.HalfNormal(self.capacity_prior_scale),
                     dist.transforms.AffineTransform(

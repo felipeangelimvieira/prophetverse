@@ -11,6 +11,11 @@
 
 This library was created to provide new versions of the Prophet model for timeseries forecasting. Implemented with numpyro, it allows to provide custom priors for specific groups of exogenous variables, and also offers a multivariate implementation for hierarchical forecasting, with potentially shared coefficients between timeseries. All implementations are based on sktime interface.
 
+### Table of contentes
+- [Features](#features)
+- [Installation](#installation)
+- [Differences between this Prophet and the original one](#differences-between-this-prophet-and-the-original-one)
+- [Contributing to Prophetverse](#contributing-to-prophetverse)
 
 ### Features
 
@@ -55,7 +60,7 @@ In this implementation, the capacity is modeled as a random variable and is assu
 
 ### Gamma and Negative Binomial likelihoods
 
-The original model only supports Gaussian likelihood. This implementation supports Gamma and Negative Binomial likelihoods, which are useful for count data. 
+The original model only supports Gaussian likelihood. This implementation supports Gamma and Negative Binomial likelihoods, which are useful for count data.
 
 ### Custom priors
 
@@ -69,7 +74,7 @@ The changepoint interval is used instead of the changepoint number. Motivation: 
 
 ### Scaling
 
-The time series is scaled internally as it is in the original model to provide more stable hyperparameters. However, exogenous variables must be scaled by the user. For that, you can use sktime's transformers and pass them to the `feature_transformer` argument of the model. 
+The time series is scaled internally as it is in the original model to provide more stable hyperparameters. However, exogenous variables must be scaled by the user. For that, you can use sktime's transformers and pass them to the `feature_transformer` argument of the model.
 
 ### Seasonality
 
@@ -80,3 +85,9 @@ The Fourier terms for seasonality must be passed as exogenous variables in the `
 For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are inferred simultaneously, and a multivariate normal likelihood is used (with LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.
 
 This model is also useful if you want to share coefficients of exogenous variables between time series. For example, if you have a dataset with multiple time series of sales of different products, you may want to share the effect of a given marketing channel between them. This is also possible with this implementation.
+
+## Contributing to Prophetverse
+
+All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas are welcome.
+
+A detailed overview on how to contribute can be found in the **[contributing guide](https://felipeangelimvieira.github.io/prophetverse/development/development-guide)**.

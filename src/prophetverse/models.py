@@ -230,6 +230,6 @@ def _compute_mean_univariate(
 
             exog_data = data[key]
             effect = exog_effect(trend=trend, data=exog_data)
-            numpyro.deterministic(key, effect)
+            effect = numpyro.deterministic(key, effect)
             mean += effect
     return mean

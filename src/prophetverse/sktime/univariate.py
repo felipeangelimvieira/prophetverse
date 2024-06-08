@@ -95,6 +95,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         optimizer_steps=1_000,
         exogenous_effects=None,
         default_effect=None,
+        scale=None,
         rng_key=None,
     ):
         """
@@ -124,6 +125,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
             optimizer_steps=optimizer_steps,
+            scale=scale,
         )
 
         self.model = univariate_model
@@ -332,6 +334,7 @@ class ProphetGamma(Prophet):
         optimizer_steps=1_000,
         exogenous_effects=None,
         default_effect=None,
+        scale=None,
         rng_key=None,
     ):
 
@@ -354,7 +357,9 @@ class ProphetGamma(Prophet):
             optimizer_steps=optimizer_steps,
             exogenous_effects=exogenous_effects,
             default_effect=default_effect,
-            rng_key=rng_key)
+            scale=scale,
+            rng_key=rng_key,
+        )
 
         self.model = univariate_gamma_model
 
@@ -405,6 +410,7 @@ class ProphetNegBinomial(Prophet):
         optimizer_steps=1_000,
         exogenous_effects=None,
         default_effect=None,
+        scale=None,
         rng_key=None,
     ):
 
@@ -427,6 +433,7 @@ class ProphetNegBinomial(Prophet):
             optimizer_steps=optimizer_steps,
             exogenous_effects=exogenous_effects,
             default_effect=default_effect,
+            scale=scale,
             rng_key=rng_key,
         )
 

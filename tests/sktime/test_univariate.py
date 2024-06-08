@@ -12,6 +12,14 @@ from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (Prophet, ProphetGamma,
                                             ProphetNegBinomial)
 
+EXTRA_FORECAST_FUNCS = [
+    
+    "predict_interval",
+    "predict_all_sites",
+    "predict_all_sites_samples",
+    "get_predictive_samples_dict",
+    "predict_samples",
+]
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
 MODELS = [
@@ -81,8 +89,11 @@ def test_prophet2_fit_with_different_nlevels(model_class, hierarchy_levels, make
     )
     forecaster.fit(y_train, X)
     y_pred = forecaster.predict(X=X, fh=fh)
-
     n_series = len(y.index.droplevel(-1).unique())
     assert isinstance(y_pred, pd.DataFrame)
     assert y_pred.shape[0] == len(fh) * n_series
     assert y_pred.shape[1] == 1
+    
+    for forecast_func in EXTRA_FORECAST_FUNCS:
+        assert getattr(forecaster, forecast_func)(X=X, fh=fh) is not None
+        

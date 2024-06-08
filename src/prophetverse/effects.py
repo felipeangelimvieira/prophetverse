@@ -141,7 +141,7 @@ class LinearEffect(AbstractEffect):
 
     Args:
         id (str): The identifier for the effect.
-        prior (tuple): A tuple with the distribution class to use for sampling coefficients and  the arguments to pass to the distribution class. Defaults to (dist.Normal, 0, 1).
+        prior (dist.Distribution): A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
         effect_mode (str): The mode of the effect, either "multiplicative" or "additive".
 
     Attributes:

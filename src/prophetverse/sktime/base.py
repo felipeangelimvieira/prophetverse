@@ -52,6 +52,7 @@ class BaseBayesianForecaster(BaseForecaster):
         optimizer_steps,
         optimizer_name,
         optimizer_kwargs,
+        scale=None,
         *args,
         **kwargs,
     ):
@@ -64,10 +65,10 @@ class BaseBayesianForecaster(BaseForecaster):
         self.optimizer_steps = optimizer_steps
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
+        self.scale=scale
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
-        
-    
+
     def optimizer(self):
         optimizer_kwargs = self.optimizer_kwargs
         optimizer_name = self.optimizer_name
@@ -193,6 +194,16 @@ class BaseBayesianForecaster(BaseForecaster):
 
         return self
 
+    def render(self, y, X, **kwargs):
+        self._set_y_scales(y)
+        y = self._scale_y(y)
+        data = self._get_fit_data(y, X, y.index.get_level_values(-1).unique())
+        return numpyro.render_model(
+            self.model,
+            model_kwargs=data,
+            **kwargs
+        )
+
     def _predict(self, fh, X):
         """
         Generate point forecasts for the given forecasting horizon.
@@ -210,15 +221,19 @@ class BaseBayesianForecaster(BaseForecaster):
         return y_pred
 
     def predict_all_sites(self, fh, X=None):
+        """
+        Predicts the values for all sites given a forecast horizon and optional input features.
 
-        if not isinstance(fh, ForecastingHorizon):
-            fh = self._check_fh(fh)
+        Parameters:
+            fh (int or array-like): The forecast horizon, specifying the number of time steps to predict into the future.
+            X (array-like, optional): The input features used for prediction. Defaults to None.
 
+        Returns:
+            pandas.DataFrame: A DataFrame containing the predicted values for all sites, with the site names as columns and the forecast horizon as the index.
+        """
         fh_as_index = self.fh_to_index(fh)
+        predictive_samples_ = self.get_predictive_samples_dict(fh=fh, X=X)
 
-        predict_data = self._get_predict_data(X=X, fh=fh)
-
-        predictive_samples_ = self.inference_engine_.predict(**predict_data)
         out = pd.DataFrame(
             data={
                 site: data.mean(axis=0).flatten()
@@ -226,7 +241,70 @@ class BaseBayesianForecaster(BaseForecaster):
             },
             index=self.periodindex_to_multiindex(fh_as_index),
         ).sort_index()
+
         return self._inv_scale_y(out)
+
+    def get_predictive_samples_dict(self, fh, X=None) -> dict[str, jnp.ndarray]:
+        """
+        Returns a dictionary of predictive samples for each time series in the input data.
+
+        Parameters:
+        - fh: ForecastingHorizon or int
+            The forecasting horizon specifying the time points to forecast.
+        - X: array-like, optional (default=None)
+            The input features for the time series forecasting model.
+
+        Returns:
+        - predictive_samples_dict: dict[str, jnp.ndarray]
+            A dictionary containing predictive samples for each time series in the input data.
+            The keys are the names of the time series, and the values are NumPy arrays
+            representing the predictive samples.
+
+        """
+        
+        if not isinstance(fh, ForecastingHorizon):
+            fh = self._check_fh(fh)
+
+        predict_data = self._get_predict_data(X=X, fh=fh)
+
+        predictive_samples_ = self.inference_engine_.predict(**predict_data)
+        return predictive_samples_
+
+    def predict_all_sites_samples(self, fh, X=None):
+        """
+        Predicts samples for all sites.
+
+        Parameters:
+            fh (int or array-like): The forecast horizon or an array-like object representing the forecast horizons.
+            X (array-like, optional): The input features for prediction. Defaults to None.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the predicted samples for all sites.
+
+        """
+        predictive_samples_ = self.get_predictive_samples_dict(fh=fh, X=X)
+        
+        fh_as_index = self.fh_to_index(fh)
+        dfs = []
+        for site, data in predictive_samples_.items():
+
+            idx = self.periodindex_to_multiindex(fh_as_index)
+
+            samples_idx = np.arange(data.shape[0])
+
+            # Set samples_idx as level 0 of idx
+            idx = pd.MultiIndex.from_product([samples_idx, idx],names=["sample", *idx.names])
+
+            dfs.append(pd.DataFrame(
+                data={
+                    site: data.flatten()
+                },
+                index=idx,
+            ))
+            
+        df = pd.concat(dfs, axis=1)
+
+        return df
 
     def predict_samples(self, fh, X=None):
         """
@@ -241,9 +319,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         fh_as_index = self.fh_to_index(fh)
 
-        predict_data = self._get_predict_data(X=X, fh=fh)
-
-        predictive_samples_ = self.inference_engine_.predict(**predict_data)
+        predictive_samples_ = self.get_predictive_samples_dict(fh=fh, X=X)
 
         observation_site = predictive_samples_["obs"]
         n_samples = predictive_samples_["obs"].shape[0]
@@ -256,6 +332,9 @@ class BaseBayesianForecaster(BaseForecaster):
         return self._inv_scale_y(preds)
 
     def _set_y_scales(self, y):
+        if self.scale is not None:
+            self._scale = self.scale
+            return
         if y.index.nlevels == 1:
             self._scale = y.abs().max().values[0]
         else:
@@ -395,8 +474,8 @@ class ExogenousEffectMixin:
         default_effect = self.default_effect
         if default_effect is None:
             default_effect = LinearEffect(
-                id="default_exog",
-                prior=(dist.Normal, 0, 1),
+                id="exogenous_variables_effect",
+                prior=dist.Normal(0, 1),
                 effect_mode="additive",
             )
 
@@ -431,7 +510,7 @@ class ExogenousEffectMixin:
 
             effects_and_columns.update(
                 {
-                    "default": (
+                    "exogenous_variables_effect": (
                         features_without_effects,
                         default_effect,
                     )

@@ -12,30 +12,15 @@ from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (Prophet, ProphetGamma,
                                             ProphetNegBinomial)
 
-EXTRA_FORECAST_FUNCS = [
-    
-    "predict_interval",
-    "predict_all_sites",
-    "predict_all_sites_samples",
-    "predict_samples",
-]
-NUM_LEVELS = 2
-NUM_BOTTOM_NODES = 3
+from ._utils import (execute_extra_predict_methods_tests,
+                     execute_fit_predict_test, make_empty_X, make_None_X,
+                     make_random_X, make_y)
+
 MODELS = [
     Prophet,
     ProphetGamma,
     ProphetNegBinomial,
 ]
-
-def _make_random_X(y):
-    return pd.DataFrame(np.random.rand(len(y), 3), columns=["x1", "x2", "x3"], index=y.index)
-
-
-def _make_None_X(y):
-    return None
-
-def _make_empty_X(y):
-    return pd.DataFrame(index=y.index)
 
 HYPERPARAMS = [
     dict(
@@ -71,28 +56,27 @@ HYPERPARAMS = [
 
 @pytest.mark.parametrize("model_class", MODELS)
 @pytest.mark.parametrize("hierarchy_levels", [(1,), (2,), (2, 1)])
-@pytest.mark.parametrize("make_X", [_make_random_X, _make_None_X, _make_empty_X])
+@pytest.mark.parametrize("make_X", [make_random_X, make_None_X, make_empty_X])
 @pytest.mark.parametrize("hyperparams", HYPERPARAMS)
 def test_prophet2_fit_with_different_nlevels(model_class, hierarchy_levels, make_X, hyperparams):
-    y = _make_hierarchical(hierarchy_levels=hierarchy_levels)
-    # convert level -1 to pd.periodIndex
-    y.index = y.index.set_levels(y.index.levels[-1].to_period("D"), level=-1)
-
+    
+    y = make_y(hierarchy_levels)
     X = make_X(
         y
     )
-    fh = list(range(-5, 3))
-    y_train = y.loc[y.index.get_level_values(-1) < "2000-01-10"]
     forecaster = model_class(
         **hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
     )
-    forecaster.fit(y_train, X)
-    y_pred = forecaster.predict(X=X, fh=fh)
-    n_series = len(y.index.droplevel(-1).unique())
-    assert isinstance(y_pred, pd.DataFrame)
-    assert y_pred.shape[0] == len(fh) * n_series
-    assert y_pred.shape[1] == 1
     
-    for forecast_func in EXTRA_FORECAST_FUNCS:
-        assert getattr(forecaster, forecast_func)(X=X, fh=fh) is not None
-        
+    execute_fit_predict_test(forecaster, y, X, test_size=4)
+
+@pytest.mark.parametrize("make_X", [make_random_X, make_None_X, make_empty_X])
+def test_extra_predict_methods(make_X):
+    y = make_y((2,1))
+    X = make_X(
+        y
+    )
+    forecaster = Prophet(
+        optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
+    execute_extra_predict_methods_tests(forecaster=forecaster, X=X, y=y)

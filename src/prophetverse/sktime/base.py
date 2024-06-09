@@ -18,7 +18,8 @@ from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from prophetverse.effects import AbstractEffect, LinearEffect
 from prophetverse.engine import (InferenceEngine, MAPInferenceEngine,
                                  MCMCInferenceEngine)
-from prophetverse.utils.frame_to_array import series_to_tensor
+from prophetverse.utils.frame_to_array import (get_multiindex_loc,
+                                               series_to_tensor)
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -195,6 +196,7 @@ class BaseBayesianForecaster(BaseForecaster):
         return self
 
     def render(self, y, X, **kwargs):
+
         self._set_y_scales(y)
         y = self._scale_y(y)
         data = self._get_fit_data(y, X, y.index.get_level_values(-1).unique())
@@ -231,8 +233,13 @@ class BaseBayesianForecaster(BaseForecaster):
         Returns:
             pandas.DataFrame: A DataFrame containing the predicted values for all sites, with the site names as columns and the forecast horizon as the index.
         """
+        if self._is_vectorized:
+            return self._vectorize_predict_method(
+                "predict_all_sites", X=X, fh=fh
+            )
+
         fh_as_index = self.fh_to_index(fh)
-        predictive_samples_ = self.get_predictive_samples_dict(fh=fh, X=X)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
         out = pd.DataFrame(
             data={
@@ -244,7 +251,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         return self._inv_scale_y(out)
 
-    def get_predictive_samples_dict(self, fh, X=None) -> dict[str, jnp.ndarray]:
+    def _get_predictive_samples_dict(self, fh, X=None) -> dict[str, jnp.ndarray]:
         """
         Returns a dictionary of predictive samples for each time series in the input data.
 
@@ -261,10 +268,11 @@ class BaseBayesianForecaster(BaseForecaster):
             representing the predictive samples.
 
         """
-        
+
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
 
+        
         predict_data = self._get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
@@ -282,18 +290,30 @@ class BaseBayesianForecaster(BaseForecaster):
             pandas.DataFrame: A DataFrame containing the predicted samples for all sites.
 
         """
-        predictive_samples_ = self.get_predictive_samples_dict(fh=fh, X=X)
-        
+
+        if self._is_vectorized:
+            return self._vectorize_predict_method("predict_all_sites_samples", X=X, fh=fh)
+
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
+
         fh_as_index = self.fh_to_index(fh)
         dfs = []
         for site, data in predictive_samples_.items():
 
-            idx = self.periodindex_to_multiindex(fh_as_index)
+            idxs = self.periodindex_to_multiindex(fh_as_index)
 
             samples_idx = np.arange(data.shape[0])
 
+            def _coerce_to_tuple(x):
+                if isinstance(x, tuple):
+                    return x
+                return (x,)
+            
+            tuples = [
+                (sample_i, *_coerce_to_tuple(idx)) for sample_i, idx in itertools.product(samples_idx, idxs)
+            ]
             # Set samples_idx as level 0 of idx
-            idx = pd.MultiIndex.from_product([samples_idx, idx],names=["sample", *idx.names])
+            idx = pd.MultiIndex.from_tuples(tuples,names=["sample", *idxs.names])
 
             dfs.append(pd.DataFrame(
                 data={
@@ -301,7 +321,7 @@ class BaseBayesianForecaster(BaseForecaster):
                 },
                 index=idx,
             ))
-            
+
         df = pd.concat(dfs, axis=1)
 
         return df
@@ -317,9 +337,14 @@ class BaseBayesianForecaster(BaseForecaster):
         Returns:
             pd.DataFrame: Samples from the posterior predictive distribution.
         """
+        if self._is_vectorized:
+            return self._vectorize_predict_method(
+                "predict_samples", X=X, fh=fh
+            )
+            
         fh_as_index = self.fh_to_index(fh)
 
-        predictive_samples_ = self.get_predictive_samples_dict(fh=fh, X=X)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
         observation_site = predictive_samples_["obs"]
         n_samples = predictive_samples_["obs"].shape[0]
@@ -453,6 +478,38 @@ class BaseBayesianForecaster(BaseForecaster):
     @property
     def site_names(self) -> list[Any]:
         return list(self.posterior_samples_.keys())
+
+    def _vectorize_predict_method(self, methodname : str, X: pd.DataFrame, fh : ForecastingHorizon):
+        """
+        Handle sktime's "vectorization" of timeseries.
+        
+        When a multiindex is passed as input and the forecaster does not accept natively hierarchical data,
+        it will create a dataframe of forecasters, and they should be called
+        with the corresponding index.
+        
+        Args:
+            methodname (str): The method name to call.
+            X (pd.DataFrame): The input data.
+            fh (ForecastingHorizon): The forecasting horizon.
+        
+        Returns:
+            pd.DataFrame: The output of the method.
+        
+        """
+        if not self._is_vectorized:
+            return getattr(self, methodname)(X=X, fh=fh)
+
+        outs = []
+        for idx, data in self.forecasters_.iterrows():
+            forecaster = data[0]
+            
+            _X = get_multiindex_loc(X, [idx])
+            # Keep only index level -1
+            for level in range(_X.index.nlevels - 1):
+                _X = _X.droplevel(0)
+            out = getattr(forecaster, methodname)(X=_X, fh=fh)
+            outs.append(out)
+        return pd.concat(outs, axis=0)
 
 
 class ExogenousEffectMixin:

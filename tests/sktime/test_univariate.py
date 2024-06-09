@@ -17,7 +17,6 @@ EXTRA_FORECAST_FUNCS = [
     "predict_interval",
     "predict_all_sites",
     "predict_all_sites_samples",
-    "get_predictive_samples_dict",
     "predict_samples",
 ]
 NUM_LEVELS = 2

@@ -48,7 +48,7 @@ def multivariate_model(
 
             exog_data = data[key]
             effect = exog_effect(trend=trend, data=exog_data)
-            numpyro.deterministic(key, effect)
+            effect = numpyro.deterministic(key, effect)
             mean += effect
 
     std_observation = numpyro.sample(

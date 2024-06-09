@@ -220,6 +220,9 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             dict: Dictionary of data for the Numpyro model.
         """
+        
+        
+            
 
         fh_dates = self.fh_to_index(fh)
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))

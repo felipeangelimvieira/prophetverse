@@ -15,6 +15,13 @@ from prophetverse.sktime.seasonality import seasonal_transformer
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
 
+EXTRA_FORECAST_FUNCS = [
+    "predict_interval",
+    "predict_all_sites",
+    "predict_all_sites_samples",
+    "predict_samples",
+]
+
 
 def _make_random_X(y):
     return pd.DataFrame(
@@ -95,7 +102,7 @@ def _execute_test(forecaster, y, X, test_size=4):
     else:
         y_train, y_test = dataset
         X_train, X_test = None, None
-        
+
     fh = list(range(1, test_size+1))
     forecaster.fit(y_train, X_train)
     y_pred = forecaster.predict(X=X_test, fh=fh)
@@ -109,10 +116,8 @@ def _execute_test(forecaster, y, X, test_size=4):
     assert y_pred.shape[1] == 1
     assert all(y_pred.index == y_test.index)
 
-    # sites_preds = forecaster.predict_all_sites(X=X, fh=fh)
-
-    # assert isinstance(sites_preds, pd.DataFrame)
-    # assert sites_preds.shape[0] == y_pred.shape[0]
+    for forecast_func in EXTRA_FORECAST_FUNCS:
+        assert getattr(forecaster, forecast_func)(X=X, fh=fh) is not None
 
 @pytest.mark.parametrize("hierarchy_levels", [0, (1,), (2, 1), (1, 2), (3, 2, 2)])
 @pytest.mark.parametrize("make_X", [_make_random_X, _make_None_X, _make_empty_X])

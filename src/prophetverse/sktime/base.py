@@ -503,10 +503,13 @@ class BaseBayesianForecaster(BaseForecaster):
         for idx, data in self.forecasters_.iterrows():
             forecaster = data[0]
             
-            _X = get_multiindex_loc(X, [idx])
-            # Keep only index level -1
-            for level in range(_X.index.nlevels - 1):
-                _X = _X.droplevel(0)
+            if X is None:
+                _X = None
+            else:
+                _X = get_multiindex_loc(X, [idx])
+                # Keep only index level -1
+                for level in range(_X.index.nlevels - 1):
+                    _X = _X.droplevel(0)
             out = getattr(forecaster, methodname)(X=_X, fh=fh)
             outs.append(out)
         return pd.concat(outs, axis=0)

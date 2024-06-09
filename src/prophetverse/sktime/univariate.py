@@ -92,7 +92,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         exogenous_effects=None,
         default_effect=None,
         scale=None,
@@ -220,9 +220,6 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         Returns:
             dict: Dictionary of data for the Numpyro model.
         """
-        
-        
-            
 
         fh_dates = self.fh_to_index(fh)
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
@@ -286,10 +283,17 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         elif isinstance(self.trend, TrendModel):
             return self.trend
-        
+
         raise ValueError(
             "trend must be either 'linear', 'logistic' or a TrendModel instance."
         )
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+
+        return [{
+            "optimizer_steps": 1_000,
+        }]
 
 
 class ProphetGamma(Prophet):
@@ -334,7 +338,7 @@ class ProphetGamma(Prophet):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         exogenous_effects=None,
         default_effect=None,
         scale=None,
@@ -410,7 +414,7 @@ class ProphetNegBinomial(Prophet):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         exogenous_effects=None,
         default_effect=None,
         scale=None,

@@ -110,7 +110,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         noise_scale=0.05,
         correlation_matrix_concentration=1.0,
         rng_key=None,
@@ -380,3 +380,10 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
         if self.internal_y_indexes_.nlevels == 1:
             return 1
         return len(self._filter_series_tuples(self.internal_y_indexes_.droplevel(-1).unique().tolist()))
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        
+        return [{
+            "optimizer_steps":1_000,
+        }]

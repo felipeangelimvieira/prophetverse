@@ -7,6 +7,7 @@ from numpyro.infer import (MCMC, NUTS, SVI, Predictive, Trace_ELBO,
 from numpyro.infer.autoguide import AutoDelta
 from numpyro.infer.initialization import init_to_mean
 
+_DEFAULT_PREDICT_NUM_SAMPLES = 1000
 
 class InferenceEngine:
     """Class representing an inference engine for a given model.
@@ -72,12 +73,14 @@ class MAPInferenceEngine(InferenceEngine):
         model: Callable,
         optimizer_factory: numpyro.optim._NumPyroOptim = None,
         num_steps=10000,
+        num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
         rng_key=None,
     ):
         if optimizer_factory is None:
             optimizer_factory = self.default_optimizer_factory
         self.optimizer_factory = optimizer_factory
         self.num_steps = num_steps
+        self.num_samples = num_samples
         super().__init__(model, rng_key)
 
     def default_optimizer_factory(self):
@@ -116,7 +119,7 @@ class MAPInferenceEngine(InferenceEngine):
             params=self.run_results_.params,
             guide=self.guide_,
             #posterior_samples=self.posterior_samples_,
-            num_samples=1000,
+            num_samples=self.num_samples,
         )
         self.samples_ = predictive(
             rng_key=self.rng_key,
@@ -197,7 +200,7 @@ class MCMCInferenceEngine(InferenceEngine):
 
         """
         
-        predictive = Predictive(self.model, self.posterior_samples_)
+        predictive = Predictive(self.model, self.posterior_samples_, num_samples=self.num_samples)
 
         self.samples_predictive_ = predictive(self.rng_key, **kwargs)
         self.samples_ = self.mcmc_.get_samples()

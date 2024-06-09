@@ -18,7 +18,7 @@ from prophetverse.sktime import (HierarchicalProphet, Prophet, ProphetGamma,
 
 PROPHET_MODELS = [Prophet, ProphetGamma, ProphetNegBinomial, HierarchicalProphet]
 
-@pytest.mark.skip(reason="Waiting for skbase update")
+#@pytest.mark.skip(reason="Waiting for skbase update")
 @pytest.mark.parametrize("model", PROPHET_MODELS)
 def test_sktime_contract(model):
     """Test the sktime contract for Prophet and HierarchicalProphet."""

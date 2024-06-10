@@ -11,6 +11,7 @@ from prophetverse.effects import LinearEffect
 from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (Prophet, ProphetGamma,
                                             ProphetNegBinomial)
+from prophetverse.trend.flat import FlatTrend
 
 from ._utils import (execute_extra_predict_methods_tests,
                      execute_fit_predict_test, make_empty_X, make_None_X,
@@ -24,6 +25,7 @@ MODELS = [
 
 HYPERPARAMS = [
     dict(
+        trend=FlatTrend(),
         feature_transformer=seasonal_transformer(
             yearly_seasonality=True, weekly_seasonality=True
         )
@@ -80,3 +82,9 @@ def test_extra_predict_methods(make_X):
         optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
     )
     execute_extra_predict_methods_tests(forecaster=forecaster, X=X, y=y)
+    
+    
+def test_raise_error_when_passing_bad_trend():
+    with pytest.raises(ValueError):
+        Prophet(trend="bad_trend")
+        

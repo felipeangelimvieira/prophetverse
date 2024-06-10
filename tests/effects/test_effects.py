@@ -106,7 +106,7 @@ def test_split_data_into_effects(effects, sample_data):
             (3,1),
         ),
         (
-            LinearEffect(id="test_lin", regex=r"lin_.*", prior=(dist.Normal, 0, 1)),
+            LinearEffect(id="test_lin", regex=r"lin_.*", prior=dist.Normal(0, 1)),
             jnp.array([[1, 2], [3, 4], [5, 6]]).reshape((-1, 2)),
             jnp.array([100, 200, 300]).reshape((-1, 1)),
             (3,1),

@@ -92,9 +92,10 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         exogenous_effects=None,
         default_effect=None,
+        scale=None,
         rng_key=None,
     ):
         """
@@ -124,6 +125,7 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
             optimizer_steps=optimizer_steps,
+            scale=scale,
         )
 
         self.model = univariate_model
@@ -281,10 +283,17 @@ class Prophet(ExogenousEffectMixin, BaseBayesianForecaster):
 
         elif isinstance(self.trend, TrendModel):
             return self.trend
-        
+
         raise ValueError(
             "trend must be either 'linear', 'logistic' or a TrendModel instance."
         )
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+
+        return [{
+            "optimizer_steps": 1_000,
+        }]
 
 
 class ProphetGamma(Prophet):
@@ -329,9 +338,10 @@ class ProphetGamma(Prophet):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         exogenous_effects=None,
         default_effect=None,
+        scale=None,
         rng_key=None,
     ):
 
@@ -354,7 +364,9 @@ class ProphetGamma(Prophet):
             optimizer_steps=optimizer_steps,
             exogenous_effects=exogenous_effects,
             default_effect=default_effect,
-            rng_key=rng_key)
+            scale=scale,
+            rng_key=rng_key,
+        )
 
         self.model = univariate_gamma_model
 
@@ -402,9 +414,10 @@ class ProphetNegBinomial(Prophet):
         inference_method="map",
         optimizer_name="Adam",
         optimizer_kwargs=None,
-        optimizer_steps=1_000,
+        optimizer_steps=100_000,
         exogenous_effects=None,
         default_effect=None,
+        scale=None,
         rng_key=None,
     ):
 
@@ -427,6 +440,7 @@ class ProphetNegBinomial(Prophet):
             optimizer_steps=optimizer_steps,
             exogenous_effects=exogenous_effects,
             default_effect=default_effect,
+            scale=scale,
             rng_key=rng_key,
         )
 

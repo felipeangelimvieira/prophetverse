@@ -18,11 +18,10 @@ from prophetverse.sktime import (HierarchicalProphet, Prophet, ProphetGamma,
 
 PROPHET_MODELS = [Prophet, ProphetGamma, ProphetNegBinomial, HierarchicalProphet]
 
-@pytest.mark.skip(reason="Waiting for skbase update")
+
+@pytest.mark.skip(reason="Temporarily disabled")
 @pytest.mark.parametrize("model", PROPHET_MODELS)
-def test_sktime_contract(model):
+def test_check_estimator(model):
     """Test the sktime contract for Prophet and HierarchicalProphet."""
 
-    check_estimator(
-        model, raise_exceptions=True
-    )
+    check_estimator(model, raise_exceptions=True)

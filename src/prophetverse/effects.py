@@ -141,7 +141,7 @@ class LinearEffect(AbstractEffect):
 
     Args:
         id (str): The identifier for the effect.
-        prior (tuple): A tuple with the distribution class to use for sampling coefficients and  the arguments to pass to the distribution class. Defaults to (dist.Normal, 0, 1).
+        prior (dist.Distribution): A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
         effect_mode (str): The mode of the effect, either "multiplicative" or "additive".
 
     Attributes:
@@ -156,10 +156,10 @@ class LinearEffect(AbstractEffect):
 
     def __init__(
         self,
-        prior=(dist.Normal, 0, 1),
+        prior=None,
         effect_mode="multiplicative",
         **kwargs):
-        self.prior = prior
+        self.prior = prior or dist.Normal(0, 0.1)
         self.effect_mode = effect_mode
         super().__init__(**kwargs)
 
@@ -177,12 +177,11 @@ class LinearEffect(AbstractEffect):
         """
         n_features = data.shape[-1]
 
-        dist = self.prior[0]
-        dist_args = self.prior[1:]
-        coefficients = self.sample(
-            "coefs",
-            dist(*[jnp.array([arg] * n_features) for arg in dist_args]),
-        )
+        with numpyro.plate(f"{self.id}_plate", n_features, dim=-1):
+            coefficients = self.sample(
+                "coefs",
+                self.prior
+            )
 
         if coefficients.ndim == 1:
             coefficients = jnp.expand_dims(coefficients, axis=-1)

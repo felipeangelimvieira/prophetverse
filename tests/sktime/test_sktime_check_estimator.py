@@ -19,7 +19,7 @@ from prophetverse.sktime import (HierarchicalProphet, Prophet, ProphetGamma,
 PROPHET_MODELS = [Prophet, ProphetGamma, ProphetNegBinomial, HierarchicalProphet]
 
 
-@pytest.mark.skip(reason="Temporarily disabled")
+#@pytest.mark.skip(reason="Temporarily disabled")
 @pytest.mark.parametrize("model", PROPHET_MODELS)
 def test_check_estimator(model):
     """Test the sktime contract for Prophet and HierarchicalProphet."""

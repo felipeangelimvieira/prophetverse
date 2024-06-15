@@ -45,6 +45,7 @@ HYPERPARAMS = [
 ]
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("hierarchy_levels", [0, (1,), (2, 1), (1, 2), (3, 2, 2)])
 def test_hierarchy_levels(hierarchy_levels):
     y = make_y(hierarchy_levels)
@@ -53,6 +54,7 @@ def test_hierarchy_levels(hierarchy_levels):
     execute_fit_predict_test(forecaster, y, X)
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize("hyperparams", HYPERPARAMS)
 def test_hyperparams(hyperparams):
     hierarchy_levels = (2, 1)
@@ -61,6 +63,22 @@ def test_hyperparams(hyperparams):
     forecaster = HierarchicalProphet(
         **hyperparams, optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
     )
+    execute_fit_predict_test(forecaster, y, X)
+
+
+@pytest.mark.ci
+@pytest.mark.parametrize("hierarchy_levels", [0, (1,), (2, 1), (1, 2), (3, 2, 2)])
+@pytest.mark.parametrize("make_X", [make_random_X, make_None_X, make_empty_X])
+@pytest.mark.parametrize("hyperparams", HYPERPARAMS)
+def test_prophet2_fit_with_different_nlevels(hierarchy_levels, make_X, hyperparams):
+    y = make_y(hierarchy_levels)
+
+    X = make_X(y)
+
+    forecaster = HierarchicalProphet(
+        **hyperparams, optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+    )
+
     execute_fit_predict_test(forecaster, y, X)
 
 

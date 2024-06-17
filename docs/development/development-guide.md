@@ -44,6 +44,16 @@ Community slack: None yet.
 ### Code standards
 Writing good code is not just about what you write. It is also about how you write it. During Continuous Integration testing, several tools will be run to check your code for stylistic errors. Generating any warnings will cause the test to fail. Thus, good style is a requirement for submitting code to Prophetverse.There are of tools in Prophetverse to help contributors verify their changes before contributing to the project
 
+#### [Pytest](https://docs.pytest.org/en/7.1.x/contents.html) 
+You can test your code with pytest integration with the poetry command
+<br> ```poetry run pytest```
+
+The CI tests are computationally intensive, so if you want to do a faster test you can run a [smoke test](https://en.wikipedia.org/wiki/Smoke_testing_(software)) with the command 
+<br> ```poetry run pytest -m "not ci"```
+
+If you also wanna run the tests even faster feel free to parallel processing the tests with [pytest-xdist](https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once).
+
+
 #### [Pre-commit](https://pre-commit.com/)
 
 Additionally, Continuous Integration will run code formatting checks like black, isort, and mypy and more using pre-commit hooks. Any warnings from these checks will cause the Continuous Integration to fail; therefore, it is helpful to run the check yourself before submitting code. This can be done by installing pre-commit (which should already have happened if you followed the instructions in Setting up your development environment) and then running:

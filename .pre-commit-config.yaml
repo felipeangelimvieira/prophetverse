@@ -3,6 +3,7 @@ repos:
   - repo: meta
     hooks:
       - id: check-useless-excludes
+
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v9.16.0
     hooks:
@@ -11,25 +12,31 @@ repos:
         additional_dependencies:
           - "@commitlint/config-conventional"
           - conventional-changelog-conventionalcommits
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
-      - id: check-ast
       - id: check-added-large-files
-      - id: check-builtin-literals
+        args:
+          - --maxkb=1000
       - id: check-case-conflict
-      - id: check-docstring-first
-      - id: check-executables-have-shebangs
-      - id: check-json
       - id: check-merge-conflict
       - id: check-symlinks
       - id: check-yaml
-        exclude: ".*\\.yaml$"
-        args: ["--unsafe"]
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: fix-encoding-pragma
+        args:
+          - --remove
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-json
       - id: detect-private-key
       - id: fix-byte-order-marker
-      - id: fix-encoding-pragma
-        args: ["--remove"]
       - id: no-commit-to-branch
         args: [--branch, main]
       - id: pretty-format-json
@@ -37,32 +44,68 @@ repos:
           - --autofix
           - --no-sort-keys
       - id: sort-simple-yaml
-      - id: trailing-whitespace
-      - id: check-added-large-files
-        args: ["--maxkb=50000"]
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - --py38-plus
+
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
         name: isort
         args: [--atomic, --profile=black, --multi-line=3, --filter-files]
+
   - repo: https://github.com/psf/black
     rev: 24.4.2
     hooks:
       - id: black
-        args: [--line-length=120]
+        language_version: python3
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear, flake8-print]
+
+  - repo: https://github.com/mgedmin/check-manifest
+    rev: "0.49"
+    hooks:
+      - id: check-manifest
+        stages: [manual]
+
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.8.5
     hooks:
-      - id: nbqa-isort
       - id: nbqa-black
+        args:
+          - --nbqa-dont-skip-bad-cells
+      - id: nbqa-isort
+        args:
+          - --nbqa-dont-skip-bad-cells
+      - id: nbqa-flake8
+        args:
+          - --nbqa-dont-skip-bad-cells
+          - --extend-ignore=E402,E203
+
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.3.0
     hooks:
       - id: pydocstyle
-        args: [--convention, google]
+        args:
+          - --config=setup.cfg
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.10.0" # Use the sha / tag you want to point at
+    rev: "v1.10.0"
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
@@ -77,6 +120,7 @@ repos:
           - pydantic==2.5.3
           - pydantic-settings==2.1.0
           - types-toml
+
   - repo: https://github.com/pycqa/pylint
     rev: v3.2.2
     hooks:

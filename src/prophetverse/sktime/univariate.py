@@ -385,13 +385,17 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         )
 
     @classmethod
-    def get_test_params(cls, parameter_set="default"):
+    def get_test_params(cls, parameter_set="default"):  # pragma: no cover
 
-        return [
-            {
-                "optimizer_steps": 1_000,
-            }
-        ]
+        params = []
+        for likelihood in _LIKELIHOOD_MODEL_MAP.keys():
+            params.append(
+                {
+                    "likelihood": likelihood,
+                    "optimizer_steps": 10,
+                }
+            )
+        return params
 
 
 class Prophet(Prophetverse):

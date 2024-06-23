@@ -70,7 +70,30 @@ class BaseBayesianForecaster(BaseForecaster):
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
 
-    def optimizer(self):
+    @property
+    def uses_discrete_likelihood(self):
+        """Property that indicates whether the forecaster uses a discrete likelihood.
+        
+        As a consequence, the target variable must be integer-valued and will not be scaled
+        before _get_fit_data is called.
+
+        Returns
+        -------
+        bool
+            True if the forecaster uses a discrete likelihood, False otherwise.
+        """
+        return False
+
+    def optimizer(self) -> numpyro.optim._NumPyroOptim:
+        """Returns the optimizer
+
+        Returns
+        -------
+        _NumPyroOptim
+            An instance of the optimizer.
+            
+        """
+        
         optimizer_kwargs = self.optimizer_kwargs
         optimizer_name = self.optimizer_name
         rng_key = self.rng_key
@@ -272,7 +295,6 @@ class BaseBayesianForecaster(BaseForecaster):
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
 
-        
         predict_data = self._get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
@@ -308,7 +330,7 @@ class BaseBayesianForecaster(BaseForecaster):
                 if isinstance(x, tuple):
                     return x
                 return (x,)
-            
+
             tuples = [
                 (sample_i, *_coerce_to_tuple(idx)) for sample_i, idx in itertools.product(samples_idx, idxs)
             ]
@@ -341,7 +363,7 @@ class BaseBayesianForecaster(BaseForecaster):
             return self._vectorize_predict_method(
                 "predict_samples", X=X, fh=fh
             )
-            
+
         fh_as_index = self.fh_to_index(fh)
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
@@ -357,24 +379,70 @@ class BaseBayesianForecaster(BaseForecaster):
         return self._inv_scale_y(preds)
 
     def _set_y_scales(self, y):
+        """
+        Set the scaling factor for the target variable.
+
+        Notes:
+            - If `scale` attribute is set, it will be used as the scaling factor.
+            - If the target variable has only one level, the scaling factor will be set as the maximum absolute value of the target variable.
+            - If the target variable has multiple levels, the scaling factor will be set as the maximum absolute value of each level, grouped by the remaining levels.
+
+
+        Parameters
+        ----------
+            y (pd.Series or pd.DataFrame): The target variable.
+
+        Returns
+        -------
+            None
+
+        """
         if self.scale is not None:
             self._scale = self.scale
-            return
-        if y.index.nlevels == 1:
-            self._scale = y.abs().max().values[0]
+        elif y.index.nlevels == 1:
+            self._scale = float(y.abs().max().values[0])
         else:
             self._scale = y.groupby(level=list(range(y.index.nlevels - 1))).agg(
                 lambda x: np.abs(x).max()
             )
 
-    def _scale_y(self, y):
-        if y.index.nlevels == 1:
+    def _scale_y(self, y : pd.DataFrame) -> pd.DataFrame:
+        """Scale the target variable dividing it by self._scale
+
+        Parameters
+        ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
+        Returns
+        -------
+        pd.DataFrame
+            The same timeseries dataframe scaled
+
+        """
+        if self.uses_discrete_likelihood:
+            return y
+
+        if isinstance(self._scale, float):
             return y / self._scale
+
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
         return y / scale_for_each_obs
 
-    def _inv_scale_y(self, y):
-        if y.index.nlevels == 1:
+    def _inv_scale_y(self, y : pd.DataFrame) -> pd.DataFrame:
+        """
+        Inverse scales the input DataFrame y.
+
+        Parameters:
+            y (pd.DataFrame): The input DataFrame to be inverse scaled.
+
+        Returns:
+            pd.DataFrame: The inverse scaled DataFrame.
+        """
+        if self.uses_discrete_likelihood:
+            return y
+
+        if isinstance(self._scale, float):
             return y * self._scale
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
         return y * scale_for_each_obs
@@ -502,7 +570,7 @@ class BaseBayesianForecaster(BaseForecaster):
         outs = []
         for idx, data in self.forecasters_.iterrows():
             forecaster = data[0]
-            
+
             if X is None:
                 _X = None
             else:

@@ -4,33 +4,22 @@ import pytest
 from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.hierarchical.aggregate import Aggregator
-from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
+from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
+                                                _make_hierarchical)
 
 from prophetverse.effects import LinearEffect
-from prophetverse.models import (
-    univariate_gamma_model,
-    univariate_model,
-    univariate_negbinomial_model,
-)
+from prophetverse.models import (univariate_gamma_model, univariate_model,
+                                 univariate_negbinomial_model)
 from prophetverse.sktime.seasonality import seasonal_transformer
-from prophetverse.sktime.univariate import (
-    _DISCRETE_LIKELIHOODS,
-    _LIKELIHOOD_MODEL_MAP,
-    Prophet,
-    ProphetGamma,
-    ProphetNegBinomial,
-    Prophetverse,
-)
+from prophetverse.sktime.univariate import (_DISCRETE_LIKELIHOODS,
+                                            _LIKELIHOOD_MODEL_MAP, Prophet,
+                                            ProphetGamma, ProphetNegBinomial,
+                                            Prophetverse)
 from prophetverse.trend.flat import FlatTrend
 
-from ._utils import (
-    execute_extra_predict_methods_tests,
-    execute_fit_predict_test,
-    make_empty_X,
-    make_None_X,
-    make_random_X,
-    make_y,
-)
+from ._utils import (execute_extra_predict_methods_tests,
+                     execute_fit_predict_test, make_empty_X, make_None_X,
+                     make_random_X, make_y)
 
 MODELS = [
     Prophet,

@@ -215,7 +215,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         return _LIKELIHOOD_MODEL_MAP[self.likelihood]
 
     @property
-    def uses_discrete_likelihood(self) -> bool:
+    def should_skip_scaling(self) -> bool:
         return self.likelihood in _DISCRETE_LIKELIHOODS
 
     def _validate_hyperparams(self):
@@ -262,7 +262,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
 
         self.trend_model_ = self._get_trend_model()
 
-        if self.uses_discrete_likelihood:
+        if self.should_skip_scaling:
             self.trend_model_.initialize(y / self._scale)
         else:
             self.trend_model_.initialize(y)

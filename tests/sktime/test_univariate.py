@@ -159,4 +159,4 @@ def test_prophetverse_likelihood_behaviour(likelihood):
     assert model.model == _LIKELIHOOD_MODEL_MAP[likelihood]
 
     if likelihood in _DISCRETE_LIKELIHOODS:
-        assert model.uses_discrete_likelihood
+        assert model.should_skip_scaling

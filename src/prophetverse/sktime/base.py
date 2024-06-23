@@ -69,7 +69,7 @@ class BaseBayesianForecaster(BaseForecaster):
         super().__init__(*args, **kwargs)
 
     @property
-    def uses_discrete_likelihood(self):
+    def should_skip_scaling(self):
         """Property that indicates whether the forecaster uses a discrete likelihood.
 
         As a consequence, the target variable must be integer-valued and will not be scaled
@@ -413,7 +413,7 @@ class BaseBayesianForecaster(BaseForecaster):
             The same timeseries dataframe scaled
 
         """
-        if self.uses_discrete_likelihood:
+        if self.should_skip_scaling:
             return y
 
         if isinstance(self._scale, float):
@@ -432,7 +432,7 @@ class BaseBayesianForecaster(BaseForecaster):
         Returns:
             pd.DataFrame: The inverse scaled DataFrame.
         """
-        if self.uses_discrete_likelihood:
+        if self.should_skip_scaling:
             return y
 
         if isinstance(self._scale, float):

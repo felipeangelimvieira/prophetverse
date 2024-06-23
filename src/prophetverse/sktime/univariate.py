@@ -13,13 +13,18 @@ from jax import random
 from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 
-from prophetverse.models import (univariate_gamma_model, univariate_model,
-                                 univariate_negbinomial_model)
-from prophetverse.sktime.base import (BaseBayesianForecaster,
-                                      ExogenousEffectMixin)
+from prophetverse.models import (
+    univariate_gamma_model,
+    univariate_model,
+    univariate_negbinomial_model,
+)
+from prophetverse.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin
 from prophetverse.trend.flat import FlatTrend
-from prophetverse.trend.piecewise import (PiecewiseLinearTrend,
-                                          PiecewiseLogisticTrend, TrendModel)
+from prophetverse.trend.piecewise import (
+    PiecewiseLinearTrend,
+    PiecewiseLogisticTrend,
+    TrendModel,
+)
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 

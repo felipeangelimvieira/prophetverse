@@ -4,22 +4,33 @@ import pytest
 from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.hierarchical.aggregate import Aggregator
-from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
-                                                _make_hierarchical)
+from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
 
 from prophetverse.effects import LinearEffect
-from prophetverse.models import (univariate_gamma_model, univariate_model,
-                                 univariate_negbinomial_model)
+from prophetverse.models import (
+    univariate_gamma_model,
+    univariate_model,
+    univariate_negbinomial_model,
+)
 from prophetverse.sktime.seasonality import seasonal_transformer
-from prophetverse.sktime.univariate import (_DISCRETE_LIKELIHOODS,
-                                            _LIKELIHOOD_MODEL_MAP, Prophet,
-                                            ProphetGamma, ProphetNegBinomial,
-                                            Prophetverse)
+from prophetverse.sktime.univariate import (
+    _DISCRETE_LIKELIHOODS,
+    _LIKELIHOOD_MODEL_MAP,
+    Prophet,
+    ProphetGamma,
+    ProphetNegBinomial,
+    Prophetverse,
+)
 from prophetverse.trend.flat import FlatTrend
 
-from ._utils import (execute_extra_predict_methods_tests,
-                     execute_fit_predict_test, make_empty_X, make_None_X,
-                     make_random_X, make_y)
+from ._utils import (
+    execute_extra_predict_methods_tests,
+    execute_fit_predict_test,
+    make_empty_X,
+    make_None_X,
+    make_random_X,
+    make_y,
+)
 
 MODELS = [
     Prophet,
@@ -28,13 +39,22 @@ MODELS = [
 ]
 
 HYPERPARAMS = [
-    dict(trend=FlatTrend(), feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True)),
     dict(
-        feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True),
+        trend=FlatTrend(),
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
+    ),
+    dict(
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
         default_effect=LinearEffect(effect_mode="multiplicative"),
     ),
     dict(
-        feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True),
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
         exogenous_effects=[
             LinearEffect(id="lineareffect1", regex=r"(x1).*"),
             LinearEffect(id="lineareffect2", regex=r"(x2).*", prior=dist.Laplace(0, 1)),
@@ -58,7 +78,9 @@ def test_model_class_fit(model_class):
 
     y = make_y(hierarchy_levels)
     X = make_X(y)
-    forecaster = model_class(**hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = model_class(
+        **hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
 
@@ -72,7 +94,9 @@ def test_hierarchy_levels_fit(hierarchy_levels):
 
     y = make_y(hierarchy_levels)
     X = make_X(y)
-    forecaster = model_class(**hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = model_class(
+        **hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
 
@@ -86,7 +110,9 @@ def test_hyperparams_fit(hyperparams):
 
     y = make_y(hierarchy_levels)
     X = make_X(y)
-    forecaster = model_class(**hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = model_class(
+        **hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
 
@@ -95,7 +121,9 @@ def test_hyperparams_fit(hyperparams):
 def test_extra_predict_methods(make_X):
     y = make_y((2, 1))
     X = make_X(y)
-    forecaster = Prophet(optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = Prophet(
+        optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
     execute_extra_predict_methods_tests(forecaster=forecaster, X=X, y=y)
 
 
@@ -104,17 +132,22 @@ def test_extra_predict_methods(make_X):
 @pytest.mark.parametrize("hierarchy_levels", [(1,), (2,), (2, 1)])
 @pytest.mark.parametrize("make_X", [make_random_X, make_None_X, make_empty_X])
 @pytest.mark.parametrize("hyperparams", HYPERPARAMS)
-def test_prophet2_fit_with_different_nlevels(model_class, hierarchy_levels, make_X, hyperparams):
+def test_prophet2_fit_with_different_nlevels(
+    model_class, hierarchy_levels, make_X, hyperparams
+):
 
     y = make_y(hierarchy_levels)
     X = make_X(y)
-    forecaster = model_class(**hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1)
+    forecaster = model_class(
+        **hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+    )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
 
-@pytest.mark.parametrize("parameters", [
-    dict(trend="bad_trend"),
-    dict(likelihood="bad_likelihood")])
+
+@pytest.mark.parametrize(
+    "parameters", [dict(trend="bad_trend"), dict(likelihood="bad_likelihood")]
+)
 def test_raise_error_when_passing_parameters(parameters):
     with pytest.raises(ValueError):
         Prophetverse(**parameters)
@@ -124,6 +157,6 @@ def test_raise_error_when_passing_parameters(parameters):
 def test_prophetverse_likelihood_behaviour(likelihood):
     model = Prophetverse(likelihood=likelihood)
     assert model.model == _LIKELIHOOD_MODEL_MAP[likelihood]
-    
+
     if likelihood in _DISCRETE_LIKELIHOODS:
         assert model.uses_discrete_likelihood

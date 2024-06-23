@@ -76,3 +76,4 @@ class AbstractEffect(ABC):
     def __call__(self, trend, data):
 
         return self.compute_effect(trend, data)
+ 

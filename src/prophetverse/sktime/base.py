@@ -15,7 +15,7 @@ from numpyro.contrib.control_flow import scan
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
-from prophetverse.effects import AbstractEffect, LinearEffect
+from prophetverse.effects.effects import AbstractEffect, LinearEffect
 from prophetverse.engine import (InferenceEngine, MAPInferenceEngine,
                                  MCMCInferenceEngine)
 from prophetverse.utils.frame_to_array import (get_multiindex_loc,

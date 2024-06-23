@@ -7,7 +7,7 @@ from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
                                                 _make_hierarchical)
 
-from prophetverse.effects import LinearEffect
+from prophetverse.effects.effects import LinearEffect
 from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (Prophet, ProphetGamma,
                                             ProphetNegBinomial)

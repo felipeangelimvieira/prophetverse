@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from numpyro import distributions as dist
 
-from prophetverse.effects import (AbstractEffect, HillEffect, LinearEffect,
+from prophetverse.effects.effects import (AbstractEffect, HillEffect, LinearEffect,
                                   LogEffect, additive_effect,
                                   multiplicative_effect)
 from prophetverse.utils.regex import exact

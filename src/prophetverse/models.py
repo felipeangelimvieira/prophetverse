@@ -5,7 +5,7 @@ import numpyro
 from numpyro import distributions as dist
 
 from prophetverse.distributions import GammaReparametrized
-from prophetverse.effects import AbstractEffect
+from prophetverse.effects.effects import AbstractEffect
 from prophetverse.trend.base import TrendModel
 
 

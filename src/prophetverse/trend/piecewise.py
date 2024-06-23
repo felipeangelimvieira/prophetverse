@@ -455,7 +455,7 @@ def _suggest_logistic_rate_and_offset(
     T = t0 - t1
     y0, y1 = y[:, i0].flatten(), y[:, i1].flatten()
 
-    if y0 == 0:
+    if np.any(y0 == 0):
         y0 = 1e-8
 
     r0 = capacities / y0
@@ -464,7 +464,7 @@ def _suggest_logistic_rate_and_offset(
     L0 = np.log(r0 - 1)
     L1 = np.log(r1 - 1)
 
-    if np.isnan(L0).any() or np.isnan(L1).any():
+    if np.any(np.isnan(L0)) or np.any(np.isnan(L1)):
         raise ValueError(
             "L0 is {}, L1 is {}. At least one of them has NaN, the input parameters were: t: {}, y: {}, capacities: {}".format(
                 L0, L1, t, y, capacities

@@ -66,7 +66,7 @@ def make_y(hierarchy_levels):
     if hierarchy_levels == 0:
         y = _make_hierarchical(
             hierarchy_levels=(1,), max_timepoints=12, min_timepoints=12
-        ).droplevel(0)
+        ).droplevel(0) 
     else:
         y = _make_hierarchical(
             hierarchy_levels=hierarchy_levels, max_timepoints=12, min_timepoints=12

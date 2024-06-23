@@ -13,6 +13,7 @@ from .base import TrendModel
 
 __all__ = ["PiecewiseLinearTrend", "PiecewiseLogisticTrend"]
 
+
 class PiecewiseLinearTrend(TrendModel):
 
     def __init__(
@@ -23,7 +24,7 @@ class PiecewiseLinearTrend(TrendModel):
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
-        **kwargs
+        **kwargs,
     ):
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
@@ -66,14 +67,14 @@ class PiecewiseLinearTrend(TrendModel):
 
     def get_changepoint_matrix(self, idx: pd.PeriodIndex) -> jnp.ndarray:
         """
-        Returns the changepoint matrix for the given index.
+                Returns the changepoint matrix for the given index.
 
-        Args:
-            idx (pd.PeriodIndex): The index for which to compute the changepoint matrix.
+                Args:
+                    idx (pd.PeriodIndex): The index for which to compute the changepoint matrix.
 
-        Returns:
-            jnp.ndarray: The changepoint matrix.
-f
+                Returns:
+                    jnp.ndarray: The changepoint matrix.
+        f
         """
         t_scaled = self._index_to_scaled_timearray(idx)
         changepoint_matrix = self._get_multivariate_changepoint_matrix(t_scaled)
@@ -148,9 +149,7 @@ f
         changepoint_intervals = _to_list_if_scalar(
             self.changepoint_interval, self.n_series
         )
-        changepoint_ranges = _to_list_if_scalar(
-            self.changepoint_range, self.n_series
-        )
+        changepoint_ranges = _to_list_if_scalar(self.changepoint_range, self.n_series)
 
         changepoint_ts = []
         for changepoint_interval, changepoint_range in zip(
@@ -166,7 +165,8 @@ f
 
             if len(changepoint_ts[-1]) == 0:
                 raise ValueError(
-                    f"No changepoints were generated. Try increasing the changing the changepoint_range. There are {len(t_scaled)} timepoints in the series, changepoint_range is {changepoint_range} and changepoint_interval is {changepoint_interval}.")
+                    f"No changepoints were generated. Try increasing the changing the changepoint_range. There are {len(t_scaled)} timepoints in the series, changepoint_range is {changepoint_range} and changepoint_interval is {changepoint_interval}."
+                )
 
         self._changepoint_ts = changepoint_ts
 
@@ -185,7 +185,9 @@ f
             detrender = Detrender()
             y = y - detrender.fit_transform(y)
 
-        self._global_rates, self._offset_prior_loc = self._suggest_global_trend_and_offset(y)
+        self._global_rates, self._offset_prior_loc = (
+            self._suggest_global_trend_and_offset(y)
+        )
         self._changepoint_prior_loc, self._changepoint_prior_scale = (
             self._get_changepoint_prior_vectors(global_rates=self._global_rates)
         )
@@ -279,10 +281,7 @@ f
 
         offset = numpyro.sample(
             "offset",
-            dist.Normal(
-                self._offset_prior_loc,
-                self._offset_prior_scale
-            ),
+            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
         )
 
         changepoint_coefficients = numpyro.sample(
@@ -297,7 +296,9 @@ f
 
         trend = (changepoint_matrix) @ changepoint_coefficients + offset
 
-        if trend.ndim == 1 or (trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series):
+        if trend.ndim == 1 or (
+            trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series
+        ):
             trend = trend.reshape((-1, 1))
 
         return trend
@@ -312,7 +313,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         changepoint_prior_scale: float,
         offset_prior_scale=10,
         capacity_prior: dist.Distribution = None,
-        **kwargs
+        **kwargs,
     ):
 
         if capacity_prior is None:
@@ -330,7 +331,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             changepoint_range,
             changepoint_prior_scale,
             offset_prior_scale=offset_prior_scale,
-            **kwargs
+            **kwargs,
         )
 
     def _suggest_global_trend_and_offset(
@@ -454,11 +455,21 @@ def _suggest_logistic_rate_and_offset(
     T = t0 - t1
     y0, y1 = y[:, i0].flatten(), y[:, i1].flatten()
 
+    if np.any(y0 == 0):
+        y0 = 1e-8
+
     r0 = capacities / y0
     r1 = capacities / y1
 
     L0 = np.log(r0 - 1)
     L1 = np.log(r1 - 1)
+
+    if np.any(np.isnan(L0)) or np.any(np.isnan(L1)):
+        raise ValueError(
+            "L0 is {}, L1 is {}. At least one of them has NaN, the input parameters were: t: {}, y: {}, capacities: {}".format(
+                L0, L1, t, y, capacities
+            )
+        )
 
     k = (L1 - L0) / T
     m = -(L1 + k * t1)

@@ -16,10 +16,8 @@ from numpyro.infer import MCMC, NUTS, Predictive, init_to_mean
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
 from prophetverse.effects import AbstractEffect, LinearEffect
-from prophetverse.engine import (InferenceEngine, MAPInferenceEngine,
-                                 MCMCInferenceEngine)
-from prophetverse.utils.frame_to_array import (get_multiindex_loc,
-                                               series_to_tensor)
+from prophetverse.engine import InferenceEngine, MAPInferenceEngine, MCMCInferenceEngine
+from prophetverse.utils.frame_to_array import get_multiindex_loc, series_to_tensor
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -66,11 +64,34 @@ class BaseBayesianForecaster(BaseForecaster):
         self.optimizer_steps = optimizer_steps
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
-        self.scale=scale
+        self.scale = scale
         self._sample_sites = set()
         super().__init__(*args, **kwargs)
 
-    def optimizer(self):
+    @property
+    def should_skip_scaling(self):
+        """Property that indicates whether the forecaster uses a discrete likelihood.
+
+        As a consequence, the target variable must be integer-valued and will not be scaled
+        before _get_fit_data is called.
+
+        Returns
+        -------
+        bool
+            True if the forecaster uses a discrete likelihood, False otherwise.
+        """
+        return False
+
+    def optimizer(self) -> numpyro.optim._NumPyroOptim:
+        """Returns the optimizer
+
+        Returns
+        -------
+        _NumPyroOptim
+            An instance of the optimizer.
+
+        """
+
         optimizer_kwargs = self.optimizer_kwargs
         optimizer_name = self.optimizer_name
         rng_key = self.rng_key
@@ -200,11 +221,7 @@ class BaseBayesianForecaster(BaseForecaster):
         self._set_y_scales(y)
         y = self._scale_y(y)
         data = self._get_fit_data(y, X, y.index.get_level_values(-1).unique())
-        return numpyro.render_model(
-            self.model,
-            model_kwargs=data,
-            **kwargs
-        )
+        return numpyro.render_model(self.model, model_kwargs=data, **kwargs)
 
     def _predict(self, fh, X):
         """
@@ -234,9 +251,7 @@ class BaseBayesianForecaster(BaseForecaster):
             pandas.DataFrame: A DataFrame containing the predicted values for all sites, with the site names as columns and the forecast horizon as the index.
         """
         if self._is_vectorized:
-            return self._vectorize_predict_method(
-                "predict_all_sites", X=X, fh=fh
-            )
+            return self._vectorize_predict_method("predict_all_sites", X=X, fh=fh)
 
         fh_as_index = self.fh_to_index(fh)
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
@@ -272,7 +287,6 @@ class BaseBayesianForecaster(BaseForecaster):
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
 
-        
         predict_data = self._get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
@@ -292,7 +306,9 @@ class BaseBayesianForecaster(BaseForecaster):
         """
 
         if self._is_vectorized:
-            return self._vectorize_predict_method("predict_all_sites_samples", X=X, fh=fh)
+            return self._vectorize_predict_method(
+                "predict_all_sites_samples", X=X, fh=fh
+            )
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
@@ -308,19 +324,20 @@ class BaseBayesianForecaster(BaseForecaster):
                 if isinstance(x, tuple):
                     return x
                 return (x,)
-            
+
             tuples = [
-                (sample_i, *_coerce_to_tuple(idx)) for sample_i, idx in itertools.product(samples_idx, idxs)
+                (sample_i, *_coerce_to_tuple(idx))
+                for sample_i, idx in itertools.product(samples_idx, idxs)
             ]
             # Set samples_idx as level 0 of idx
-            idx = pd.MultiIndex.from_tuples(tuples,names=["sample", *idxs.names])
+            idx = pd.MultiIndex.from_tuples(tuples, names=["sample", *idxs.names])
 
-            dfs.append(pd.DataFrame(
-                data={
-                    site: data.flatten()
-                },
-                index=idx,
-            ))
+            dfs.append(
+                pd.DataFrame(
+                    data={site: data.flatten()},
+                    index=idx,
+                )
+            )
 
         df = pd.concat(dfs, axis=1)
 
@@ -338,10 +355,8 @@ class BaseBayesianForecaster(BaseForecaster):
             pd.DataFrame: Samples from the posterior predictive distribution.
         """
         if self._is_vectorized:
-            return self._vectorize_predict_method(
-                "predict_samples", X=X, fh=fh
-            )
-            
+            return self._vectorize_predict_method("predict_samples", X=X, fh=fh)
+
         fh_as_index = self.fh_to_index(fh)
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
@@ -357,24 +372,70 @@ class BaseBayesianForecaster(BaseForecaster):
         return self._inv_scale_y(preds)
 
     def _set_y_scales(self, y):
+        """
+        Set the scaling factor for the target variable.
+
+        Notes:
+            - If `scale` attribute is set, it will be used as the scaling factor.
+            - If the target variable has only one level, the scaling factor will be set as the maximum absolute value of the target variable.
+            - If the target variable has multiple levels, the scaling factor will be set as the maximum absolute value of each level, grouped by the remaining levels.
+
+
+        Parameters
+        ----------
+            y (pd.Series or pd.DataFrame): The target variable.
+
+        Returns
+        -------
+            None
+
+        """
         if self.scale is not None:
             self._scale = self.scale
-            return
-        if y.index.nlevels == 1:
-            self._scale = y.abs().max().values[0]
+        elif y.index.nlevels == 1:
+            self._scale = float(y.abs().max().values[0])
         else:
             self._scale = y.groupby(level=list(range(y.index.nlevels - 1))).agg(
                 lambda x: np.abs(x).max()
             )
 
-    def _scale_y(self, y):
-        if y.index.nlevels == 1:
+    def _scale_y(self, y: pd.DataFrame) -> pd.DataFrame:
+        """Scale the target variable dividing it by self._scale
+
+        Parameters
+        ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
+        Returns
+        -------
+        pd.DataFrame
+            The same timeseries dataframe scaled
+
+        """
+        if self.should_skip_scaling:
+            return y
+
+        if isinstance(self._scale, float):
             return y / self._scale
+
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
         return y / scale_for_each_obs
 
-    def _inv_scale_y(self, y):
-        if y.index.nlevels == 1:
+    def _inv_scale_y(self, y: pd.DataFrame) -> pd.DataFrame:
+        """
+        Inverse scales the input DataFrame y.
+
+        Parameters:
+            y (pd.DataFrame): The input DataFrame to be inverse scaled.
+
+        Returns:
+            pd.DataFrame: The inverse scaled DataFrame.
+        """
+        if self.should_skip_scaling:
+            return y
+
+        if isinstance(self._scale, float):
             return y * self._scale
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
         return y * scale_for_each_obs
@@ -479,22 +540,24 @@ class BaseBayesianForecaster(BaseForecaster):
     def site_names(self) -> list[Any]:
         return list(self.posterior_samples_.keys())
 
-    def _vectorize_predict_method(self, methodname : str, X: pd.DataFrame, fh : ForecastingHorizon):
+    def _vectorize_predict_method(
+        self, methodname: str, X: pd.DataFrame, fh: ForecastingHorizon
+    ):
         """
         Handle sktime's "vectorization" of timeseries.
-        
+
         When a multiindex is passed as input and the forecaster does not accept natively hierarchical data,
         it will create a dataframe of forecasters, and they should be called
         with the corresponding index.
-        
+
         Args:
             methodname (str): The method name to call.
             X (pd.DataFrame): The input data.
             fh (ForecastingHorizon): The forecasting horizon.
-        
+
         Returns:
             pd.DataFrame: The output of the method.
-        
+
         """
         if not self._is_vectorized:
             return getattr(self, methodname)(X=X, fh=fh)
@@ -502,7 +565,7 @@ class BaseBayesianForecaster(BaseForecaster):
         outs = []
         for idx, data in self.forecasters_.iterrows():
             forecaster = data[0]
-            
+
             if X is None:
                 _X = None
             else:
@@ -551,7 +614,7 @@ class ExogenousEffectMixin:
                 )
 
             if not len(columns):
-                logging.warning("No columns match the regex {}".format(effect.regex))
+                logging.warning(f"No columns match the regex {effect.regex}")
 
             columns_with_effects = columns_with_effects.union(columns)
 

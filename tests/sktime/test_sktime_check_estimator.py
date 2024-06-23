@@ -14,9 +14,12 @@ from skbase.utils.deep_equals._deep_equals import (_coerce_list, _dict_equals,
 from sktime.utils.estimator_checks import check_estimator
 
 from prophetverse.sktime import (HierarchicalProphet, Prophet, ProphetGamma,
-                                 ProphetNegBinomial)
+                                 ProphetNegBinomial, Prophetverse)
 
-PROPHET_MODELS = [Prophet, ProphetGamma, ProphetNegBinomial, HierarchicalProphet]
+PROPHET_MODELS = [
+    Prophetverse,
+    HierarchicalProphet,
+]
 
 
 @pytest.mark.skip(reason="Temporarily disabled")

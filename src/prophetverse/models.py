@@ -11,7 +11,7 @@ from prophetverse.trend.base import TrendModel
 
 def multivariate_model(
     y,
-    trend_model : TrendModel,
+    trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
     data: Dict[str, jnp.ndarray] = None,
     exogenous_effects: Dict[str, AbstractEffect] = None,
@@ -22,10 +22,10 @@ def multivariate_model(
 ):
     """
     Defines the Numpyro multivariate model.
-    
+
     The multivariate model is infers a Prophet-like model for each time series and use
     a multivariate normal likelihood as the observation model.
-    
+
     Args:
         y (jnp.ndarray): Array of time series data.
         trend_model (TrendModel): Trend model.
@@ -34,9 +34,9 @@ def multivariate_model(
         exogenous_effects (dict): Dictionary containing the exogenous effects.
         noise_scale (float): Noise scale.
         correlation_matrix_concentration (float): Concentration parameter for the LKJ distribution.
-        
+
     """
-    
+
     trend = trend_model(**trend_data)
 
     numpyro.deterministic("trend", trend)
@@ -92,11 +92,11 @@ def multivariate_model(
 def univariate_model(
     y,
     trend_model: TrendModel,
-    trend_data: Dict[str, jnp.ndarray], 
+    trend_data: Dict[str, jnp.ndarray],
     data: Dict[str, jnp.ndarray] = None,
     exogenous_effects: Dict[str, AbstractEffect] = None,
     noise_scale=0.5,
-    **kwargs
+    **kwargs,
 ):
     """
     Defines the Prophet-like model for univariate timeseries.
@@ -175,7 +175,7 @@ def univariate_negbinomial_model(
     exogenous_effects: Dict[str, AbstractEffect] = None,
     noise_scale=0.5,
     scale=1,
-    **kwargs
+    **kwargs,
 ):
     """
     Defines the Prophet-like model for univariate timeseries.
@@ -195,13 +195,11 @@ def univariate_negbinomial_model(
         data=data,
         exogenous_effects=exogenous_effects,
     )
-    
-    
-    
+
     mean = _to_positive(mean, 1e-5)
-    
-    mean = mean*scale
-    
+
+    mean = mean * scale
+
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2) as time_plate:
@@ -218,10 +216,10 @@ def _to_positive(x, threshold):
 
 def _compute_mean_univariate(
     trend_model: TrendModel,
-    trend_data: Dict[str, jnp.ndarray], 
+    trend_data: Dict[str, jnp.ndarray],
     data: Dict[str, jnp.ndarray] = None,
     exogenous_effects: Dict[str, AbstractEffect] = None,
-    ):
+):
     trend = trend_model(**trend_data)
 
     numpyro.deterministic("trend", trend)

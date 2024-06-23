@@ -3,6 +3,7 @@
 This module implements the Univariate Prophet model, similar to the one implemented in the `prophet` library.
 
 """
+
 from functools import partial
 from typing import Callable
 
@@ -118,7 +119,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
     exogenous_effects : List[AbstractEffect], optional, default=None
         A list of ``prophetverse`` ``AbstractEffect`` objects
         defining the exogenous effects to be used in the model.
-        
+
     likelihood : str, optional, default="normal"
         Likelihood to use for the model. Can be "normal", "gamma" or "negbinomial".
 
@@ -208,7 +209,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
     def model(self) -> Callable:
         return _LIKELIHOOD_MODEL_MAP[self.likelihood]
 
-    @property 
+    @property
     def uses_discrete_likelihood(self) -> bool:
         return self.likelihood in _DISCRETE_LIKELIHOODS
 
@@ -229,11 +230,15 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
             raise ValueError("capacity_prior_loc must be greater than 0.")
         if self.offset_prior_scale <= 0:
             raise ValueError("offset_prior_scale must be greater than 0.")
-        if self.trend not in ["linear", "logistic", "flat"] and not isinstance(self.trend, TrendModel):
+        if self.trend not in ["linear", "logistic", "flat"] and not isinstance(
+            self.trend, TrendModel
+        ):
             raise ValueError('trend must be either "linear" or "logistic".')
 
         if self.likelihood not in _LIKELIHOOD_MODEL_MAP:
-            raise ValueError(f"likelihood must be one of {list(_LIKELIHOOD_MODEL_MAP.keys())}.")
+            raise ValueError(
+                f"likelihood must be one of {list(_LIKELIHOOD_MODEL_MAP.keys())}. Got {self.likelihood}."
+            )
 
     def _get_fit_data(self, y, X, fh):
         """
@@ -253,7 +258,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         self.trend_model_ = self._get_trend_model()
 
         if self.uses_discrete_likelihood:
-            self.trend_model_.initialize(y/self._scale)
+            self.trend_model_.initialize(y / self._scale)
         else:
             self.trend_model_.initialize(y)
 
@@ -278,10 +283,9 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
 
         ## Inputs that also are used in predict
         self.fit_and_predict_data_ = {
-            
             "trend_model": self.trend_model_,
-            "noise_scale" : self.noise_scale,
-            "scale" : self._scale,
+            "noise_scale": self.noise_scale,
+            "scale": self._scale,
             "exogenous_effects": (
                 self.exogenous_effect_dict if self._has_exogenous else None
             ),
@@ -296,9 +300,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
 
         return inputs
 
-    def _get_predict_data(
-        self, X: pd.DataFrame, fh: ForecastingHorizon
-    ) -> dict:
+    def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> dict:
         """
         Prepares the data for making predictions.
 
@@ -322,7 +324,9 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
             X = self.feature_transformer.transform(X)
 
         exogenous_data = (
-            self._get_exogenous_data_array(X.loc[fh_as_index]) if self._has_exogenous else None
+            self._get_exogenous_data_array(X.loc[fh_as_index])
+            if self._has_exogenous
+            else None
         )
 
         return dict(
@@ -366,9 +370,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
                 ),
             )
         elif self.trend == "flat":
-            return FlatTrend(
-                changepoint_prior_scale=self.changepoint_prior_scale
-            )
+            return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
 
         elif isinstance(self.trend, TrendModel):
             return self.trend
@@ -380,9 +382,11 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
     @classmethod
     def get_test_params(cls, parameter_set="default"):
 
-        return [{
-            "optimizer_steps": 1_000,
-        }]
+        return [
+            {
+                "optimizer_steps": 1_000,
+            }
+        ]
 
 
 class Prophet(Prophetverse):

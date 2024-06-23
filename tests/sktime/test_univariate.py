@@ -4,21 +4,22 @@ import pytest
 from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.hierarchical.aggregate import Aggregator
-from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
+from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
+                                                _make_hierarchical)
 
 from prophetverse.effects import LinearEffect
+from prophetverse.models import (univariate_gamma_model, univariate_model,
+                                 univariate_negbinomial_model)
 from prophetverse.sktime.seasonality import seasonal_transformer
-from prophetverse.sktime.univariate import Prophet, ProphetGamma, ProphetNegBinomial
+from prophetverse.sktime.univariate import (_DISCRETE_LIKELIHOODS,
+                                            _LIKELIHOOD_MODEL_MAP, Prophet,
+                                            ProphetGamma, ProphetNegBinomial,
+                                            Prophetverse)
 from prophetverse.trend.flat import FlatTrend
 
-from ._utils import (
-    execute_extra_predict_methods_tests,
-    execute_fit_predict_test,
-    make_empty_X,
-    make_None_X,
-    make_random_X,
-    make_y,
-)
+from ._utils import (execute_extra_predict_methods_tests,
+                     execute_fit_predict_test, make_empty_X, make_None_X,
+                     make_random_X, make_y)
 
 MODELS = [
     Prophet,
@@ -111,7 +112,18 @@ def test_prophet2_fit_with_different_nlevels(model_class, hierarchy_levels, make
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
 
-
-def test_raise_error_when_passing_bad_trend():
+@pytest.mark.parametrize("parameters", [
+    dict(trend="bad_trend"),
+    dict(likelihood="bad_likelihood")])
+def test_raise_error_when_passing_parameters(parameters):
     with pytest.raises(ValueError):
-        Prophet(trend="bad_trend")
+        Prophetverse(**parameters)
+
+
+@pytest.mark.parametrize("likelihood", ["normal", "gamma", "negbinomial"])
+def test_prophetverse_likelihood_behaviour(likelihood):
+    model = Prophetverse(likelihood=likelihood)
+    assert model.model == _LIKELIHOOD_MODEL_MAP[likelihood]
+    
+    if likelihood in _DISCRETE_LIKELIHOODS:
+        assert model.uses_discrete_likelihood

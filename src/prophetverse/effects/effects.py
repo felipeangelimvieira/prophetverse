@@ -1,18 +1,10 @@
 #  pylint: disable=g-import-not-at-top
-import logging
-import re
-from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Protocol, Tuple, TypedDict
-from prophetverse.effects.base import AbstractEffect
 import jax.numpy as jnp
 import numpyro
-import pandas as pd
 from numpyro import distributions as dist
-
-# --------------
-#     Effects
-# --------------
-
+from prophetverse.effects.base import AbstractEffect
+from prophetverse.utils.algebric_operations import _exponent_safe
+from prophetverse.effects.effect_apply import additive_effect, multiplicative_effect
 
 
 class LogEffect(AbstractEffect):
@@ -179,25 +171,3 @@ class HillEffect(AbstractEffect):
         if self.effect_mode == "additive":
             return effect
         return trend * effect
-
-
-def matrix_multiplication(data, coefficients):
-    return data @ coefficients.reshape((-1, 1))
-
-
-def additive_effect(
-    trend: jnp.ndarray, data: jnp.ndarray, coefficients: jnp.ndarray
-) -> jnp.ndarray:
-    return matrix_multiplication(data, coefficients)
-
-
-def multiplicative_effect(
-    trend: jnp.ndarray, data: jnp.ndarray, coefficients: jnp.ndarray
-) -> jnp.ndarray:
-    return trend * matrix_multiplication(data, coefficients)
-
-
-def _exponent_safe(data, exponent):
-    # From lightweight mmm library
-    exponent_safe = jnp.where(data == 0, 1, data) ** exponent
-    return jnp.where(data == 0, 0, exponent_safe)

@@ -23,11 +23,20 @@ class AbstractEffect(ABC):
     def match_columns(self, columns: pd.Index) -> pd.Index:
         """Match the columns of the DataFrame with the regex pattern.
 
-        Args:
-            columns (pd.Index): Columns of the dataframe.
+        Parameters
+        ----------
+        columns : pd.Index
+            Columns of the dataframe.
 
-        Returns:
-            pd.Index: The columns that match the regex pattern.
+        Returns
+        -------
+        pd.Index
+            The columns that match the regex pattern.
+
+        Raises
+        ------
+        ValueError
+            Indicates the abscence of required regex pattern.
         """
         if isinstance(columns, List):
             columns = pd.Index(columns)
@@ -37,15 +46,22 @@ class AbstractEffect(ABC):
         return columns[columns.str.match(self.regex)]
 
     @staticmethod
-    def split_data_into_effects(X: pd.DataFrame, effects: List) -> Dict[str, pd.DataFrame]:
+    def split_data_into_effects(
+        X: pd.DataFrame, effects: List
+    ) -> Dict[str, pd.DataFrame]:
         """Split the data into effects.
 
-        Args:
-            X (pd.DataFrame): The DataFrame to split.
-            effects (List[AbstractEffect]): The effects to split the data into.
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The DataFrame to split.
+        effects : List
+            The effects to split the data into.
 
-        Returns:
-            Dict[str, pd.DataFrame]: A dictionary mapping effect names to DataFrames.
+        Returns
+        -------
+        Dict[str, pd.DataFrame]
+            A dictionary mapping effect names to DataFrames.
         """
         data = {}
         for effect in effects:
@@ -60,15 +76,15 @@ class AbstractEffect(ABC):
     def compute_effect(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
         """Compute the effect based on the trend and data.
 
-        Args:
-            trend (jnp.ndarray): The trend.
-            data (jnp.ndarray): The data concerning this effect.
-
-        Returns:
-            jnp.ndarray: The effect.
+        Parameters
+        ----------
+        trend : jnp.ndarray
+            The trend.
+        data : jnp.ndarray
+            The data concerning this effect.
         """
         ...
 
-    def __call__(self, trend, data):
+    def __call__(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.compute_effect(trend, data)

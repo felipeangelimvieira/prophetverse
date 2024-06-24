@@ -5,13 +5,8 @@ import pytest
 from numpyro import distributions as dist
 
 from prophetverse.effects.base import AbstractEffect
-from prophetverse.effects.effects import (
-    HillEffect,
-    LinearEffect,
-    LogEffect,
-    additive_effect,
-    multiplicative_effect,
-)
+from prophetverse.effects.effect_apply import additive_effect, multiplicative_effect
+from prophetverse.effects.effects import HillEffect, LinearEffect, LogEffect
 from prophetverse.utils.regex import exact
 
 
@@ -140,8 +135,7 @@ def test_compute_effect(effect: AbstractEffect, data, trend, expected_shape):
 # Testing AbstractEffect instantiation
 def test_abstract_effect_cannot_be_instantiated():
     with pytest.raises(TypeError):
-        effect = AbstractEffect()
-
+        effect = AbstractEffect() 
 
 # Testing Additive and Multiplicative effects
 def test_additive_effect():

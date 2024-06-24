@@ -4,9 +4,14 @@ import pandas as pd
 import pytest
 from numpyro import distributions as dist
 
-from prophetverse.effects.effects import (AbstractEffect, HillEffect, LinearEffect,
-                                  LogEffect, additive_effect,
-                                  multiplicative_effect)
+from prophetverse.effects.base import AbstractEffect
+from prophetverse.effects.effects import (
+    HillEffect,
+    LinearEffect,
+    LogEffect,
+    additive_effect,
+    multiplicative_effect,
+)
 from prophetverse.utils.regex import exact
 
 
@@ -37,7 +42,7 @@ def effects():
             half_max_prior=dist.Gamma(1, 1),
             slope_prior=dist.HalfNormal(10),
             max_effect_prior=dist.Gamma(1, 1),
-            regex=exact("x1")
+            regex=exact("x1"),
         ),
     ]
 
@@ -103,13 +108,13 @@ def test_split_data_into_effects(effects, sample_data):
             ),
             jnp.array([1, 2, 3]).reshape((-1, 1)),
             jnp.array([100, 200, 300]).reshape((-1, 1)),
-            (3,1),
+            (3, 1),
         ),
         (
             LinearEffect(id="test_lin", regex=r"lin_.*", prior=dist.Normal(0, 1)),
             jnp.array([[1, 2], [3, 4], [5, 6]]).reshape((-1, 2)),
             jnp.array([100, 200, 300]).reshape((-1, 1)),
-            (3,1),
+            (3, 1),
         ),
         (
             HillEffect(
@@ -120,11 +125,11 @@ def test_split_data_into_effects(effects, sample_data):
             ),
             jnp.array([1, 2, 3]).reshape((-1, 1)),
             jnp.array([100, 200, 300]).reshape((-1, 1)),
-            (3,1),
+            (3, 1),
         ),
     ],
 )
-def test_compute_effect(effect : AbstractEffect, data, trend, expected_shape):
+def test_compute_effect(effect: AbstractEffect, data, trend, expected_shape):
 
     with numpyro.handlers.seed(rng_seed=0):
         result = effect.compute_effect(trend, data)

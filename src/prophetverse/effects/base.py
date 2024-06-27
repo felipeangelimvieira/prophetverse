@@ -20,7 +20,7 @@ class AbstractEffect(ABC):
         self.id = id
         self.regex = regex
 
-    def match_columns(self, columns: pd.Index) -> pd.Index:
+    def match_columns(self, columns: pd.Index | List[str]) -> pd.Index:
         """Match the columns of the DataFrame with the regex pattern.
 
         Parameters

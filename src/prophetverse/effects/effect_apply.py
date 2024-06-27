@@ -20,7 +20,7 @@ def additive_effect(data: jnp.ndarray, coefficients: jnp.ndarray) -> jnp.ndarray
     jnp.ndarray
         Data with the effect applied.
     """
-    return matrix_multiplication(data, coefficients) #TODO falta somar tendencia?
+    return matrix_multiplication(data, coefficients)
 
 
 def multiplicative_effect(

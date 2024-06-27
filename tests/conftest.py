@@ -38,10 +38,10 @@ class ConcreteEffect(AbstractEffect):
         return trend + jnp.mean(data, axis=0)
 
 
-@pytest.fixture(name="concrete_effect")
+@pytest.fixture(name="effect_with_regex")
 def effect_with_regex():
     """Most simple class of abstracteffect with optional regex."""
-    return ConcreteEffect(id="test_effect", regex="A|B")
+    return ConcreteEffect(id="test_effect", regex="x1|x2")
 
 
 @pytest.fixture

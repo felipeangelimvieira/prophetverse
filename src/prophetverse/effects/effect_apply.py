@@ -20,6 +20,11 @@ def additive_effect(data: jnp.ndarray, coefficients: jnp.ndarray) -> jnp.ndarray
     jnp.ndarray
         Data with the effect applied.
     """
+    if data.shape[1] != coefficients.shape[0]:
+        raise ValueError(
+            "Dimensions of data and coefficients do not match for matrix multiplication"
+        )
+
     return matrix_multiplication(data, coefficients)
 
 
@@ -42,4 +47,9 @@ def multiplicative_effect(
     jnp.ndarray
         Data with the effect applied.
     """
+    if data.shape[1] != coefficients.shape[0]:
+        raise ValueError(
+            "Dimensions of data and coefficients do not match for matrix multiplication"
+        )
+
     return trend * matrix_multiplication(data, coefficients)

@@ -2,7 +2,7 @@
 
 import itertools
 import logging
-from typing import Any, Dict, List, Never, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -801,7 +801,7 @@ class ExogenousEffectMixin:
         """
         effects_and_columns: Dict[str, Tuple[set[str], AbstractEffect]] = {}
         columns_with_effects: set[str] = set()
-        exogenous_effects: Union[list[AbstractEffect], set[Never]] = (
+        exogenous_effects: Union[list[AbstractEffect], set[Any]] = (
             self.exogenous_effects or set()
         )
 

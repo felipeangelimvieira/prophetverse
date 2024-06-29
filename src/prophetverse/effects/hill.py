@@ -46,14 +46,14 @@ class HillEffect(AbstractEffect):
         Parameters
         ----------
         trend : jnp.ndarray
-            The trend component.
+            The trend component of the hierarchical prophet model.
         data : jnp.ndarray
-            The input data.
+            The data used to compute the effect.
 
         Returns
         -------
         jnp.ndarray
-            The computed effect.
+            The computed effect based on the given trend and data.
         """
         half_max = self.sample("half_max", self.half_max_prior)
         slope = self.sample("slope", self.slope_prior)

@@ -46,9 +46,9 @@ def test_compute_effect_multiplicative(hill_effect_multiplicative):
         result = hill_effect_multiplicative.compute_effect(trend, data)
 
     half_max, slope, max_effect = 0.5, 1.0, 1.5
-    x = _exponent_safe(data / half_max, -slope)  # Calculation of x in Hill function
-    expected_effect = max_effect / (1 + x)  # Expected effect based on Hill function
-    expected_result = trend * expected_effect  # Multiplicative effect on trend
+    x = _exponent_safe(data / half_max, -slope)
+    expected_effect = max_effect / (1 + x)
+    expected_result = trend * expected_effect
 
     assert jnp.allclose(result, expected_result)
 
@@ -61,7 +61,7 @@ def test_compute_effect_additive(hill_effect_additive):
         result = hill_effect_additive.compute_effect(trend, data)
 
     half_max, slope, max_effect = 0.5, 1.0, 1.5
-    x = _exponent_safe(data / half_max, -slope)  # Calculation of x in Hill function
-    expected_result = max_effect / (1 + x)  # Expected additive effect
+    x = _exponent_safe(data / half_max, -slope)
+    expected_result = max_effect / (1 + x)
 
     assert jnp.allclose(result, expected_result)

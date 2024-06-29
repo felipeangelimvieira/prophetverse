@@ -34,7 +34,7 @@ class ExpandColumnPerLevel(BaseTransformer):
         Transform the input data by expanding the columns.
     """
 
-    def __init__(self, columns_regex):
+    def __init__(self, columns_regex: list[str]):
         self.columns_regex = columns_regex
         super().__init__()
 

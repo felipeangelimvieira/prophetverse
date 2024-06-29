@@ -1,24 +1,37 @@
+"""Utility to obtain the seasonal transformer for sktime."""
+
 import pandas as pd
 from sktime.transformations.series.fourier import FourierFeatures
 
-def seasonal_transformer(freq="D", yearly_seasonality=False, weekly_seasonality=False) -> pd.DataFrame:
+
+def seasonal_transformer(
+    freq="D", yearly_seasonality=False, weekly_seasonality=False
+) -> pd.DataFrame:
     """
-    Transforms the seasonality parameters into a pandas DataFrame.
+    Transform the seasonality parameters into a pandas DataFrame.
 
-    Args:
-        freq (str, optional): The frequency of the time series. Defaults to "D".
-        yearly_seasonality (bool or int, optional): Whether to include yearly seasonality. If bool, 
-            the number of Fourier terms is set to 10. If int, the number of Fourier terms is set to 
-            the specified value. Defaults to False.
-        weekly_seasonality (bool or int, optional): Whether to include weekly seasonality. If bool, 
-            the number of Fourier terms is set to 3. If int, the number of Fourier terms is set to 
-            the specified value. Defaults to False.
+    Parameters
+    ----------
+    freq : str, optional
+        The frequency of the time series. Defaults to "D".
+    yearly_seasonality : bool or int, optional
+        Whether to include yearly seasonality. If bool, the number of Fourier terms is
+        set to 10. If int, the number of Fourier terms is set to the specified value.
+        Defaults to False.
+    weekly_seasonality : bool or int, optional
+        Whether to include weekly seasonality. If bool, the number of Fourier terms
+        is set to 3. If int, the number of Fourier terms is set to the specified value.
+        Defaults to False.
 
-    Returns:
-        pd.DataFrame: A pandas DataFrame containing the seasonality parameters.
+    Returns
+    -------
+    pd.DataFrame
+        A pandas DataFrame containing the seasonality parameters.
 
-    Raises:
-        ValueError: If yearly_seasonality or weekly_seasonality is not a boolean or an integer.
+    Raises
+    ------
+    ValueError
+        If yearly_seasonality or weekly_seasonality is not a boolean or an integer.
     """
     sp_list = []
     fourier_term_list = []
@@ -45,5 +58,8 @@ def seasonal_transformer(freq="D", yearly_seasonality=False, weekly_seasonality=
         fourier_term_list.append(weekly_seasonality_num_terms)
 
     return FourierFeatures(
-        sp_list=sp_list, fourier_terms_list=fourier_term_list, freq=freq, keep_original_columns=True
+        sp_list=sp_list,
+        fourier_terms_list=fourier_term_list,
+        freq=freq,
+        keep_original_columns=True,
     )

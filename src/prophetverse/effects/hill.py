@@ -34,16 +34,9 @@ class HillEffect(AbstractEffect):
         effect_mode : effects_application, optional
             Mode of the effect (either "additive" or "multiplicative")
         """
-        if half_max_prior is None:
-            half_max_prior = dist.Gamma(1, 1)
-        if slope_prior is None:
-            slope_prior = dist.HalfNormal(10)
-        if max_effect_prior is None:
-            max_effect_prior = dist.Gamma(1, 1)
-
-        self.half_max_prior = half_max_prior
-        self.slope_prior = slope_prior
-        self.max_effect_prior = max_effect_prior
+        self.half_max_prior = half_max_prior or dist.Gamma(1, 1)
+        self.slope_prior = slope_prior or dist.HalfNormal(10)
+        self.max_effect_prior = max_effect_prior or dist.Gamma(1, 1)
         self.effect_mode = effect_mode
         super().__init__(**kwargs)
 

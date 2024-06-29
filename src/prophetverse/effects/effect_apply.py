@@ -1,8 +1,12 @@
 """Defines the application of effects: additive or multiplicative."""
 
+from typing import Literal
+
 import jax.numpy as jnp
 
 from prophetverse.utils.algebric_operations import matrix_multiplication
+
+effects_application = Literal["additive", "multiplicative"]
 
 
 def additive_effect(data: jnp.ndarray, coefficients: jnp.ndarray) -> jnp.ndarray:

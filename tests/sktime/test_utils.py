@@ -2,15 +2,18 @@ import jax.numpy as jnp
 import numpy as np
 import pandas as pd
 import pytest
-from numpyro import distributions as dist
 from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
-from prophetverse.utils.frame_to_array import (convert_dataframe_to_tensors,
-                                    convert_index_to_days_since_epoch,
-                                    get_bottom_series_idx, get_multiindex_loc,
-                                    iterate_all_series, loc_bottom_series,
-                                    series_to_tensor)
+from prophetverse.utils import (
+    convert_dataframe_to_tensors,
+    convert_index_to_days_since_epoch,
+    get_bottom_series_idx,
+    get_multiindex_loc,
+    iterate_all_series,
+    loc_bottom_series,
+    series_to_tensor,
+)
 
 NUM_LEVELS = 2
 NUM_BOTTOM_NODES = 3
@@ -79,7 +82,7 @@ def test_series_to_tensor(multiindex_df):
 
 
 def test_convert_dataframe_to_tensors(multiindex_df):
-    
+
     result = convert_dataframe_to_tensors(multiindex_df)
     assert isinstance(result, tuple)
     assert isinstance(result[0], jnp.ndarray)

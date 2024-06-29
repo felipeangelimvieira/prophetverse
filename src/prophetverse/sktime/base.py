@@ -137,6 +137,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         return getattr(numpyro.optim, optimizer_name)(**optimizer_kwargs)
 
+    # pragma: no cover
     def _get_fit_data(
         self, y: pd.DataFrame, X: pd.DataFrame, fh: ForecastingHorizon
     ) -> Dict[str, Any]:
@@ -164,6 +165,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
+    # pragma: no cover
     def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon):
         """Generate samples from the posterior predictive distribution.
 
@@ -181,6 +183,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
+    # pragma: no cover
     def model(self, *args, **kwargs):
         """
         Numpyro model.
@@ -259,28 +262,6 @@ class BaseBayesianForecaster(BaseForecaster):
         self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
         return self
-
-    def render(self, y: pd.DataFrame, X: pd.DataFrame, **kwargs):
-        """Render a graphical representation of the model.
-
-        Uses the numpyro.render_model function.
-
-        Parameters
-        ----------
-        y : pd.DataFrame
-            Sample inputs of target variable
-        X : pd.DataFrame
-            Sample inputs of exogenous variable
-
-        Returns
-        -------
-        Digraph
-            A graphical representation of the model
-        """
-        self._set_y_scales(y)
-        y = self._scale_y(y)
-        data = self._get_fit_data(y, X, y.index.get_level_values(-1).unique())
-        return numpyro.render_model(self.model, model_kwargs=data, **kwargs)
 
     def _predict(self, fh, X):
         """

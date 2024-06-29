@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Self
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ class ExpandColumnPerLevel(BaseTransformer):
         self.columns_regex = columns_regex
         super().__init__()
 
-    def fit(self, X: pd.DataFrame, y: Optional[pd.DataFrame] = None) -> Self:
+    def fit(self, X: pd.DataFrame, y: Optional[pd.DataFrame] = None):
         """
         Fit the transformer to the input data.
 

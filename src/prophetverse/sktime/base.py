@@ -14,7 +14,7 @@ from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
 from prophetverse.effects import AbstractEffect, LinearEffect
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
-from prophetverse.utils.frame_to_array import get_multiindex_loc, series_to_tensor
+from prophetverse.utils import get_multiindex_loc, series_to_tensor
 
 
 class BaseBayesianForecaster(BaseForecaster):

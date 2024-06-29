@@ -17,8 +17,7 @@ from prophetverse.trend.piecewise import (
     PiecewiseLogisticTrend,
     TrendModel,
 )
-from prophetverse.utils.frame_to_array import loc_bottom_series, series_to_tensor
-from prophetverse.utils.multiindex import reindex_time_series
+from prophetverse.utils import loc_bottom_series, reindex_time_series, series_to_tensor
 
 from ._expand_column_per_level import ExpandColumnPerLevel
 

@@ -28,7 +28,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
     Parameters
     ----------
-    rng_key: jax.random.KeyArray
+    rng_key: KeyArray
         The RNG Key to use for sampling.
     inference_method: str
         The inference method to use. Can be either "mcmc" or "map".
@@ -61,7 +61,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
     def __init__(
         self,
-        rng_key: jax.random.KeyArray,
+        rng_key: jax.typing.ArrayLike,
         inference_method: str,
         mcmc_samples: int,
         mcmc_warmup: int,
@@ -853,7 +853,7 @@ class ExogenousEffectMixin:
 
         self._exogenous_effects_and_columns = effects_and_columns
 
-    def _get_exogenous_data_array(self, X):
+    def _get_exogenous_data_array(self, X: pd.DataFrame):
         """
         Get exogenous data array.
 

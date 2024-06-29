@@ -1,17 +1,7 @@
-import numpy as np
-import pandas as pd
 import pytest
 from numpyro import distributions as dist
-from sktime.forecasting.base import ForecastingHorizon
-from sktime.transformations.hierarchical.aggregate import Aggregator
-from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
 
 from prophetverse.effects import LinearEffect
-from prophetverse.models import (
-    univariate_gamma_model,
-    univariate_model,
-    univariate_negbinomial_model,
-)
 from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (
     _DISCRETE_LIKELIHOODS,
@@ -152,6 +142,7 @@ def test_prophet2_fit_with_different_nlevels(
         dict(likelihood="bad_likelihood"),
         dict(offset_prior_scale=-1),
         dict(capacity_prior_scale=-1),
+        dict(changepoint_interval=-1),
     ],
 )
 def test_raise_error_when_passing_parameters(parameters):

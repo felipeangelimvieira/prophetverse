@@ -1,4 +1,10 @@
-from typing import Iterable, Tuple, Union
+"""
+Piecewise trend models.
+
+This module contains the implementation of piecewise trend models (logistic and linear).
+"""
+
+from typing import Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -15,6 +21,37 @@ __all__ = ["PiecewiseLinearTrend", "PiecewiseLogisticTrend"]
 
 
 class PiecewiseLinearTrend(TrendModel):
+    """Piecewise Linear Trend model.
+
+    This model assumes that the trend is piecewise linear, with changepoints
+    at regular intervals. The number of changepoints is determined by the
+    `changepoint_interval` and `changepoint_range` parameters. The
+    `changepoint_interval` parameter specifies the interval between changepoints,
+    while the `changepoint_range` parameter specifies the range of the changepoints.
+
+    This implementation is based on the `Prophet`_ library. The initial values (global
+    rate and global offset) are suggested using the maximum and minimum values of the
+    time series data.
+
+
+    Parameters
+    ----------
+    changepoint_interval : int
+        The interval between changepoints.
+    changepoint_range : int
+        The range of the changepoints.
+    changepoint_prior_scale : dist.Distribution
+        The prior scale for the changepoints.
+    offset_prior_scale : float, optional
+        The prior scale for the offset. Default is 0.1.
+    squeeze_if_single_series : bool, optional
+        If True, squeeze the output if there is only one series. Default is True.
+    remove_seasonality_before_suggesting_initial_vals : bool, optional
+        If True, remove seasonality before suggesting initial values, using sktime's
+        detrender. Default is True.
+
+
+    """
 
     def __init__(
         self,
@@ -38,12 +75,15 @@ class PiecewiseLinearTrend(TrendModel):
 
     def initialize(self, y: pd.DataFrame):
         """
-        Initializes the piecewise trend model.
+        Initialize the piecewise trend model.
 
-        Args:
-            y (pd.DataFrame): The input data.
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The input data.
 
-        Returns:
+        Returns
+        -------
             None
         """
         super().initialize(y)
@@ -55,26 +95,32 @@ class PiecewiseLinearTrend(TrendModel):
 
     def prepare_input_data(self, idx: pd.PeriodIndex) -> dict:
         """
-        Prepares the input data for the piecewise trend model.
+        Prepare the input data for the piecewise trend model.
 
-        Args:
-            idx (pd.PeriodIndex): The index of the data.
+        Parameters
+        ----------
+        idx: pd.PeriodIndex
+            The index of the data.
 
-        Returns:
-            dict: A dictionary containing the prepared input data.
+        Returns
+        -------
+        dict
+            A dictionary containing the prepared input data.
         """
         return {"changepoint_matrix": self.get_changepoint_matrix(idx)}
 
     def get_changepoint_matrix(self, idx: pd.PeriodIndex) -> jnp.ndarray:
         """
-                Returns the changepoint matrix for the given index.
+        Return the changepoint matrix for the given index.
 
-                Args:
-                    idx (pd.PeriodIndex): The index for which to compute the changepoint matrix.
+        Parameters
+        ----------
+        idx: pd.PeriodIndex
+            The index for which to compute the changepoint matrix.
 
-                Returns:
-                    jnp.ndarray: The changepoint matrix.
-        f
+        Returns
+        -------
+            jnp.ndarray: The changepoint matrix.
         """
         t_scaled = self._index_to_scaled_timearray(idx)
         changepoint_matrix = self._get_multivariate_changepoint_matrix(t_scaled)
@@ -90,8 +136,10 @@ class PiecewiseLinearTrend(TrendModel):
     def n_changepoint_per_series(self):
         """Get the number of changepoints per series.
 
-        Returns:
-            int: Number of changepoints per series.
+        Returns
+        -------
+        int
+            Number of changepoints per series.
         """
         return [len(cp) for cp in self._changepoint_ts]
 
@@ -99,25 +147,34 @@ class PiecewiseLinearTrend(TrendModel):
     def n_changepoints(self):
         """Get the total number of changepoints.
 
-        Returns:
-            int: Total number of changepoints.
+        Returns
+        -------
+        int
+            Total number of changepoints.
         """
         return sum(self.n_changepoint_per_series)
 
     def _get_multivariate_changepoint_matrix(self, t_scaled) -> jnp.ndarray:
         """
-        Get the changepoint matrix. The changepoint matrix has shape (n_series, n_timepoints, total number of changepoints for all series).
-        A mask is applied so that for index i at dim 0, only the changepoints for series i are non-zero at dim -1.
+        Get the changepoint matrix.
 
-        Args:
-            t_scaled (ndarray): Transformed time index.
+        The changepoint matrix has shape (n_series, n_timepoints, total number of
+        changepoints for all series). A mask is applied so that for index i at dim 0,
+        only the changepoints for series i are non-zero at dim -1.
 
-        Returns:
-            ndarray: The changepoint matrix.
+        Parameters
+        ----------
+        t_scaled: jnp.ndarray
+            Transformed time index.
+
+        Returns
+        -------
+        jnp.ndarray
+            The changepoint matrix.
         """
         changepoint_ts = np.concatenate(self._changepoint_ts)
-        changepoint_design_tensor = []
-        changepoint_mask_tensor = []
+        changepoint_design_tensor_list = []
+        changepoint_mask_tensor_list = []
         for i, n_changepoints in enumerate(self.n_changepoint_per_series):
             A = _get_changepoint_matrix(t_scaled, changepoint_ts)
 
@@ -126,24 +183,31 @@ class PiecewiseLinearTrend(TrendModel):
             mask = np.zeros_like(A)
             mask[:, start_idx:end_idx] = 1
 
-            changepoint_design_tensor.append(A)
-            changepoint_mask_tensor.append(mask)
+            changepoint_design_tensor_list.append(A)
+            changepoint_mask_tensor_list.append(mask)
 
-        changepoint_design_tensor = np.stack(changepoint_design_tensor, axis=0)
-        changepoint_mask_tensor = np.stack(changepoint_mask_tensor, axis=0)
+        changepoint_design_tensor: np.ndarray = np.stack(
+            changepoint_design_tensor_list, axis=0
+        )
+        changepoint_mask_tensor: np.ndarray = np.stack(
+            changepoint_mask_tensor_list, axis=0
+        )
         return changepoint_design_tensor * changepoint_mask_tensor
 
     def _setup_changepoints(self, t_scaled) -> None:
         """
-        Setup changepoint variables
+        Set changepoint variables.
 
         This function has the collateral effect of setting the following attributes:
-        - self._changepoint_ts
+        - self._changepoint_ts.
 
-        Args:
-            t_scaled (ndarray): Transformed time index.
+        Parameters
+        ----------
+        t_scaled: jnp.ndarray
+            Transformed time index.
 
-        Returns:
+        Returns
+        -------
             None
         """
         changepoint_intervals = _to_list_if_scalar(
@@ -165,22 +229,27 @@ class PiecewiseLinearTrend(TrendModel):
 
             if len(changepoint_ts[-1]) == 0:
                 raise ValueError(
-                    f"No changepoints were generated. Try increasing the changing the changepoint_range. There are {len(t_scaled)} timepoints in the series, changepoint_range is {changepoint_range} and changepoint_interval is {changepoint_interval}."
+                    "No changepoints were generated. Try increasing the changing"
+                    + f" the changepoint_range. There are {len(t_scaled)} timepoints "
+                    + f" in the series, changepoint_range is {changepoint_range} and "
+                    + f"changepoint_interval is {changepoint_interval}."
                 )
 
         self._changepoint_ts = changepoint_ts
 
     def _setup_changepoint_prior_vectors(self, y: pd.DataFrame) -> None:
         """
-        Sets up the changepoint prior vectors for the model.
+        Set up the changepoint prior vectors for the model.
 
-        Args:
-            y (pd.DataFrame): The input DataFrame containing the time series data.
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The input DataFrame containing the time series data.
 
-        Returns:
+        Returns
+        -------
             None
         """
-
         if self.remove_seasonality_before_suggesting_initial_vals:
             detrender = Detrender()
             y = y - detrender.fit_transform(y)
@@ -198,17 +267,19 @@ class PiecewiseLinearTrend(TrendModel):
         global_rates: jnp.array,
     ) -> Tuple[jnp.array, jnp.array]:
         """
-        Returns the prior vectors for the changepoint coefficients.
+        Return the prior vectors for the changepoint coefficients.
 
-        Args:
-            global_rates (jnp.array): The global rates for each series.
+        Parameters
+        ----------
+        global_rates: jnp.array
+            The global rates for each series.
 
-        Returns:
-            Tuple[jnp.array, jnp.array]: A tuple containing the changepoint prior
-            location vector and the changepoint prior scale vector.
-
+        Returns
+        -------
+        Tuple[jnp.array, jnp.array]
+            A tuple containing the changepoint prior location vector and the
+            changepoint prior scale vector.
         """
-
         n_series = len(self.n_changepoint_per_series)
 
         def zeros_with_first_value(size, first_value):
@@ -243,14 +314,17 @@ class PiecewiseLinearTrend(TrendModel):
         self, y: pd.DataFrame
     ) -> Tuple[jnp.array, jnp.array]:
         """
-        Suggests the global trend and offset for the given time series data.
+        Suggest the global trend and offset for the given time series data.
 
-        Args:
-            y (pd.DataFrame): The time series data.
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The time series data.
 
-        Returns:
-            Tuple[jnp.array, jnp.array]: A tuple containing the global trend and offset.
-
+        Returns
+        -------
+        Tuple[jnp.array, jnp.array]
+            A tuple containing the global trend and offset.
         """
         t = self._index_to_scaled_timearray(y.index.get_level_values(-1).unique())
 
@@ -264,21 +338,22 @@ class PiecewiseLinearTrend(TrendModel):
 
         return global_rate, offset_loc
 
-    def compute_trend(self, changepoint_matrix: jnp.ndarray) -> jnp.ndarray:
+    def compute_trend(  # type: ignore[override]
+        self, changepoint_matrix: jnp.ndarray
+    ) -> jnp.ndarray:
         """
-        Computes the trend based on the given changepoint matrix.
+        Compute the trend based on the given changepoint matrix.
 
-        Args:
-            changepoint_matrix (jnp.ndarray): The changepoint matrix.
+        Parameters
+        ----------
+        changepoint_matrix: jnp.ndarray
+            The changepoint matrix.
 
-        Returns:
-            jnp.ndarray: The computed trend.
-
-        Raises:
-            None
-
+        Returns
+        -------
+        jnp.ndarray
+            The computed trend.
         """
-
         offset = numpyro.sample(
             "offset",
             dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
@@ -305,6 +380,40 @@ class PiecewiseLinearTrend(TrendModel):
 
 
 class PiecewiseLogisticTrend(PiecewiseLinearTrend):
+    """
+    Piecewise logistic trend model.
+
+    This logistic trend differs from the original Prophet logistic trend in that it
+    considers a capacity prior distribution. The capacity prior distribution is used
+    to estimate the maximum value that the time series trend can reach.
+
+    It uses internally the piecewise linear trend model, and then applies a logistic
+    function to the output of the linear trend model.
+
+
+    The initial values (global rate and global offset) are suggested using the maximum
+    and minimum values of the time series data.
+
+
+    Parameters
+    ----------
+    changepoint_interval : int
+        The interval between changepoints.
+    changepoint_range : int
+        The range of the changepoints.
+    changepoint_prior_scale : dist.Distribution
+        The prior scale for the changepoints.
+    offset_prior_scale : float, optional
+        The prior scale for the offset. Default is 0.1.
+    squeeze_if_single_series : bool, optional
+        If True, squeeze the output if there is only one series. Default is True.
+    remove_seasonality_before_suggesting_initial_vals : bool, optional
+        If True, remove seasonality before suggesting initial values, using sktime's
+        detrender. Default is True.
+    capacity_prior : dist.Distribution, optional
+        The prior distribution for the capacity. Default is a HalfNormal distribution
+        with loc=1.05 and scale=1.
+    """
 
     def __init__(
         self,
@@ -315,7 +424,6 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         capacity_prior: dist.Distribution = None,
         **kwargs,
     ):
-
         if capacity_prior is None:
             capacity_prior = dist.TransformedDistribution(
                 dist.HalfNormal(
@@ -338,15 +446,22 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         self, y: pd.DataFrame
     ) -> Tuple[jnp.array, jnp.array]:
         """
-        Suggests the global trend and offset for the given time series data.
+        Suggest the global trend and offset for the given time series data.
 
-        Args:
-            y (pd.DataFrame): The input time series data.
+        This implementation considers the max and min values of the timeseries
+        to anallytically estimate the global rate and offset.
 
-        Returns:
-            Tuple[jnp.array, jnp.array]: A tuple containing the suggested global rates and offset.
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The input time series data.
+
+        Returns
+        -------
+        Tuple[jnp.array, jnp.array]
+            A tuple containing the suggested global rates
+            and offset.
         """
-
         t_arrays = self._index_to_scaled_timearray(
             y.index.get_level_values(-1).unique()
         )
@@ -365,19 +480,21 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
         return global_rates, offset
 
-    def compute_trend(self, changepoint_matrix: jnp.ndarray) -> jnp.ndarray:
+    def compute_trend(  # type: ignore[override]
+        self, changepoint_matrix: jnp.ndarray, **kwargs
+    ) -> jnp.ndarray:
         """
-        Computes the trend for the given changepoint matrix.
+        Compute the trend for the given changepoint matrix.
 
-        Args:
-            changepoint_matrix (jnp.ndarray): The changepoint matrix.
+        Parameters
+        ----------
+        changepoint_matrix: jnp.ndarray
+            The changepoint matrix.
 
-        Returns:
-            jnp.ndarray: The computed trend.
-
-        Raises:
-            None
-
+        Returns
+        -------
+        jnp.ndarray
+            The computed trend.
         """
         with numpyro.plate("series", self.n_series, dim=-3):
             capacity = numpyro.sample("capacity", self.capacity_prior)
@@ -392,14 +509,20 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
 def _to_list_if_scalar(x, size=1):
     """
-    Converts a scalar value to a list of the same value repeated `size` times.
+    Convert a scalar value to a list of the same value repeated `size` times.
 
-    Args:
-        x (scalar or array-like): The input value to be converted.
-        size (int, optional): The number of times to repeat the value in the list. Default is 1.
+    Parameters
+    ----------
+    x: scalar or array-like
+        The input value to be converted.
+    size: int, optional
+        The number of times to repeat the value in the list. Default is 1.
 
-    Returns:
-        list: A list containing the input value repeated `size` times if `x` is a scalar, otherwise returns `x` unchanged.
+    Returns
+    -------
+    list
+        A list containing the input value repeated `size` times if `x` is
+        a scalar, otherwise returns `x` unchanged.
     """
     if np.isscalar(x):
         return [x] * size
@@ -408,14 +531,17 @@ def _to_list_if_scalar(x, size=1):
 
 def _enforce_array_if_zero_dim(x):
     """
-    Reshapes the input array `x` to have at least one dimension if it has zero dimensions.
+    Reshapes the input array `x` to have at least one dimension if it has zero dim.
 
-    Args:
-        x (array-like): The input array.
+    Parameters
+    ----------
+    x: array-like
+        The input array.
 
-    Returns:
-        array-like: The reshaped array.
-
+    Returns
+    -------
+    array-like
+        The reshaped array.
     """
     if x.ndim == 0:
         return x.reshape(1)
@@ -426,19 +552,24 @@ def _suggest_logistic_rate_and_offset(
     t: np.ndarray, y: np.ndarray, capacities: Union[float, np.ndarray]
 ):
     """
-    Suggests the logistic rate and offset based on the given time series data.
+    Suggest the logistic rate and offset based on the given time series data.
 
-    Parameters:
-        t (ndarray): The time values of the time series data.
-        y (ndarray): The observed values of the time series data.
-        capacities (float or ndarray): The capacity or capacities of the time series data.
+    Parameters
+    ----------
+    t: ndarray
+        The time values of the time series data.
+    y: ndarray
+        The observed values of the time series data.
+    capacities: float or ndarray
+        The capacity or capacities of the time series data.
 
-    Returns:
-        m (ndarray): The suggested offset.
-        k (ndarray): The suggested logistic rate.
-
+    Returns
+    -------
+    m: jnp.ndarray
+        The suggested offset.
+    k: jnp.ndarray
+        The suggested logistic rate.
     """
-
     if y.ndim == 1:
         y = y.reshape(1, -1)
     elif y.ndim == 3:
@@ -465,11 +596,11 @@ def _suggest_logistic_rate_and_offset(
     L1 = np.log(r1 - 1)
 
     if np.any(np.isnan(L0)) or np.any(np.isnan(L1)):
-        raise ValueError(
-            "L0 is {}, L1 is {}. At least one of them has NaN, the input parameters were: t: {}, y: {}, capacities: {}".format(
-                L0, L1, t, y, capacities
-            )
+        error_str = (
+            "L0 is {}, L1 is {}. At least one of them has NaN,"
+            + "the input parameters were: t: {}, y: {}, capacities: {}"
         )
+        raise ValueError(error_str.format(L0, L1, t, y, capacities))
 
     k = (L1 - L0) / T
     m = -(L1 + k * t1)
@@ -478,16 +609,21 @@ def _suggest_logistic_rate_and_offset(
 
 
 def _get_changepoint_matrix(t: jnp.ndarray, changepoint_t: jnp.array) -> jnp.ndarray:
-    """Generates a changepoint matrix based on the time indexes and changepoint time indexes.
-
-    Args:
-        t (jnp.ndarray): array with timepoints of shape (n, 1) preferably
-        changepoint_t (jnp.array): array with changepoint timepoints of shape (n_changepoints,)
-
-    Returns:
-        jnp.ndarray: changepoint matrix - already with discontinuities at changepoits hanlded
     """
+    Generate a changepoint matrix based on the time indexes and changepoint indexes.
 
+    Parameters
+    ----------
+    t: jnp.ndarray
+        array with timepoints of shape (n, 1) preferably
+    changepoint_t: jnp.array
+        array with changepoint timepoints of shape (n_changepoints,)
+
+    Returns
+    -------
+    jnp.ndarray
+        changepoint matrix of shape (n, n_changepoints)
+    """
     expanded_ts = jnp.tile(t.reshape((-1, 1)), (1, len(changepoint_t)))
     A = (expanded_ts >= changepoint_t.reshape((1, -1))).astype(int) * expanded_ts
     cutoff_ts = changepoint_t.reshape((1, -1))
@@ -499,17 +635,23 @@ def _get_changepoint_timeindexes(
     t: jnp.ndarray, changepoint_interval: int, changepoint_range: float = 0.90
 ) -> jnp.array:
     """
-    Returns an array of time indexes for changepoints based on the given parameters.
+    Return an array of time indexes for changepoints based on the given parameters.
 
-    Args:
-        t (jnp.ndarray): The array of time values.
-        changepoint_interval (int): The interval between changepoints.
-        changepoint_range (float, optional): The range of changepoints. Defaults to 0.90.
-            If greater than 1, it is interpreted as then number of timepoints.
-            If less than zero, it is interpreted as number of timepoints from the end of the time series.
+    Parameters
+    ----------
+    t: jnp.ndarray
+        The array of time values.
+    changepoint_interval: int
+        The interval between changepoints.
+    changepoint_range: float, optional
+        The range of changepoints. Defaults to 0.90. If greater than 1, it is
+        interpreted as then number of timepoints.If less than zero, it is interpreted as
+        number of timepoints from the end of the time series.
 
-    Returns:
-        jnp.array: An array of time indexes for changepoints.
+    Returns
+    -------
+    jnp.array
+        An array of time indexes for changepoints.
     """
     if changepoint_range < 1 and changepoint_range > 0:
         max_t = t.max() * changepoint_range

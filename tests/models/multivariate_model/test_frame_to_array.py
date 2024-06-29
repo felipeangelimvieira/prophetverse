@@ -3,11 +3,15 @@ import pandas as pd
 import pytest
 from jax import numpy as jnp
 
-from prophetverse.utils.frame_to_array import (
-    convert_dataframe_to_tensors, convert_index_to_days_since_epoch,
-    extract_timetensor_from_dataframe, get_bottom_series_idx,
-    get_multiindex_loc, iterate_all_series, loc_bottom_series,
-    series_to_tensor)
+from prophetverse.utils import (
+    convert_dataframe_to_tensors,
+    convert_index_to_days_since_epoch,
+    get_bottom_series_idx,
+    get_multiindex_loc,
+    iterate_all_series,
+    loc_bottom_series,
+    series_to_tensor,
+)
 
 
 # Sample data preparation
@@ -49,7 +53,7 @@ def test_loc_bottom_series(sample_hierarchical_data):
 
 # Test for iterating all series
 def test_iterate_all_series(sample_hierarchical_data):
-    for idx, series in iterate_all_series(sample_hierarchical_data):
+    for _, series in iterate_all_series(sample_hierarchical_data):
         assert len(series) == 3, "Each iterated series should have 2 features"
 
 
@@ -69,11 +73,9 @@ def test_series_to_tensor(sample_hierarchical_data):
     ), "Shape should reflect the reshaping into a 3D tensor"
 
 
-
 # Test for converting DataFrame to tensors
 def test_convert_dataframe_to_tensors(sample_hierarchical_data):
     t_arrays, df_as_arrays = convert_dataframe_to_tensors(sample_hierarchical_data)
     assert isinstance(t_arrays, jnp.ndarray) and isinstance(
         df_as_arrays, jnp.ndarray
     ), "Should convert both time and data arrays to JAX tensors"
-

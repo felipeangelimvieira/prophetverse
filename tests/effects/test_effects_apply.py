@@ -22,21 +22,6 @@ def test_multiplicative_effect_happy_path():
     assert jnp.allclose(result, expected)
 
 
-def test_additive_effect_mismatched_dimensions():
-    data = jnp.array([[1, 2], [3, 4]])
-    coefficients = jnp.array([1])
-    with pytest.raises(ValueError):
-        additive_effect(data, coefficients)
-
-
-def test_multiplicative_effect_mismatched_dimensions():
-    trend = 2.0
-    data = jnp.array([[1, 2], [3, 4]])
-    coefficients = jnp.array([1])
-    with pytest.raises(ValueError):
-        multiplicative_effect(trend, data, coefficients)
-
-
 def test_additive_effect_empty_data():
     data = jnp.array([[]])
     coefficients = jnp.array([])

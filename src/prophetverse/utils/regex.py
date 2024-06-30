@@ -1,18 +1,22 @@
+"""Regex utilities to facilitate the definition of columns for effects."""
 
-__all__  = [
-    "starts_with",
-    "exact"
-]
+__all__ = ["starts_with", "exact"]
+
 
 def starts_with(prefixes):
     """
-    Returns a regular expression pattern that matches strings starting with any of the given prefixes.
+    Return a regular expression pattern that matches strings starting given prefixes.
 
-    Args:
-        prefixes (list): A list of strings representing the prefixes to match.
+    Parameters
+    ----------
+    prefixes: list
+        A list of strings representing the prefixes to match.
 
-    Returns:
-        str: A regular expression pattern that matches strings starting with any of the given prefixes.
+    Returns
+    -------
+    str
+        A regular expression pattern that matches strings starting with any of the
+        given prefixes.
     """
     if isinstance(prefixes, str):
         prefixes = [prefixes]
@@ -21,12 +25,16 @@ def starts_with(prefixes):
 
 def exact(string):
     """
-    Returns a regular expression pattern that matches the exact given string.
+    Return a regular expression pattern that matches the exact given string.
 
-    Args:
-        string (str): The string to match exactly.
+    Parameters
+    ----------
+    string: str
+        The string to match exactly.
 
-    Returns:
-        str: A regular expression pattern that matches the exact given string.
+    Returns
+    -------
+    str
+        A regular expression pattern that matches the exact given string.
     """
     return rf"^{string}$"

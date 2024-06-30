@@ -1,4 +1,6 @@
-from typing import Dict
+"""Defines the numpyro models used in the Prophet-like framework."""
+
+from typing import Dict, Optional
 
 import jax.numpy as jnp
 import numpyro
@@ -13,30 +15,30 @@ def multivariate_model(
     y,
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
-    data: Dict[str, jnp.ndarray] = None,
-    exogenous_effects: Dict[str, AbstractEffect] = None,
+    data: Optional[Dict[str, jnp.ndarray]] = None,
+    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
     noise_scale=0.05,
     correlation_matrix_concentration=1.0,
     is_single_series=False,
     **kwargs,
 ):
     """
-    Defines the Numpyro multivariate model.
+    Define the Numpyro multivariate model.
 
     The multivariate model is infers a Prophet-like model for each time series and use
     a multivariate normal likelihood as the observation model.
 
-    Args:
+    Parameters
+    ----------
         y (jnp.ndarray): Array of time series data.
         trend_model (TrendModel): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
         noise_scale (float): Noise scale.
-        correlation_matrix_concentration (float): Concentration parameter for the LKJ distribution.
-
+        correlation_matrix_concentration (float): Concentration parameter for the LKJ
+        distribution.
     """
-
     trend = trend_model(**trend_data)
 
     numpyro.deterministic("trend", trend)
@@ -47,7 +49,7 @@ def multivariate_model(
 
         for key, exog_effect in exogenous_effects.items():
 
-            exog_data = data[key]
+            exog_data = data[key]  # type: ignore[index]
             effect = exog_effect(trend=trend, data=exog_data)
             effect = numpyro.deterministic(key, effect)
             mean += effect
@@ -93,15 +95,16 @@ def univariate_model(
     y,
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
-    data: Dict[str, jnp.ndarray] = None,
-    exogenous_effects: Dict[str, AbstractEffect] = None,
+    data: Optional[Dict[str, jnp.ndarray]] = None,
+    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
     noise_scale=0.5,
     **kwargs,
 ):
     """
-    Defines the Prophet-like model for univariate timeseries.
+    Define the Prophet-like model for univariate timeseries.
 
-    Args:
+    Parameters
+    ----------
         y (jnp.ndarray): Array of time series data.
         trend_model (TrendModel): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
@@ -109,7 +112,6 @@ def univariate_model(
         exogenous_effects (dict): Dictionary containing the exogenous effects.
         noise_scale (float): Noise scale.
     """
-
     mean = _compute_mean_univariate(
         trend_model=trend_model,
         trend_data=trend_data,
@@ -119,7 +121,7 @@ def univariate_model(
 
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
-    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
+    with numpyro.plate("data", len(mean), dim=-2):
         numpyro.sample(
             "obs",
             dist.Normal(mean.reshape((-1, 1)), noise_scale),
@@ -131,15 +133,16 @@ def univariate_gamma_model(
     y,
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
-    data: Dict[str, jnp.ndarray] = None,
-    exogenous_effects: Dict[str, AbstractEffect] = None,
+    data: Optional[Dict[str, jnp.ndarray]] = None,
+    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
     noise_scale=0.5,
     **kwargs,
 ):
     """
-    Defines the Prophet-like model for univariate timeseries.
+    Define the Prophet-like model for univariate timeseries.
 
-    Args:
+    Parameters
+    ----------
         y (jnp.ndarray): Array of time series data.
         trend_model (TrendModel): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
@@ -147,7 +150,6 @@ def univariate_gamma_model(
         exogenous_effects (dict): Dictionary containing the exogenous effects.
         noise_scale (float): Noise scale.
     """
-
     mean = _compute_mean_univariate(
         trend_model=trend_model,
         trend_data=trend_data,
@@ -159,7 +161,7 @@ def univariate_gamma_model(
 
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
-    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
+    with numpyro.plate("data", len(mean), dim=-2):
         numpyro.sample(
             "obs",
             GammaReparametrized(mean.reshape((-1, 1)), noise_scale),
@@ -171,16 +173,17 @@ def univariate_negbinomial_model(
     y,
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
-    data: Dict[str, jnp.ndarray] = None,
-    exogenous_effects: Dict[str, AbstractEffect] = None,
+    data: Optional[Dict[str, jnp.ndarray]] = None,
+    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
     noise_scale=0.5,
     scale=1,
     **kwargs,
 ):
     """
-    Defines the Prophet-like model for univariate timeseries.
+    Define the Prophet-like model for univariate timeseries.
 
-    Args:
+    Parameters
+    ----------
         y (jnp.ndarray): Array of time series data.
         trend_model (TrendModel): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
@@ -188,7 +191,6 @@ def univariate_negbinomial_model(
         exogenous_effects (dict): Dictionary containing the exogenous effects.
         noise_scale (float): Noise scale.
     """
-
     mean = _compute_mean_univariate(
         trend_model=trend_model,
         trend_data=trend_data,
@@ -202,7 +204,7 @@ def univariate_negbinomial_model(
 
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
-    with numpyro.plate("data", len(mean), dim=-2) as time_plate:
+    with numpyro.plate("data", len(mean), dim=-2):
         numpyro.sample(
             "obs",
             dist.NegativeBinomial2(mean.reshape((-1, 1)), noise_scale * scale),
@@ -217,8 +219,8 @@ def _to_positive(x, threshold):
 def _compute_mean_univariate(
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
-    data: Dict[str, jnp.ndarray] = None,
-    exogenous_effects: Dict[str, AbstractEffect] = None,
+    data: Optional[Dict[str, jnp.ndarray]] = None,
+    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
 ):
     trend = trend_model(**trend_data)
 
@@ -230,7 +232,7 @@ def _compute_mean_univariate(
 
         for key, exog_effect in exogenous_effects.items():
 
-            exog_data = data[key]
+            exog_data = data[key]  # type: ignore[index]
             effect = exog_effect(trend=trend, data=exog_data)
             effect = numpyro.deterministic(key, effect)
             mean += effect

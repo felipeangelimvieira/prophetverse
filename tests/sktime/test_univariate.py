@@ -1,7 +1,7 @@
 import pytest
 from numpyro import distributions as dist
 
-from prophetverse.effects import LinearEffect
+from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (
     _DISCRETE_LIKELIHOODS,

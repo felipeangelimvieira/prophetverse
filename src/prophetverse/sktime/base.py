@@ -12,8 +12,8 @@ import numpyro.distributions as dist
 import pandas as pd
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
-
-from prophetverse.effects import AbstractEffect, LinearEffect
+from prophetverse.effects.base import AbstractEffect
+from prophetverse.effects.linear import LinearEffect
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
 from prophetverse.utils import get_multiindex_loc, series_to_tensor
 

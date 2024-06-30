@@ -51,7 +51,12 @@ class LogEffect(AbstractEffect):
         """
         scale = self.sample("log_scale", self.scale_prior)
         rate = self.sample("log_rate", self.rate_prior)
+
+        if jnp.any(rate * data + 1 <= 0):
+            raise ValueError("Can't take log of negative values or zero.")
+
         effect = scale * jnp.log(rate * data + 1)
+
         if self.effect_mode == "additive":
             return effect
         return trend * effect

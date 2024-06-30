@@ -1,6 +1,5 @@
 """Definition of Hill Effect class."""
 
-#  pylint: disable=g-import-not-at-topt
 import jax.numpy as jnp
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution

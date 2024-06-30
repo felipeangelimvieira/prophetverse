@@ -1,6 +1,5 @@
 """Definition of Linear Effect class."""
 
-#  pylint: disable=g-import-not-at-top
 import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist

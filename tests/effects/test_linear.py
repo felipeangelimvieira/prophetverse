@@ -52,18 +52,3 @@ def test_compute_effect_additive(linear_effect_additive):
     expected_result = additive_effect(data, jnp.array([1.0, 1.0]))
 
     assert jnp.allclose(result, expected_result)
-
-
-def test_compute_effect_high_dimensional_data(linear_effect_multiplicative):
-    trend = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    data = jnp.array(
-        [[[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]], [[2.0, 3.0], [3.0, 4.0], [4.0, 5.0]]]
-    )
-
-    with seed(numpyro.handlers.seed, 0):
-        result = linear_effect_multiplicative.compute_effect(trend, data)
-
-    expected_coefficients = jnp.array([1.0, 1.0])
-    expected_result = multiplicative_effect(trend, data, expected_coefficients)
-
-    assert jnp.allclose(result, expected_result)

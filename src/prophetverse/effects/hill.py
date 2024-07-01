@@ -8,9 +8,23 @@ from prophetverse.effects.base import AbstractEffect
 from prophetverse.effects.effect_apply import effects_application
 from prophetverse.utils.algebric_operations import _exponent_safe
 
+__all__ = ["HillEffect"]
+
 
 class HillEffect(AbstractEffect):
-    """Represents a Hill effect in a time series model."""
+    """Represents a Hill effect in a time series model.
+
+    Parameters
+    ----------
+    half_max_prior : None | Distribution, optional
+        Prior distribution for the half-maximum parameter
+    slope_prior : None | Distribution, optional
+        Prior distribution for the slope parameter
+    max_effect_prior : None | Distribution, optional
+        Prior distribution for the maximum effect parameter
+    effect_mode : effects_application, optional
+        Mode of the effect (either "additive" or "multiplicative")
+    """
 
     def __init__(
         self,
@@ -20,19 +34,6 @@ class HillEffect(AbstractEffect):
         effect_mode: effects_application = "multiplicative",
         **kwargs,
     ):
-        """Initialize priors.
-
-        Parameters
-        ----------
-        half_max_prior : None | Distribution, optional
-            Prior distribution for the half-maximum parameter
-        slope_prior : None | Distribution, optional
-            Prior distribution for the slope parameter
-        max_effect_prior : None | Distribution, optional
-            Prior distribution for the maximum effect parameter
-        effect_mode : effects_application, optional
-            Mode of the effect (either "additive" or "multiplicative")
-        """
         self.half_max_prior = half_max_prior or dist.Gamma(1, 1)
         self.slope_prior = slope_prior or dist.HalfNormal(10)
         self.max_effect_prior = max_effect_prior or dist.Gamma(1, 1)

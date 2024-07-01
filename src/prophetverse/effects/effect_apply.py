@@ -6,6 +6,8 @@ import jax.numpy as jnp
 
 from prophetverse.utils.algebric_operations import matrix_multiplication
 
+__all__ = ["additive_effect", "multiplicative_effect"]
+
 effects_application = Literal["additive", "multiplicative"]
 
 

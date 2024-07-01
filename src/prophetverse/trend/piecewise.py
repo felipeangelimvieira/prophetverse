@@ -470,7 +470,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         if hasattr(self.capacity_prior, "loc"):
             capacity_prior_loc = self.capacity_prior.loc
         else:
-            capacity_prior_loc = 1.05
+            capacity_prior_loc = y_arrays.max() * 1.05
 
         global_rates, offset = _suggest_logistic_rate_and_offset(
             t=t_arrays.squeeze(),

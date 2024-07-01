@@ -12,9 +12,19 @@ from prophetverse.effects.effect_apply import (
     multiplicative_effect,
 )
 
+__all__ = ["LinearEffect"]
+
 
 class LinearEffect(AbstractEffect):
-    """Represents a linear effect in a hierarchical prophet model."""
+    """Represents a linear effect in a hierarchical prophet model.
+
+    Parameters
+    ----------
+    prior : None | Distribution, optional
+        A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
+    effect_mode : effects_application, optional
+        Either "multiplicative" or "additive" by default "multiplicative".
+    """
 
     def __init__(
         self,
@@ -22,15 +32,6 @@ class LinearEffect(AbstractEffect):
         effect_mode: effects_application = "multiplicative",
         **kwargs,
     ):
-        """Initialize linear effect priors and application.
-
-        Parameters
-        ----------
-        prior : None | Distribution, optional
-            A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
-        effect_mode : effects_application, optional
-            Either "multiplicative" or "additive" by default "multiplicative".
-        """
         self.prior = prior or dist.Normal(0, 0.1)
         self.effect_mode = effect_mode
 

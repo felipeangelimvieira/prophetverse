@@ -7,6 +7,8 @@ import jax.numpy as jnp
 import numpyro
 import pandas as pd
 
+__all__ = ["AbstractEffect"]
+
 
 class AbstractEffect(ABC):
     """Abstract class for effects.

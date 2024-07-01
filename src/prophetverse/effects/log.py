@@ -7,9 +7,21 @@ from numpyro.distributions import Distribution
 from prophetverse.effects.base import AbstractEffect
 from prophetverse.effects.effect_apply import effects_application
 
+__all__ = ["LogEffect"]
+
 
 class LogEffect(AbstractEffect):
-    """Represents a log effect as effect = scale * log(rate * data + 1)."""
+    """Represents a log effect as effect = scale * log(rate * data + 1).
+
+    Parameters
+    ----------
+    scale_prior : Distribution | None, optional
+        The prior distribution for the scale parameter., by default Gamma
+    rate_prior : Distribution | None, optional
+        The prior distribution for the rate parameter., by default Gamma
+    effect_mode : effects_application, optional
+        Either "additive" or "multiplicative", by default "multiplicative"
+    """
 
     def __init__(
         self,
@@ -18,17 +30,6 @@ class LogEffect(AbstractEffect):
         effect_mode: effects_application = "multiplicative",
         **kwargs,
     ):
-        """Log effect for a variable.
-
-        Parameters
-        ----------
-        scale_prior : Distribution | None, optional
-            The prior distribution for the scale parameter., by default Gamma
-        rate_prior : Distribution | None, optional
-            The prior distribution for the rate parameter., by default Gamma
-        effect_mode : effects_application, optional
-            Either "additive" or "multiplicative", by default "multiplicative"
-        """
         self.scale_prior = scale_prior or dist.Gamma(1, 1)
         self.rate_prior = rate_prior or dist.Gamma(1, 1)
         self.effect_mode = effect_mode

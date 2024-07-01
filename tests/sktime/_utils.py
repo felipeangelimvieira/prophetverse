@@ -5,10 +5,9 @@ from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.split import temporal_train_test_split
 from sktime.transformations.hierarchical.aggregate import Aggregator
-from sktime.utils._testing.hierarchical import (_bottom_hier_datagen,
-                                                _make_hierarchical)
+from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
 
-from prophetverse.effects import LinearEffect
+from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime.multivariate import HierarchicalProphet
 from prophetverse.sktime.seasonality import seasonal_transformer
 
@@ -18,6 +17,7 @@ EXTRA_FORECAST_FUNCS = [
     "predict_all_sites_samples",
     "predict_samples",
 ]
+
 
 def execute_fit_predict_test(forecaster, y, X, test_size=4):
 
@@ -38,7 +38,7 @@ def execute_fit_predict_test(forecaster, y, X, test_size=4):
 
 
 def _split_train_test(y, X, test_size=4):
-    
+
     dataset = temporal_train_test_split(y, X, test_size=test_size)
     if X is not None:
         y_train, y_test, X_train, X_test = dataset
@@ -47,6 +47,7 @@ def _split_train_test(y, X, test_size=4):
         X_train, X_test = None, None
 
     return y_train, y_test, X_train, X_test
+
 
 def make_random_X(y):
     return pd.DataFrame(
@@ -66,7 +67,7 @@ def make_y(hierarchy_levels):
     if hierarchy_levels == 0:
         y = _make_hierarchical(
             hierarchy_levels=(1,), max_timepoints=12, min_timepoints=12
-        ).droplevel(0) 
+        ).droplevel(0)
     else:
         y = _make_hierarchical(
             hierarchy_levels=hierarchy_levels, max_timepoints=12, min_timepoints=12
@@ -86,7 +87,7 @@ def execute_extra_predict_methods_tests(forecaster, y, X, test_size=4):
 
     n_series = y_train.index.droplevel(-1).nunique()
     for forecast_func in EXTRA_FORECAST_FUNCS:
-        preds =  getattr(forecaster, forecast_func)(X=X, fh=fh) 
+        preds = getattr(forecaster, forecast_func)(X=X, fh=fh)
         assert preds is not None
         assert isinstance(preds, pd.DataFrame)
 

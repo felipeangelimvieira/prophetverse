@@ -7,7 +7,7 @@ from sktime.split import temporal_train_test_split
 from sktime.transformations.hierarchical.aggregate import Aggregator
 from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
 
-from prophetverse.effects import LinearEffect
+from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime.multivariate import HierarchicalProphet
 from prophetverse.sktime.seasonality import seasonal_transformer
 
@@ -21,13 +21,21 @@ from ._utils import (
 )
 
 HYPERPARAMS = [
-    dict(feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True)),
     dict(
-        feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True),
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        )
+    ),
+    dict(
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
         default_effect=LinearEffect(effect_mode="multiplicative"),
     ),
     dict(
-        feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True),
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
         exogenous_effects=[
             LinearEffect(id="lineareffect1", regex=r"(x1).*"),
             LinearEffect(id="lineareffect2", regex=r"(x2).*", prior=dist.Laplace(0, 1)),
@@ -39,7 +47,9 @@ HYPERPARAMS = [
     dict(trend="logistic"),
     dict(inference_method="mcmc"),
     dict(
-        feature_transformer=seasonal_transformer(yearly_seasonality=True, weekly_seasonality=True),
+        feature_transformer=seasonal_transformer(
+            yearly_seasonality=True, weekly_seasonality=True
+        ),
         shared_features=["x1"],
     ),
 ]
@@ -50,7 +60,9 @@ HYPERPARAMS = [
 def test_hierarchy_levels(hierarchy_levels):
     y = make_y(hierarchy_levels)
     X = make_random_X(y)
-    forecaster = HierarchicalProphet(optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2)
+    forecaster = HierarchicalProphet(
+        optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+    )
     execute_fit_predict_test(forecaster, y, X)
 
 
@@ -61,7 +73,11 @@ def test_hyperparams(hyperparams):
     y = make_y(hierarchy_levels)
     X = make_random_X(y)
     forecaster = HierarchicalProphet(
-        **hyperparams, optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+        **hyperparams,
+        optimizer_steps=20,
+        changepoint_interval=2,
+        mcmc_samples=2,
+        mcmc_warmup=2
     )
     execute_fit_predict_test(forecaster, y, X)
 
@@ -76,7 +92,11 @@ def test_prophet2_fit_with_different_nlevels(hierarchy_levels, make_X, hyperpara
     X = make_X(y)
 
     forecaster = HierarchicalProphet(
-        **hyperparams, optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+        **hyperparams,
+        optimizer_steps=20,
+        changepoint_interval=2,
+        mcmc_samples=2,
+        mcmc_warmup=2
     )
 
     execute_fit_predict_test(forecaster, y, X)
@@ -86,6 +106,8 @@ def test_prophet2_fit_with_different_nlevels(hierarchy_levels, make_X, hyperpara
 def test_extra_predict_methods(make_X):
     y = make_y((2, 1))
     X = make_X(y)
-    forecaster = HierarchicalProphet(optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2)
+    forecaster = HierarchicalProphet(
+        optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+    )
 
     execute_extra_predict_methods_tests(forecaster=forecaster, X=X, y=y)

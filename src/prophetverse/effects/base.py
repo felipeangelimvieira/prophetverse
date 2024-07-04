@@ -1,7 +1,7 @@
 """Module that stores abstract class of effects."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import jax.numpy as jnp
 import numpyro
@@ -22,7 +22,7 @@ class AbstractEffect(ABC):
         self.id = id
         self.regex = regex
 
-    def match_columns(self, columns: pd.Index | List[str]) -> pd.Index:
+    def match_columns(self, columns: Union[pd.Index, List[str]]) -> pd.Index:
         """Match the columns of the DataFrame with the regex pattern.
 
         Parameters

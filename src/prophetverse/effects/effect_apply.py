@@ -8,7 +8,7 @@ from prophetverse.utils.algebric_operations import matrix_multiplication
 
 __all__ = ["additive_effect", "multiplicative_effect"]
 
-effects_application = Literal["additive", "multiplicative"]
+EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
 
 
 def additive_effect(data: jnp.ndarray, coefficients: jnp.ndarray) -> jnp.ndarray:

@@ -1,35 +1,37 @@
 """Functions that perform algebraic operations."""
 
+from typing import Union
+
 import jax.numpy as jnp
 from numpy.typing import NDArray
 
 
 def matrix_multiplication(
-    data: jnp.ndarray | NDArray, coefficients: jnp.ndarray | NDArray
-) -> jnp.ndarray | NDArray:
+    data: Union[jnp.ndarray, NDArray], coefficients: Union[jnp.ndarray, NDArray]
+) -> Union[jnp.ndarray, NDArray]:
     """Perform matrix multiplication between two matrixes.
 
     Parameters
     ----------
-    data : jnp.ndarray | NDArray
+    data : Union[jnp.ndarray, NDArray]
         Array to be multiplied.
-    coefficients : jnp.ndarray | NDArray
+    coefficients : Union[jnp.ndarray, NDArray]
         Array of coefficients used at matrix multiplication.
 
     Returns
     -------
-    jnp.ndarray | NDArray
+    Union[jnp.ndarray, NDArray]
         Matrix multiplication between data and coefficients.
     """
     return data @ coefficients.reshape((-1, 1))
 
 
-def _exponent_safe(data: jnp.ndarray | NDArray, exponent: float) -> jnp.ndarray:
+def _exponent_safe(data: Union[jnp.ndarray, NDArray], exponent: float) -> jnp.ndarray:
     """Exponentiate an array without numerical errors replacing zeros with ones.
 
     Parameters
     ----------
-    data : jnp.ndarray | NDArray
+    data : Union[jnp.ndarray, NDArray]
         Array to be exponentiated.
     exponent : float
         Expoent numerical value.

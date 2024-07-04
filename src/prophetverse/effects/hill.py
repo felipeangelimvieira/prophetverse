@@ -1,11 +1,13 @@
 """Definition of Hill Effect class."""
 
+from typing import Optional
+
 import jax.numpy as jnp
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
 from prophetverse.effects.base import AbstractEffect
-from prophetverse.effects.effect_apply import effects_application
+from prophetverse.effects.effect_apply import EFFECT_APPLICATION_TYPE
 from prophetverse.utils.algebric_operations import _exponent_safe
 
 __all__ = ["HillEffect"]
@@ -16,11 +18,11 @@ class HillEffect(AbstractEffect):
 
     Parameters
     ----------
-    half_max_prior : None | Distribution, optional
+    half_max_prior : Distribution, optional
         Prior distribution for the half-maximum parameter
-    slope_prior : None | Distribution, optional
+    slope_prior : Distribution, optional
         Prior distribution for the slope parameter
-    max_effect_prior : None | Distribution, optional
+    max_effect_prior : Distribution, optional
         Prior distribution for the maximum effect parameter
     effect_mode : effects_application, optional
         Mode of the effect (either "additive" or "multiplicative")
@@ -28,10 +30,10 @@ class HillEffect(AbstractEffect):
 
     def __init__(
         self,
-        half_max_prior: None | Distribution = None,
-        slope_prior: None | Distribution = None,
-        max_effect_prior: None | Distribution = None,
-        effect_mode: effects_application = "multiplicative",
+        half_max_prior: Optional[Distribution] = None,
+        slope_prior: Optional[Distribution] = None,
+        max_effect_prior: Optional[Distribution] = None,
+        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         **kwargs,
     ):
         self.half_max_prior = half_max_prior or dist.Gamma(1, 1)

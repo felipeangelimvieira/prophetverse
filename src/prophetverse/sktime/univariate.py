@@ -140,7 +140,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         # --------------
         "authors": "felipeangelimvieira",
         "maintainers": "felipeangelimvieira",
-        "python_dependencies": "prophetverse",
+        # "python_dependencies": "prophetverse",
         # estimator type
         # --------------
         "capability:pred_int": True,

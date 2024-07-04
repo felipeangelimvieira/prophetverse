@@ -1,5 +1,7 @@
 """Definition of Linear Effect class."""
 
+from typing import Optional
+
 import jax.numpy as jnp
 import numpyro
 from numpyro import distributions as dist
@@ -7,8 +9,8 @@ from numpyro.distributions import Distribution
 
 from prophetverse.effects.base import AbstractEffect
 from prophetverse.effects.effect_apply import (
+    EFFECT_APPLICATION_TYPE,
     additive_effect,
-    effects_application,
     multiplicative_effect,
 )
 
@@ -20,7 +22,7 @@ class LinearEffect(AbstractEffect):
 
     Parameters
     ----------
-    prior : None | Distribution, optional
+    prior : Distribution, optional
         A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
     effect_mode : effects_application, optional
         Either "multiplicative" or "additive" by default "multiplicative".
@@ -28,8 +30,8 @@ class LinearEffect(AbstractEffect):
 
     def __init__(
         self,
-        prior: None | Distribution = None,
-        effect_mode: effects_application = "multiplicative",
+        prior: Optional[Distribution] = None,
+        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         **kwargs,
     ):
         self.prior = prior or dist.Normal(0, 0.1)

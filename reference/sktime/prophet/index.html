@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.26">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.28">
     
     
       
@@ -452,15 +452,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#prophetverse.sktime.univariate.Prophet.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      __init__
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -731,15 +722,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#prophetverse.sktime.univariate.Prophet.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      __init__
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -768,20 +750,34 @@
 <a id="prophetverse.sktime.univariate.Prophet"></a>
     <div class="doc doc-contents first">
             <p class="doc doc-class-bases">
-              Bases: <code><span title="prophetverse.sktime.base.ExogenousEffectMixin">ExogenousEffectMixin</span></code>, <code><span title="prophetverse.sktime.base.BaseBayesianForecaster">BaseBayesianForecaster</span></code></p>
+              Bases: <code><span title="prophetverse.sktime.univariate.Prophetverse">Prophetverse</span></code></p>
 
 
-      <p>Univariate Prophet model, similar to the one implemented in the <code>prophet</code> library.</p>
-<p>The main difference between the mathematical model here and from the original one is the
-logistic trend. Here, another parametrization is considered, and the capacity is not
-passed as input, but inferred from the data.</p>
-<p>With respect to API, this one follows sktime convention where all hiperparameters are passed during
-<strong>init</strong>, and uses <code>changepoint_interval</code> instead of <code>n_changepoints</code> to set the changepoints. There's no
-weekly_seasonality/yearly_seasonality, but instead, the user can pass a <code>feature_transformer</code> that
-will be used to generate the fourier terms. The same for holidays.</p>
-<p>This model accepts configurations where each exogenous variable has a different function relating it to its additive
-effect on the time series. One can, for example, set different priors for a group of feature, or use a Hill function
-to model the effect of a feature.</p>
+      <p>Univariate <code>Prophetverse</code> forecaster - prophet model implemented in numpyro.</p>
+<p>Differences to facebook's prophet:</p>
+<ul>
+<li>
+<p>logistic trend. Here, another parametrization is considered,
+  and the capacity is not passed as input, but inferred from the data.</p>
+</li>
+<li>
+<p>the users can pass arbitrary <code>sktime</code> transformers as <code>feature_transformer</code>,
+  for instance <code>FourierFeatures</code> or <code>HolidayFeatures</code>.</p>
+</li>
+<li>
+<p>no default weekly_seasonality/yearly_seasonality, this is left to the user
+  via the <code>feature_transformer</code> parameter</p>
+</li>
+<li>
+<p>Uses <code>changepoint_interval</code> instead of <code>n_changepoints</code> to set changepoints.</p>
+</li>
+<li>
+<p>accepts configurations where each exogenous variable has a different function
+  relating it to its additive effect on the time series.
+  One can, for example, set different priors for a group of feature,
+  or use a Hill function to model the effect of a feature.</p>
+</li>
+</ul>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -802,7 +798,7 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The number of points between each potential changepoint.</p>
+                <p>Number of potential changepoints to sample in the history.</p>
               </div>
             </td>
             <td>
@@ -812,14 +808,24 @@ to model the effect of a feature.</p>
           <tr class="doc-section-item">
             <td><code>changepoint_range</code></td>
             <td>
-                  <code>float</code>
+                  <code>float or int</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Proportion of the history in which trend changepoints will be estimated. 
-                       If a float between 0 and 1, the range will be that proportion of the history. 
-                       If an int, the range will be that number of points. A negative int indicates number of points
-                       counting from the end of the history.</p>
+                <p>Proportion of the history in which trend changepoints will be estimated.</p>
+<ul>
+<li>
+<p>if float, must be between 0 and 1.
+  The range will be that proportion of the training history.</p>
+</li>
+<li>
+<p>if int, ca nbe positive or negative.
+  Absolute value must be less than number of training points.
+  The range will be that number of points.
+  A negative int indicates number of points
+  counting from the end of the history, a positive int from the beginning.</p>
+</li>
+</ul>
               </div>
             </td>
             <td>
@@ -833,7 +839,8 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Parameter controlling the flexibility of the automatic changepoint selection.</p>
+                <p>Regularization parameter controlling the flexibility
+of the automatic changepoint selection.</p>
               </div>
             </td>
             <td>
@@ -847,7 +854,8 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Scale parameter for the prior distribution of the offset. The offset is the constant term in the piecewise trend equation. Default is 0.1.</p>
+                <p>Scale parameter for the prior distribution of the offset.
+The offset is the constant term in the piecewise trend equation.</p>
               </div>
             </td>
             <td>
@@ -857,11 +865,13 @@ to model the effect of a feature.</p>
           <tr class="doc-section-item">
             <td><code>feature_transformer</code></td>
             <td>
-                  <code>BaseTransformer</code>
+                  <code>sktime transformer, BaseTransformer</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Transformer object to generate Fourier terms, holiday or other features. Should be a sktime's Transformer</p>
+                <p>Transformer object to generate Fourier terms, holiday or other features.
+If None, no additional features are used.
+For multiple features, pass a <code>FeatureUnion</code> object with the transformers.</p>
               </div>
             </td>
             <td>
@@ -913,7 +923,7 @@ to model the effect of a feature.</p>
           <tr class="doc-section-item">
             <td><code>trend</code></td>
             <td>
-                  <code>str</code>
+                  <code>str, optional, one of &#34;linear&#34; (default) or &#34;logistic&#34;</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -921,7 +931,7 @@ to model the effect of a feature.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;linear&#39;</code>
+                  <code>&#39;logistic&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -945,7 +955,7 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of MCMC warmup steps.</p>
+                <p>Number of MCMC warmup steps. Also known as burn-in.</p>
               </div>
             </td>
             <td>
@@ -969,7 +979,7 @@ to model the effect of a feature.</p>
           <tr class="doc-section-item">
             <td><code>inference_method</code></td>
             <td>
-                  <code>str</code>
+                  <code>str, optional, one of &#34;mcmc&#34; or &#34;map&#34;</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -977,7 +987,7 @@ to model the effect of a feature.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;map&#39;</code>
+                  <code>&#34;map&#34;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -987,11 +997,11 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Name of the optimizer to use for variational inference.</p>
+                <p>Name of the numpyro optimizer to use for variational inference.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;Adam&#39;</code>
+                  <code>&#34;Adam&#34;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1001,11 +1011,11 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Additional keyword arguments to pass to the optimizer.</p>
+                <p>Additional keyword arguments to pass to the numpyro optimizer.</p>
               </div>
             </td>
             <td>
-                  <code>None</code>
+                  <code>{}</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1019,7 +1029,7 @@ to model the effect of a feature.</p>
               </div>
             </td>
             <td>
-                  <code>100000</code>
+                  <code>100_000</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1029,7 +1039,8 @@ to model the effect of a feature.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A list defining the exogenous effects to be used in the model.</p>
+                <p>A list of <code>prophetverse</code> <code>AbstractEffect</code> objects
+defining the exogenous effects to be used in the model.</p>
               </div>
             </td>
             <td>
@@ -1039,7 +1050,7 @@ to model the effect of a feature.</p>
           <tr class="doc-section-item">
             <td><code>default_effect</code></td>
             <td>
-                  <code>AbstractEffect</code>
+                  <code>AbstractEffectm optional, defalut=None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1061,13 +1072,13 @@ to model the effect of a feature.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td><code>rng_key</code></td>
             <td>
-                  <code><span title="jax.random.PRNGKey">PRNGKey</span></code>
+                  <code>jax.random.PRNGKey or None (default</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1083,327 +1094,245 @@ to model the effect of a feature.</p>
 
               <details class="quote">
                 <summary>Source code in <code>src/prophetverse/sktime/univariate.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 26</span>
-<span class="normal"> 27</span>
-<span class="normal"> 28</span>
-<span class="normal"> 29</span>
-<span class="normal"> 30</span>
-<span class="normal"> 31</span>
-<span class="normal"> 32</span>
-<span class="normal"> 33</span>
-<span class="normal"> 34</span>
-<span class="normal"> 35</span>
-<span class="normal"> 36</span>
-<span class="normal"> 37</span>
-<span class="normal"> 38</span>
-<span class="normal"> 39</span>
-<span class="normal"> 40</span>
-<span class="normal"> 41</span>
-<span class="normal"> 42</span>
-<span class="normal"> 43</span>
-<span class="normal"> 44</span>
-<span class="normal"> 45</span>
-<span class="normal"> 46</span>
-<span class="normal"> 47</span>
-<span class="normal"> 48</span>
-<span class="normal"> 49</span>
-<span class="normal"> 50</span>
-<span class="normal"> 51</span>
-<span class="normal"> 52</span>
-<span class="normal"> 53</span>
-<span class="normal"> 54</span>
-<span class="normal"> 55</span>
-<span class="normal"> 56</span>
-<span class="normal"> 57</span>
-<span class="normal"> 58</span>
-<span class="normal"> 59</span>
-<span class="normal"> 60</span>
-<span class="normal"> 61</span>
-<span class="normal"> 62</span>
-<span class="normal"> 63</span>
-<span class="normal"> 64</span>
-<span class="normal"> 65</span>
-<span class="normal"> 66</span>
-<span class="normal"> 67</span>
-<span class="normal"> 68</span>
-<span class="normal"> 69</span>
-<span class="normal"> 70</span>
-<span class="normal"> 71</span>
-<span class="normal"> 72</span>
-<span class="normal"> 73</span>
-<span class="normal"> 74</span>
-<span class="normal"> 75</span>
-<span class="normal"> 76</span>
-<span class="normal"> 77</span>
-<span class="normal"> 78</span>
-<span class="normal"> 79</span>
-<span class="normal"> 80</span>
-<span class="normal"> 81</span>
-<span class="normal"> 82</span>
-<span class="normal"> 83</span>
-<span class="normal"> 84</span>
-<span class="normal"> 85</span>
-<span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span>
-<span class="normal">156</span>
-<span class="normal">157</span>
-<span class="normal">158</span>
-<span class="normal">159</span>
-<span class="normal">160</span>
-<span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Prophet</span><span class="p">(</span><span class="n">ExogenousEffectMixin</span><span class="p">,</span> <span class="n">BaseBayesianForecaster</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
+<span class="normal">475</span>
+<span class="normal">476</span>
+<span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span>
+<span class="normal">480</span>
+<span class="normal">481</span>
+<span class="normal">482</span>
+<span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span>
+<span class="normal">491</span>
+<span class="normal">492</span>
+<span class="normal">493</span>
+<span class="normal">494</span>
+<span class="normal">495</span>
+<span class="normal">496</span>
+<span class="normal">497</span>
+<span class="normal">498</span>
+<span class="normal">499</span>
+<span class="normal">500</span>
+<span class="normal">501</span>
+<span class="normal">502</span>
+<span class="normal">503</span>
+<span class="normal">504</span>
+<span class="normal">505</span>
+<span class="normal">506</span>
+<span class="normal">507</span>
+<span class="normal">508</span>
+<span class="normal">509</span>
+<span class="normal">510</span>
+<span class="normal">511</span>
+<span class="normal">512</span>
+<span class="normal">513</span>
+<span class="normal">514</span>
+<span class="normal">515</span>
+<span class="normal">516</span>
+<span class="normal">517</span>
+<span class="normal">518</span>
+<span class="normal">519</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Prophet</span><span class="p">(</span><span class="n">Prophetverse</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Univariate ``Prophetverse`` forecaster - prophet model implemented in numpyro.</span>
 
-<span class="sd">    Univariate Prophet model, similar to the one implemented in the `prophet` library.</span>
+<span class="sd">    Differences to facebook&#39;s prophet:</span>
 
-<span class="sd">    The main difference between the mathematical model here and from the original one is the</span>
-<span class="sd">    logistic trend. Here, another parametrization is considered, and the capacity is not</span>
-<span class="sd">    passed as input, but inferred from the data.</span>
+<span class="sd">    * logistic trend. Here, another parametrization is considered,</span>
+<span class="sd">      and the capacity is not passed as input, but inferred from the data.</span>
 
-<span class="sd">    With respect to API, this one follows sktime convention where all hiperparameters are passed during</span>
-<span class="sd">    __init__, and uses `changepoint_interval` instead of `n_changepoints` to set the changepoints. There&#39;s no</span>
-<span class="sd">    weekly_seasonality/yearly_seasonality, but instead, the user can pass a `feature_transformer` that</span>
-<span class="sd">    will be used to generate the fourier terms. The same for holidays.</span>
+<span class="sd">    * the users can pass arbitrary ``sktime`` transformers as ``feature_transformer``,</span>
+<span class="sd">      for instance ``FourierFeatures`` or ``HolidayFeatures``.</span>
 
-<span class="sd">    This model accepts configurations where each exogenous variable has a different function relating it to its additive</span>
-<span class="sd">    effect on the time series. One can, for example, set different priors for a group of feature, or use a Hill function</span>
-<span class="sd">    to model the effect of a feature.</span>
+<span class="sd">    * no default weekly_seasonality/yearly_seasonality, this is left to the user</span>
+<span class="sd">      via the ``feature_transformer`` parameter</span>
 
+<span class="sd">    * Uses ``changepoint_interval`` instead of ``n_changepoints`` to set changepoints.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        changepoint_interval (int): The number of points between each potential changepoint.</span>
-<span class="sd">        changepoint_range (float): Proportion of the history in which trend changepoints will be estimated. </span>
-<span class="sd">                                   If a float between 0 and 1, the range will be that proportion of the history. </span>
-<span class="sd">                                   If an int, the range will be that number of points. A negative int indicates number of points</span>
-<span class="sd">                                   counting from the end of the history.</span>
-<span class="sd">        changepoint_prior_scale (float): Parameter controlling the flexibility of the automatic changepoint selection.</span>
-<span class="sd">        offset_prior_scale (float): Scale parameter for the prior distribution of the offset. The offset is the constant term in the piecewise trend equation. Default is 0.1.</span>
-<span class="sd">        feature_transformer (BaseTransformer): Transformer object to generate Fourier terms, holiday or other features. Should be a sktime&#39;s Transformer</span>
-<span class="sd">        capacity_prior_scale (float): Scale parameter for the prior distribution of the capacity.</span>
-<span class="sd">        capacity_prior_loc (float): Location parameter for the prior distribution of the capacity.</span>
-<span class="sd">        noise_scale (float): Scale parameter for the observation noise.</span>
-<span class="sd">        trend (str): Type of trend to use. Can be &quot;linear&quot; or &quot;logistic&quot;.</span>
-<span class="sd">        mcmc_samples (int): Number of MCMC samples to draw.</span>
-<span class="sd">        mcmc_warmup (int): Number of MCMC warmup steps.</span>
-<span class="sd">        mcmc_chains (int): Number of MCMC chains to run in parallel.</span>
-<span class="sd">        inference_method (str): Inference method to use. Can be &quot;mcmc&quot; or &quot;map&quot;.</span>
-<span class="sd">        optimizer_name (str): Name of the optimizer to use for variational inference.</span>
-<span class="sd">        optimizer_kwargs (dict): Additional keyword arguments to pass to the optimizer.</span>
-<span class="sd">        optimizer_steps (int): Number of optimization steps to perform for variational inference.</span>
-<span class="sd">        exogenous_effects (List[AbstractEffect]): A list defining the exogenous effects to be used in the model.</span>
-<span class="sd">        default_effect (AbstractEffect): The default effect to be used when no effect is specified for a variable.</span>
-<span class="sd">        default_exogenous_prior (tuple): Default prior distribution for exogenous effects.</span>
-<span class="sd">        rng_key (jax.random.PRNGKey): Random number generator key.</span>
+<span class="sd">    * accepts configurations where each exogenous variable has a different function</span>
+<span class="sd">      relating it to its additive effect on the time series.</span>
+<span class="sd">      One can, for example, set different priors for a group of feature,</span>
+<span class="sd">      or use a Hill function to model the effect of a feature.</span>
 
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    changepoint_interval : int, optional, default=25</span>
+<span class="sd">        Number of potential changepoints to sample in the history.</span>
 
+<span class="sd">    changepoint_range : float or int, optional, default=0.8</span>
+<span class="sd">        Proportion of the history in which trend changepoints will be estimated.</span>
+
+<span class="sd">        * if float, must be between 0 and 1.</span>
+<span class="sd">          The range will be that proportion of the training history.</span>
+
+<span class="sd">        * if int, ca nbe positive or negative.</span>
+<span class="sd">          Absolute value must be less than number of training points.</span>
+<span class="sd">          The range will be that number of points.</span>
+<span class="sd">          A negative int indicates number of points</span>
+<span class="sd">          counting from the end of the history, a positive int from the beginning.</span>
+
+<span class="sd">    changepoint_prior_scale : float, optional, default=0.001</span>
+<span class="sd">        Regularization parameter controlling the flexibility</span>
+<span class="sd">        of the automatic changepoint selection.</span>
+
+<span class="sd">    offset_prior_scale : float, optional, default=0.1</span>
+<span class="sd">        Scale parameter for the prior distribution of the offset.</span>
+<span class="sd">        The offset is the constant term in the piecewise trend equation.</span>
+
+<span class="sd">    feature_transformer : sktime transformer, BaseTransformer, optional, default=None</span>
+<span class="sd">        Transformer object to generate Fourier terms, holiday or other features.</span>
+<span class="sd">        If None, no additional features are used.</span>
+<span class="sd">        For multiple features, pass a ``FeatureUnion`` object with the transformers.</span>
+
+<span class="sd">    capacity_prior_scale : float, optional, default=0.2</span>
+<span class="sd">        Scale parameter for the prior distribution of the capacity.</span>
+
+<span class="sd">    capacity_prior_loc : float, optional, default=1.1</span>
+<span class="sd">        Location parameter for the prior distribution of the capacity.</span>
+
+<span class="sd">    noise_scale : float, optional, default=0.05</span>
+<span class="sd">        Scale parameter for the observation noise.</span>
+<span class="sd">    trend : str, optional, one of &quot;linear&quot; (default) or &quot;logistic&quot;</span>
+<span class="sd">        Type of trend to use. Can be &quot;linear&quot; or &quot;logistic&quot;.</span>
+
+<span class="sd">    mcmc_samples : int, optional, default=2000</span>
+<span class="sd">        Number of MCMC samples to draw.</span>
+
+<span class="sd">    mcmc_warmup : int, optional, default=200</span>
+<span class="sd">        Number of MCMC warmup steps. Also known as burn-in.</span>
+
+<span class="sd">    mcmc_chains : int, optional, default=4</span>
+<span class="sd">        Number of MCMC chains to run in parallel.</span>
+
+<span class="sd">    inference_method : str, optional, one of &quot;mcmc&quot; or &quot;map&quot;, default=&quot;map&quot;</span>
+<span class="sd">        Inference method to use. Can be &quot;mcmc&quot; or &quot;map&quot;.</span>
+
+<span class="sd">    optimizer_name : str, optional, default=&quot;Adam&quot;</span>
+<span class="sd">        Name of the numpyro optimizer to use for variational inference.</span>
+
+<span class="sd">    optimizer_kwargs : dict, optional, default={}</span>
+<span class="sd">        Additional keyword arguments to pass to the numpyro optimizer.</span>
+
+<span class="sd">    optimizer_steps : int, optional, default=100_000</span>
+<span class="sd">        Number of optimization steps to perform for variational inference.</span>
+
+<span class="sd">    exogenous_effects : List[AbstractEffect], optional, default=None</span>
+<span class="sd">        A list of ``prophetverse`` ``AbstractEffect`` objects</span>
+<span class="sd">        defining the exogenous effects to be used in the model.</span>
+
+<span class="sd">    default_effect : AbstractEffectm optional, defalut=None</span>
+<span class="sd">        The default effect to be used when no effect is specified for a variable.</span>
+
+<span class="sd">    default_exogenous_prior : tuple, default=None</span>
+<span class="sd">        Default prior distribution for exogenous effects.</span>
+
+<span class="sd">    rng_key : jax.random.PRNGKey or None (default</span>
+<span class="sd">        Random number generator key.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="n">_tags</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;requires-fh-in-fit&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="s2">&quot;y_inner_mtype&quot;</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-    <span class="p">}</span> 
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1415,7 +1344,7 @@ to model the effect of a feature.</p>
         <span class="n">capacity_prior_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">capacity_prior_loc</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span>
         <span class="n">noise_scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
-        <span class="n">trend</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
+        <span class="n">trend</span><span class="o">=</span><span class="s2">&quot;logistic&quot;</span><span class="p">,</span>
         <span class="n">mcmc_samples</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
         <span class="n">mcmc_warmup</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
         <span class="n">mcmc_chains</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
@@ -1428,202 +1357,30 @@ to model the effect of a feature.</p>
         <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">rng_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initializes the Prophet model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_interval</span> <span class="o">=</span> <span class="n">changepoint_interval</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_range</span> <span class="o">=</span> <span class="n">changepoint_range</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_prior_scale</span> <span class="o">=</span> <span class="n">changepoint_prior_scale</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">offset_prior_scale</span> <span class="o">=</span> <span class="n">offset_prior_scale</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">noise_scale</span> <span class="o">=</span> <span class="n">noise_scale</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">feature_transformer</span> <span class="o">=</span> <span class="n">feature_transformer</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_scale</span> <span class="o">=</span> <span class="n">capacity_prior_scale</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_loc</span> <span class="o">=</span> <span class="n">capacity_prior_loc</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="o">=</span> <span class="n">trend</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">rng_key</span><span class="o">=</span><span class="n">rng_key</span><span class="p">,</span>
-            <span class="c1"># ExogenousEffectMixin</span>
-            <span class="n">default_effect</span><span class="o">=</span><span class="n">default_effect</span><span class="p">,</span>
-            <span class="n">exogenous_effects</span><span class="o">=</span><span class="n">exogenous_effects</span><span class="p">,</span>
-            <span class="c1"># BaseBayesianForecaster</span>
-            <span class="n">inference_method</span><span class="o">=</span><span class="n">inference_method</span><span class="p">,</span>
+            <span class="n">changepoint_interval</span><span class="o">=</span><span class="n">changepoint_interval</span><span class="p">,</span>
+            <span class="n">changepoint_range</span><span class="o">=</span><span class="n">changepoint_range</span><span class="p">,</span>
+            <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="n">changepoint_prior_scale</span><span class="p">,</span>
+            <span class="n">offset_prior_scale</span><span class="o">=</span><span class="n">offset_prior_scale</span><span class="p">,</span>
+            <span class="n">feature_transformer</span><span class="o">=</span><span class="n">feature_transformer</span><span class="p">,</span>
+            <span class="n">capacity_prior_scale</span><span class="o">=</span><span class="n">capacity_prior_scale</span><span class="p">,</span>
+            <span class="n">capacity_prior_loc</span><span class="o">=</span><span class="n">capacity_prior_loc</span><span class="p">,</span>
+            <span class="n">noise_scale</span><span class="o">=</span><span class="n">noise_scale</span><span class="p">,</span>
+            <span class="n">trend</span><span class="o">=</span><span class="n">trend</span><span class="p">,</span>
             <span class="n">mcmc_samples</span><span class="o">=</span><span class="n">mcmc_samples</span><span class="p">,</span>
             <span class="n">mcmc_warmup</span><span class="o">=</span><span class="n">mcmc_warmup</span><span class="p">,</span>
             <span class="n">mcmc_chains</span><span class="o">=</span><span class="n">mcmc_chains</span><span class="p">,</span>
+            <span class="n">inference_method</span><span class="o">=</span><span class="n">inference_method</span><span class="p">,</span>
             <span class="n">optimizer_name</span><span class="o">=</span><span class="n">optimizer_name</span><span class="p">,</span>
             <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="n">optimizer_kwargs</span><span class="p">,</span>
             <span class="n">optimizer_steps</span><span class="o">=</span><span class="n">optimizer_steps</span><span class="p">,</span>
+            <span class="n">exogenous_effects</span><span class="o">=</span><span class="n">exogenous_effects</span><span class="p">,</span>
+            <span class="n">likelihood</span><span class="o">=</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span>
+            <span class="n">default_effect</span><span class="o">=</span><span class="n">default_effect</span><span class="p">,</span>
             <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="n">rng_key</span><span class="o">=</span><span class="n">rng_key</span><span class="p">,</span>
         <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">univariate_model</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_hyperparams</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_validate_hyperparams</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Validate the hyperparameters</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_interval</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;changepoint_interval must be greater than 0.&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_prior_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;changepoint_prior_scale must be greater than 0.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;noise_scale must be greater than 0.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;capacity_prior_scale must be greater than 0.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_loc</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;capacity_prior_loc must be greater than 0.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_prior_scale</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;offset_prior_scale must be greater than 0.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="s2">&quot;logistic&quot;</span><span class="p">,</span> <span class="s2">&quot;flat&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trend</span><span class="p">,</span> <span class="n">TrendModel</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;trend must be either &quot;linear&quot; or &quot;logistic&quot;.&#39;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_get_fit_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">fh</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Prepares the data for the Numpyro model.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            y (pd.DataFrame): Time series data.</span>
-<span class="sd">            X (pd.DataFrame): Exogenous variables.</span>
-<span class="sd">            fh (ForecastingHorizon): Forecasting horizon.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            dict: Dictionary of data for the Numpyro model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">fh</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_level_values</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">trend_model_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_trend_model</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">trend_model_</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
-
-        <span class="n">trend_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend_model_</span><span class="o">.</span><span class="n">prepare_input_data</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
-
-        <span class="c1">## Exogenous features</span>
-
-        <span class="k">if</span> <span class="n">X</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">X</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">y</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_transformer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-
-            <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_transformer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_has_exogenous</span> <span class="o">=</span> <span class="o">~</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">empty</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">y</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_custom_effects</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
-        <span class="n">exogenous_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_exogenous_data_array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
-
-        <span class="n">y_array</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-
-        <span class="c1">## Inputs that also are used in predict</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fit_and_predict_data_</span> <span class="o">=</span> <span class="p">{</span>
-
-            <span class="s2">&quot;trend_model&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend_model_</span><span class="p">,</span>
-            <span class="s2">&quot;noise_scale&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_scale</span><span class="p">,</span>
-            <span class="s2">&quot;exogenous_effects&quot;</span><span class="p">:</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">exogenous_effect_dict</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_exogenous</span> <span class="k">else</span> <span class="kc">None</span>
-            <span class="p">),</span>
-        <span class="p">}</span>
-
-        <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">y_array</span><span class="p">,</span>
-            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">exogenous_data</span><span class="p">,</span>
-            <span class="s2">&quot;trend_data&quot;</span><span class="p">:</span> <span class="n">trend_data</span><span class="p">,</span>
-            <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_and_predict_data_</span><span class="p">,</span>
-        <span class="p">}</span>
-
-        <span class="k">return</span> <span class="n">inputs</span>
-
-    <span class="k">def</span> <span class="nf">_get_predict_data</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">fh</span><span class="p">:</span> <span class="n">ForecastingHorizon</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Prepares the data for making predictions.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            X (pd.DataFrame): Exogenous variables.</span>
-<span class="sd">            fh (ForecastingHorizon): Forecasting horizon.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            dict: Dictionary of data for the Numpyro model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">fh_dates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fh_to_index</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
-        <span class="n">fh_as_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">fh_dates</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()))</span>
-
-        <span class="n">trend_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend_model_</span><span class="o">.</span><span class="n">prepare_input_data</span><span class="p">(</span><span class="n">fh_as_index</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">X</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">X</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">fh_as_index</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_transformer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_transformer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
-
-        <span class="n">exogenous_data</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_get_exogenous_data_array</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">fh_as_index</span><span class="p">])</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_exogenous</span> <span class="k">else</span> <span class="kc">None</span>
-        <span class="p">)</span>
-
-        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
-            <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">data</span><span class="o">=</span><span class="n">exogenous_data</span><span class="p">,</span>
-            <span class="n">trend_data</span><span class="o">=</span><span class="n">trend_data</span><span class="p">,</span>
-            <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_and_predict_data_</span><span class="p">,</span>
-        <span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_get_trend_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns the trend model based on the specified trend parameter.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            TrendModel: The trend model based on the specified trend parameter.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the trend parameter is not one of &#39;linear&#39;, &#39;logistic&#39;, &#39;flat&#39; or a TrendModel instance.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="c1">## Changepoints and trend</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="o">==</span> <span class="s2">&quot;linear&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">PiecewiseLinearTrend</span><span class="p">(</span>
-                <span class="n">changepoint_interval</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_interval</span><span class="p">,</span>
-                <span class="n">changepoint_range</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_range</span><span class="p">,</span>
-                <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_prior_scale</span><span class="p">,</span>
-                <span class="n">offset_prior_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_prior_scale</span><span class="p">,</span>
-            <span class="p">)</span>
-
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="o">==</span> <span class="s2">&quot;logistic&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">PiecewiseLogisticTrend</span><span class="p">(</span>
-                <span class="n">changepoint_interval</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_interval</span><span class="p">,</span>
-                <span class="n">changepoint_range</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_range</span><span class="p">,</span>
-                <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_prior_scale</span><span class="p">,</span>
-                <span class="n">offset_prior_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_prior_scale</span><span class="p">,</span>
-                <span class="n">capacity_prior</span><span class="o">=</span><span class="n">dist</span><span class="o">.</span><span class="n">TransformedDistribution</span><span class="p">(</span>
-                    <span class="n">dist</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_scale</span><span class="p">),</span>
-                    <span class="n">dist</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">AffineTransform</span><span class="p">(</span>
-                        <span class="n">loc</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_loc</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span>
-                    <span class="p">),</span>
-                <span class="p">),</span>
-            <span class="p">)</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="o">==</span> <span class="s2">&quot;flat&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">FlatTrend</span><span class="p">(</span>
-                <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">changepoint_prior_scale</span>
-            <span class="p">)</span>
-
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trend</span><span class="p">,</span> <span class="n">TrendModel</span><span class="p">):</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trend</span>
-
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;trend must be either &#39;linear&#39;, &#39;logistic&#39; or a TrendModel instance.&quot;</span>
-        <span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_test_params</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">parameter_set</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">):</span>
-
-        <span class="k">return</span> <span class="p">[{</span>
-            <span class="s2">&quot;optimizer_steps&quot;</span><span class="p">:</span> <span class="mi">1_000</span><span class="p">,</span>
-        <span class="p">}]</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -1638,136 +1395,6 @@ to model the effect of a feature.</p>
 
 
 
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="prophetverse.sktime.univariate.Prophet.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">changepoint_interval</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">changepoint_range</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">offset_prior_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">feature_transformer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">capacity_prior_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">capacity_prior_loc</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">noise_scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">trend</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">mcmc_samples</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">mcmc_warmup</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">mcmc_chains</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">inference_method</span><span class="o">=</span><span class="s1">&#39;map&#39;</span><span class="p">,</span> <span class="n">optimizer_name</span><span class="o">=</span><span class="s1">&#39;Adam&#39;</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">optimizer_steps</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">exogenous_effects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default_effect</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rng_key</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-      <p>Initializes the Prophet model.</p>
-
-            <details class="quote">
-              <summary>Source code in <code>src/prophetverse/sktime/univariate.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 78</span>
-<span class="normal"> 79</span>
-<span class="normal"> 80</span>
-<span class="normal"> 81</span>
-<span class="normal"> 82</span>
-<span class="normal"> 83</span>
-<span class="normal"> 84</span>
-<span class="normal"> 85</span>
-<span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">changepoint_interval</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
-    <span class="n">changepoint_range</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
-    <span class="n">changepoint_prior_scale</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
-    <span class="n">offset_prior_scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-    <span class="n">feature_transformer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">capacity_prior_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">capacity_prior_loc</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span>
-    <span class="n">noise_scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
-    <span class="n">trend</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
-    <span class="n">mcmc_samples</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span>
-    <span class="n">mcmc_warmup</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-    <span class="n">mcmc_chains</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-    <span class="n">inference_method</span><span class="o">=</span><span class="s2">&quot;map&quot;</span><span class="p">,</span>
-    <span class="n">optimizer_name</span><span class="o">=</span><span class="s2">&quot;Adam&quot;</span><span class="p">,</span>
-    <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">optimizer_steps</span><span class="o">=</span><span class="mi">100_000</span><span class="p">,</span>
-    <span class="n">exogenous_effects</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">default_effect</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">rng_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-<span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Initializes the Prophet model.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_interval</span> <span class="o">=</span> <span class="n">changepoint_interval</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_range</span> <span class="o">=</span> <span class="n">changepoint_range</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">changepoint_prior_scale</span> <span class="o">=</span> <span class="n">changepoint_prior_scale</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">offset_prior_scale</span> <span class="o">=</span> <span class="n">offset_prior_scale</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">noise_scale</span> <span class="o">=</span> <span class="n">noise_scale</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">feature_transformer</span> <span class="o">=</span> <span class="n">feature_transformer</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_scale</span> <span class="o">=</span> <span class="n">capacity_prior_scale</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">capacity_prior_loc</span> <span class="o">=</span> <span class="n">capacity_prior_loc</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">trend</span> <span class="o">=</span> <span class="n">trend</span>
-
-    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="n">rng_key</span><span class="o">=</span><span class="n">rng_key</span><span class="p">,</span>
-        <span class="c1"># ExogenousEffectMixin</span>
-        <span class="n">default_effect</span><span class="o">=</span><span class="n">default_effect</span><span class="p">,</span>
-        <span class="n">exogenous_effects</span><span class="o">=</span><span class="n">exogenous_effects</span><span class="p">,</span>
-        <span class="c1"># BaseBayesianForecaster</span>
-        <span class="n">inference_method</span><span class="o">=</span><span class="n">inference_method</span><span class="p">,</span>
-        <span class="n">mcmc_samples</span><span class="o">=</span><span class="n">mcmc_samples</span><span class="p">,</span>
-        <span class="n">mcmc_warmup</span><span class="o">=</span><span class="n">mcmc_warmup</span><span class="p">,</span>
-        <span class="n">mcmc_chains</span><span class="o">=</span><span class="n">mcmc_chains</span><span class="p">,</span>
-        <span class="n">optimizer_name</span><span class="o">=</span><span class="n">optimizer_name</span><span class="p">,</span>
-        <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="n">optimizer_kwargs</span><span class="p">,</span>
-        <span class="n">optimizer_steps</span><span class="o">=</span><span class="n">optimizer_steps</span><span class="p">,</span>
-        <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
-    <span class="p">)</span>
-
-    <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">univariate_model</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_validate_hyperparams</span><span class="p">()</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
 
 
 
@@ -1825,7 +1452,7 @@ to model the effect of a feature.</p>
     <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
       
     
   </body>

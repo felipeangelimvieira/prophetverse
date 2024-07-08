@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.26">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.28">
     
     
       
@@ -750,10 +750,10 @@
 <a id="prophetverse.sktime.univariate.ProphetGamma"></a>
     <div class="doc doc-contents first">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.sktime.univariate.Prophet" href="../prophet/#prophetverse.sktime.univariate.Prophet">Prophet</a></code></p>
+              Bases: <code><span title="prophetverse.sktime.univariate.Prophetverse">Prophetverse</span></code></p>
 
 
-      <p>A subclass of Prophet that models time series data with a gamma likelihood. Useful for positive only timeseries.</p>
+      <p>Gamma-likelihood prophet.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -774,7 +774,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The number of points between potential changepoints. Default is 25.</p>
+                <p>Number of potential changepoints to sample in the history.</p>
               </div>
             </td>
             <td>
@@ -784,11 +784,24 @@
           <tr class="doc-section-item">
             <td><code>changepoint_range</code></td>
             <td>
-                  <code>float</code>
+                  <code>float or int</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Proportion of history in which trend changepoints will be estimated. Default is 0.8.</p>
+                <p>Proportion of the history in which trend changepoints will be estimated.</p>
+<ul>
+<li>
+<p>if float, must be between 0 and 1.
+  The range will be that proportion of the training history.</p>
+</li>
+<li>
+<p>if int, ca nbe positive or negative.
+  Absolute value must be less than number of training points.
+  The range will be that number of points.
+  A negative int indicates number of points
+  counting from the end of the history, a positive int from the beginning.</p>
+</li>
+</ul>
               </div>
             </td>
             <td>
@@ -802,7 +815,8 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.</p>
+                <p>Regularization parameter controlling the flexibility
+of the automatic changepoint selection.</p>
               </div>
             </td>
             <td>
@@ -816,7 +830,8 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Scale parameter for the prior distribution of the offset. Default is 0.1.</p>
+                <p>Scale parameter for the prior distribution of the offset.
+The offset is the constant term in the piecewise trend equation.</p>
               </div>
             </td>
             <td>
@@ -826,11 +841,13 @@
           <tr class="doc-section-item">
             <td><code>feature_transformer</code></td>
             <td>
-                  <code>object</code>
+                  <code>sktime transformer, BaseTransformer</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A transformer object to preprocess exogenous features. Default is None.</p>
+                <p>Transformer object to generate Fourier terms, holiday or other features.
+If None, no additional features are used.
+For multiple features, pass a <code>FeatureUnion</code> object with the transformers.</p>
               </div>
             </td>
             <td>
@@ -844,7 +861,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Scale parameter for the capacity prior distribution. Default is 0.2.</p>
+                <p>Scale parameter for the prior distribution of the capacity.</p>
               </div>
             </td>
             <td>
@@ -858,7 +875,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Location parameter for the capacity prior distribution. Default is 1.1.</p>
+                <p>Location parameter for the prior distribution of the capacity.</p>
               </div>
             </td>
             <td>
@@ -872,7 +889,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Scale parameter for the observation noise. Default is 0.05.</p>
+                <p>Scale parameter for the observation noise.</p>
               </div>
             </td>
             <td>
@@ -882,11 +899,11 @@
           <tr class="doc-section-item">
             <td><code>trend</code></td>
             <td>
-                  <code>str</code>
+                  <code>str, optional, one of &#34;linear&#34; (default) or &#34;logistic&#34;</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Type of trend component. Default is "logistic".</p>
+                <p>Type of trend to use. Can be "linear" or "logistic".</p>
               </div>
             </td>
             <td>
@@ -900,7 +917,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of MCMC samples. Default is 2000.</p>
+                <p>Number of MCMC samples to draw.</p>
               </div>
             </td>
             <td>
@@ -914,7 +931,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of MCMC warmup steps. Default is 200.</p>
+                <p>Number of MCMC warmup steps. Also known as burn-in.</p>
               </div>
             </td>
             <td>
@@ -928,7 +945,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of MCMC chains. Default is 4.</p>
+                <p>Number of MCMC chains to run in parallel.</p>
               </div>
             </td>
             <td>
@@ -938,15 +955,15 @@
           <tr class="doc-section-item">
             <td><code>inference_method</code></td>
             <td>
-                  <code>str</code>
+                  <code>str, optional, one of &#34;mcmc&#34; or &#34;map&#34;</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Method for inference. Default is "map".</p>
+                <p>Inference method to use. Can be "mcmc" or "map".</p>
               </div>
             </td>
             <td>
-                  <code>&#39;map&#39;</code>
+                  <code>&#34;map&#34;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -956,11 +973,11 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Name of the optimizer. Default is "Adam".</p>
+                <p>Name of the numpyro optimizer to use for variational inference.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;Adam&#39;</code>
+                  <code>&#34;Adam&#34;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -970,11 +987,11 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Additional keyword arguments for the optimizer. Default is None.</p>
+                <p>Additional keyword arguments to pass to the numpyro optimizer.</p>
               </div>
             </td>
             <td>
-                  <code>None</code>
+                  <code>{}</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -984,21 +1001,22 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Number of optimizer steps. Default is 1000.</p>
+                <p>Number of optimization steps to perform for variational inference.</p>
               </div>
             </td>
             <td>
-                  <code>100000</code>
+                  <code>100_000</code>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td><code>exogenous_effects</code></td>
             <td>
-                  <code>list</code>
+                  <code>List[AbstractEffect]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>List of exogenous effects. Default is None.</p>
+                <p>A list of <code>prophetverse</code> <code>AbstractEffect</code> objects
+defining the exogenous effects to be used in the model.</p>
               </div>
             </td>
             <td>
@@ -1008,11 +1026,25 @@
           <tr class="doc-section-item">
             <td><code>default_effect</code></td>
             <td>
-                  <code>object</code>
+                  <code>AbstractEffectm optional, defalut=None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Default effect for exogenous features. Default is None.</p>
+                <p>The default effect to be used when no effect is specified for a variable.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>default_exogenous_prior</code></td>
+            <td>
+                  <code>tuple</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Default prior distribution for exogenous effects.</p>
               </div>
             </td>
             <td>
@@ -1022,11 +1054,11 @@
           <tr class="doc-section-item">
             <td><code>rng_key</code></td>
             <td>
-                  <code><span title="jax.random.PRNGKey">PRNGKey</span></code>
+                  <code>jax.random.PRNGKey or None (default</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Random number generator key. Default is None.</p>
+                <p>Random number generator key.</p>
               </div>
             </td>
             <td>
@@ -1038,101 +1070,208 @@
 
               <details class="quote">
                 <summary>Source code in <code>src/prophetverse/sktime/univariate.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span>
-<span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
-<span class="normal">346</span>
-<span class="normal">347</span>
-<span class="normal">348</span>
-<span class="normal">349</span>
-<span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span>
-<span class="normal">355</span>
-<span class="normal">356</span>
-<span class="normal">357</span>
-<span class="normal">358</span>
-<span class="normal">359</span>
-<span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
-<span class="normal">363</span>
-<span class="normal">364</span>
-<span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span>
-<span class="normal">368</span>
-<span class="normal">369</span>
-<span class="normal">370</span>
-<span class="normal">371</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ProphetGamma</span><span class="p">(</span><span class="n">Prophet</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A subclass of Prophet that models time series data with a gamma likelihood. Useful for positive only timeseries.</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span>
+<span class="normal">628</span>
+<span class="normal">629</span>
+<span class="normal">630</span>
+<span class="normal">631</span>
+<span class="normal">632</span>
+<span class="normal">633</span>
+<span class="normal">634</span>
+<span class="normal">635</span>
+<span class="normal">636</span>
+<span class="normal">637</span>
+<span class="normal">638</span>
+<span class="normal">639</span>
+<span class="normal">640</span>
+<span class="normal">641</span>
+<span class="normal">642</span>
+<span class="normal">643</span>
+<span class="normal">644</span>
+<span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span>
+<span class="normal">663</span>
+<span class="normal">664</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span>
+<span class="normal">669</span>
+<span class="normal">670</span>
+<span class="normal">671</span>
+<span class="normal">672</span>
+<span class="normal">673</span>
+<span class="normal">674</span>
+<span class="normal">675</span>
+<span class="normal">676</span>
+<span class="normal">677</span>
+<span class="normal">678</span>
+<span class="normal">679</span>
+<span class="normal">680</span>
+<span class="normal">681</span>
+<span class="normal">682</span>
+<span class="normal">683</span>
+<span class="normal">684</span>
+<span class="normal">685</span>
+<span class="normal">686</span>
+<span class="normal">687</span>
+<span class="normal">688</span>
+<span class="normal">689</span>
+<span class="normal">690</span>
+<span class="normal">691</span>
+<span class="normal">692</span>
+<span class="normal">693</span>
+<span class="normal">694</span>
+<span class="normal">695</span>
+<span class="normal">696</span>
+<span class="normal">697</span>
+<span class="normal">698</span>
+<span class="normal">699</span>
+<span class="normal">700</span>
+<span class="normal">701</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ProphetGamma</span><span class="p">(</span><span class="n">Prophetverse</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gamma-likelihood prophet.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        changepoint_interval (int): The number of points between potential changepoints. Default is 25.</span>
-<span class="sd">        changepoint_range (float): Proportion of history in which trend changepoints will be estimated. Default is 0.8.</span>
-<span class="sd">        changepoint_prior_scale (float): Parameter modulating the flexibility of the automatic changepoint selection. Default is 0.001.</span>
-<span class="sd">        offset_prior_scale (float): Scale parameter for the prior distribution of the offset. Default is 0.1.</span>
-<span class="sd">        feature_transformer (object): A transformer object to preprocess exogenous features. Default is None.</span>
-<span class="sd">        capacity_prior_scale (float): Scale parameter for the capacity prior distribution. Default is 0.2.</span>
-<span class="sd">        capacity_prior_loc (float): Location parameter for the capacity prior distribution. Default is 1.1.</span>
-<span class="sd">        noise_scale (float): Scale parameter for the observation noise. Default is 0.05.</span>
-<span class="sd">        trend (str): Type of trend component. Default is &quot;logistic&quot;.</span>
-<span class="sd">        mcmc_samples (int): Number of MCMC samples. Default is 2000.</span>
-<span class="sd">        mcmc_warmup (int): Number of MCMC warmup steps. Default is 200.</span>
-<span class="sd">        mcmc_chains (int): Number of MCMC chains. Default is 4.</span>
-<span class="sd">        inference_method (str): Method for inference. Default is &quot;map&quot;.</span>
-<span class="sd">        optimizer_name (str): Name of the optimizer. Default is &quot;Adam&quot;.</span>
-<span class="sd">        optimizer_kwargs (dict): Additional keyword arguments for the optimizer. Default is None.</span>
-<span class="sd">        optimizer_steps (int): Number of optimizer steps. Default is 1000.</span>
-<span class="sd">        exogenous_effects (list): List of exogenous effects. Default is None.</span>
-<span class="sd">        default_effect (object): Default effect for exogenous features. Default is None.</span>
-<span class="sd">        rng_key (jax.random.PRNGKey): Random number generator key. Default is None.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    changepoint_interval : int, optional, default=25</span>
+<span class="sd">        Number of potential changepoints to sample in the history.</span>
+
+<span class="sd">    changepoint_range : float or int, optional, default=0.8</span>
+<span class="sd">        Proportion of the history in which trend changepoints will be estimated.</span>
+
+<span class="sd">        * if float, must be between 0 and 1.</span>
+<span class="sd">          The range will be that proportion of the training history.</span>
+
+<span class="sd">        * if int, ca nbe positive or negative.</span>
+<span class="sd">          Absolute value must be less than number of training points.</span>
+<span class="sd">          The range will be that number of points.</span>
+<span class="sd">          A negative int indicates number of points</span>
+<span class="sd">          counting from the end of the history, a positive int from the beginning.</span>
+
+<span class="sd">    changepoint_prior_scale : float, optional, default=0.001</span>
+<span class="sd">        Regularization parameter controlling the flexibility</span>
+<span class="sd">        of the automatic changepoint selection.</span>
+
+<span class="sd">    offset_prior_scale : float, optional, default=0.1</span>
+<span class="sd">        Scale parameter for the prior distribution of the offset.</span>
+<span class="sd">        The offset is the constant term in the piecewise trend equation.</span>
+
+<span class="sd">    feature_transformer : sktime transformer, BaseTransformer, optional, default=None</span>
+<span class="sd">        Transformer object to generate Fourier terms, holiday or other features.</span>
+<span class="sd">        If None, no additional features are used.</span>
+<span class="sd">        For multiple features, pass a ``FeatureUnion`` object with the transformers.</span>
+
+<span class="sd">    capacity_prior_scale : float, optional, default=0.2</span>
+<span class="sd">        Scale parameter for the prior distribution of the capacity.</span>
+
+<span class="sd">    capacity_prior_loc : float, optional, default=1.1</span>
+<span class="sd">        Location parameter for the prior distribution of the capacity.</span>
+
+<span class="sd">    noise_scale : float, optional, default=0.05</span>
+<span class="sd">        Scale parameter for the observation noise.</span>
+<span class="sd">    trend : str, optional, one of &quot;linear&quot; (default) or &quot;logistic&quot;</span>
+<span class="sd">        Type of trend to use. Can be &quot;linear&quot; or &quot;logistic&quot;.</span>
+
+<span class="sd">    mcmc_samples : int, optional, default=2000</span>
+<span class="sd">        Number of MCMC samples to draw.</span>
+
+<span class="sd">    mcmc_warmup : int, optional, default=200</span>
+<span class="sd">        Number of MCMC warmup steps. Also known as burn-in.</span>
+
+<span class="sd">    mcmc_chains : int, optional, default=4</span>
+<span class="sd">        Number of MCMC chains to run in parallel.</span>
+
+<span class="sd">    inference_method : str, optional, one of &quot;mcmc&quot; or &quot;map&quot;, default=&quot;map&quot;</span>
+<span class="sd">        Inference method to use. Can be &quot;mcmc&quot; or &quot;map&quot;.</span>
+
+<span class="sd">    optimizer_name : str, optional, default=&quot;Adam&quot;</span>
+<span class="sd">        Name of the numpyro optimizer to use for variational inference.</span>
+
+<span class="sd">    optimizer_kwargs : dict, optional, default={}</span>
+<span class="sd">        Additional keyword arguments to pass to the numpyro optimizer.</span>
+
+<span class="sd">    optimizer_steps : int, optional, default=100_000</span>
+<span class="sd">        Number of optimization steps to perform for variational inference.</span>
+
+<span class="sd">    exogenous_effects : List[AbstractEffect], optional, default=None</span>
+<span class="sd">        A list of ``prophetverse`` ``AbstractEffect`` objects</span>
+<span class="sd">        defining the exogenous effects to be used in the model.</span>
+
+<span class="sd">    default_effect : AbstractEffectm optional, defalut=None</span>
+<span class="sd">        The default effect to be used when no effect is specified for a variable.</span>
+
+<span class="sd">    default_exogenous_prior : tuple, default=None</span>
+<span class="sd">        Default prior distribution for exogenous effects.</span>
+
+<span class="sd">    rng_key : jax.random.PRNGKey or None (default</span>
+<span class="sd">        Random number generator key.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
@@ -1177,12 +1316,11 @@
             <span class="n">optimizer_kwargs</span><span class="o">=</span><span class="n">optimizer_kwargs</span><span class="p">,</span>
             <span class="n">optimizer_steps</span><span class="o">=</span><span class="n">optimizer_steps</span><span class="p">,</span>
             <span class="n">exogenous_effects</span><span class="o">=</span><span class="n">exogenous_effects</span><span class="p">,</span>
+            <span class="n">likelihood</span><span class="o">=</span><span class="s2">&quot;gamma&quot;</span><span class="p">,</span>
             <span class="n">default_effect</span><span class="o">=</span><span class="n">default_effect</span><span class="p">,</span>
             <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
             <span class="n">rng_key</span><span class="o">=</span><span class="n">rng_key</span><span class="p">,</span>
         <span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">univariate_gamma_model</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -1254,7 +1392,7 @@
     <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
       
     
   </body>

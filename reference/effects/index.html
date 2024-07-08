@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.26">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.28">
     
     
       
@@ -617,6 +617,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#prophetverse.effects.AbstractEffect.__call__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __call__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prophetverse.effects.AbstractEffect.compute_effect" class="md-nav__link">
     <span class="md-ellipsis">
       compute_effect
@@ -726,6 +735,33 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prophetverse.effects.additive_effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      additive_effect
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prophetverse.effects.matrix_multiplication" class="md-nav__link">
+    <span class="md-ellipsis">
+      matrix_multiplication
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prophetverse.effects.multiplicative_effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      multiplicative_effect
+    </span>
+  </a>
   
 </li>
       
@@ -854,6 +890,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#prophetverse.effects.AbstractEffect.__call__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __call__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prophetverse.effects.AbstractEffect.compute_effect" class="md-nav__link">
     <span class="md-ellipsis">
       compute_effect
@@ -966,6 +1011,33 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#prophetverse.effects.additive_effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      additive_effect
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prophetverse.effects.matrix_multiplication" class="md-nav__link">
+    <span class="md-ellipsis">
+      matrix_multiplication
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prophetverse.effects.multiplicative_effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      multiplicative_effect
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -993,6 +1065,8 @@
 
 <a id="prophetverse.effects"></a>
     <div class="doc doc-contents first">
+
+      <p>Effects that define relationships between variables and the target.</p>
 
 
 
@@ -1026,8 +1100,11 @@
 The id is used to create unique names for the samples in the model.</p>
 
               <details class="quote">
-                <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
+                <summary>Source code in <code>src/prophetverse/effects/base.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
 <span class="normal">19</span>
@@ -1094,7 +1171,16 @@ The id is used to create unique names for the samples in the model.</p>
 <span class="normal">80</span>
 <span class="normal">81</span>
 <span class="normal">82</span>
-<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AbstractEffect</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">AbstractEffect</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract class for effects.</span>
 
 <span class="sd">    Effects should inherit from this class and implement the `compute_effect` method.</span>
@@ -1106,17 +1192,24 @@ The id is used to create unique names for the samples in the model.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">regex</span> <span class="o">=</span> <span class="n">regex</span>
 
-
-    <span class="k">def</span> <span class="nf">match_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span> <span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">match_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Match the columns of the DataFrame with the regex pattern.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            X (pd.DataFrame): The DataFrame to match.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        columns : pd.Index</span>
+<span class="sd">            Columns of the dataframe.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Index: The columns that match the regex pattern.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pd.Index</span>
+<span class="sd">            The columns that match the regex pattern.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            Indicates the abscence of required regex pattern.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">List</span><span class="p">):</span>
             <span class="n">columns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
 
@@ -1125,42 +1218,47 @@ The id is used to create unique names for the samples in the model.</p>
         <span class="k">return</span> <span class="n">columns</span><span class="p">[</span><span class="n">columns</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">regex</span><span class="p">)]</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">split_data_into_effects</span><span class="p">(</span><span class="n">X</span> <span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">effects</span> <span class="p">:</span> <span class="n">List</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">split_data_into_effects</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">effects</span><span class="p">:</span> <span class="n">List</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Split the data into effects.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            X (pd.DataFrame): The DataFrame to split.</span>
-<span class="sd">            effects (List[AbstractEffect]): The effects to split the data into.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : pd.DataFrame</span>
+<span class="sd">            The DataFrame to split.</span>
+<span class="sd">        effects : List</span>
+<span class="sd">            The effects to split the data into.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            Dict[str, pd.DataFrame]: A dictionary mapping effect names to DataFrames.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Dict[str, pd.DataFrame]</span>
+<span class="sd">            A dictionary mapping effect names to DataFrames.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">effect</span> <span class="ow">in</span> <span class="n">effects</span><span class="p">:</span>
             <span class="n">data</span><span class="p">[</span><span class="n">effect</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">effect</span><span class="o">.</span><span class="n">match_columns</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">columns</span><span class="p">)]</span>
         <span class="k">return</span> <span class="n">data</span>
 
-    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Sample a random variable with a unique name.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sample a random variable with a unique name.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">numpyro</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span> <span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span> <span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> 
+    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the effect based on the trend and data.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            trend (jnp.ndarray): The trend.</span>
-<span class="sd">            data (jnp.ndarray): The data concerning this effect.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            jnp.ndarray: The effect.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trend : jnp.ndarray</span>
+<span class="sd">            The trend.</span>
+<span class="sd">        data : jnp.ndarray</span>
+<span class="sd">            The data concerning this effect.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="o">...</span>
 
-    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the processes to calculate effect as a function.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1176,6 +1274,32 @@ The id is used to create unique names for the samples in the model.</p>
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="prophetverse.effects.AbstractEffect.__call__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__call__</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Run the processes to calculate effect as a function.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/prophetverse/effects/base.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the processes to calculate effect as a function.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 
@@ -1237,52 +1361,29 @@ The id is used to create unique names for the samples in the model.</p>
       </tbody>
     </table>
 
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>jnp.ndarray: The effect.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span>
-<span class="normal">76</span>
-<span class="normal">77</span>
+              <summary>Source code in <code>src/prophetverse/effects/base.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">77</span>
 <span class="normal">78</span>
-<span class="normal">79</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
-<span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span> <span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span> <span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span> 
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
+<span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the effect based on the trend and data.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        trend (jnp.ndarray): The trend.</span>
-<span class="sd">        data (jnp.ndarray): The data concerning this effect.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        jnp.ndarray: The effect.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    trend : jnp.ndarray</span>
+<span class="sd">        The trend.</span>
+<span class="sd">    data : jnp.ndarray</span>
+<span class="sd">        The data concerning this effect.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
@@ -1317,13 +1418,13 @@ The id is used to create unique names for the samples in the model.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>X</code></td>
+            <td><code>columns</code></td>
             <td>
-                  <code><span title="pandas.DataFrame">DataFrame</span></code>
+                  <code><span title="pandas.Index">Index</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The DataFrame to match.</p>
+                <p>Columns of the dataframe.</p>
               </div>
             </td>
             <td>
@@ -1349,7 +1450,30 @@ The id is used to create unique names for the samples in the model.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>pd.Index: The columns that match the regex pattern.</p>
+                <p>The columns that match the regex pattern.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code>ValueError</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Indicates the abscence of required regex pattern.</p>
               </div>
             </td>
           </tr>
@@ -1357,8 +1481,12 @@ The id is used to create unique names for the samples in the model.</p>
     </table>
 
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+              <summary>Source code in <code>src/prophetverse/effects/base.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
 <span class="normal">30</span>
 <span class="normal">31</span>
 <span class="normal">32</span>
@@ -1373,16 +1501,28 @@ The id is used to create unique names for the samples in the model.</p>
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
-<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">match_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span> <span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">:</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">match_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Match the columns of the DataFrame with the regex pattern.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        X (pd.DataFrame): The DataFrame to match.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    columns : pd.Index</span>
+<span class="sd">        Columns of the dataframe.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        pd.Index: The columns that match the regex pattern.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.Index</span>
+<span class="sd">        The columns that match the regex pattern.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        Indicates the abscence of required regex pattern.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">List</span><span class="p">):</span>
         <span class="n">columns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
 
@@ -1409,15 +1549,11 @@ The id is used to create unique names for the samples in the model.</p>
       <p>Sample a random variable with a unique name.</p>
 
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Sample a random variable with a unique name.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+              <summary>Source code in <code>src/prophetverse/effects/base.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sample a random variable with a unique name.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">numpyro</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1471,7 +1607,7 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>effects</code></td>
             <td>
-                  <code><span title="typing.List">List</span>[<a class="autorefs autorefs-internal" title="prophetverse.effects.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a>]</code>
+                  <code><span title="typing.List">List</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1501,7 +1637,7 @@ The id is used to create unique names for the samples in the model.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Dict[str, pd.DataFrame]: A dictionary mapping effect names to DataFrames.</p>
+                <p>A dictionary mapping effect names to DataFrames.</p>
               </div>
             </td>
           </tr>
@@ -1509,12 +1645,8 @@ The id is used to create unique names for the samples in the model.</p>
     </table>
 
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
+              <summary>Source code in <code>src/prophetverse/effects/base.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
 <span class="normal">51</span>
 <span class="normal">52</span>
 <span class="normal">53</span>
@@ -1524,16 +1656,34 @@ The id is used to create unique names for the samples in the model.</p>
 <span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
-<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">split_data_into_effects</span><span class="p">(</span><span class="n">X</span> <span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">effects</span> <span class="p">:</span> <span class="n">List</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="k">def</span> <span class="nf">split_data_into_effects</span><span class="p">(</span>
+    <span class="n">X</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">effects</span><span class="p">:</span> <span class="n">List</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Split the data into effects.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        X (pd.DataFrame): The DataFrame to split.</span>
-<span class="sd">        effects (List[AbstractEffect]): The effects to split the data into.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X : pd.DataFrame</span>
+<span class="sd">        The DataFrame to split.</span>
+<span class="sd">    effects : List</span>
+<span class="sd">        The effects to split the data into.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        Dict[str, pd.DataFrame]: A dictionary mapping effect names to DataFrames.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict[str, pd.DataFrame]</span>
+<span class="sd">        A dictionary mapping effect names to DataFrames.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">effect</span> <span class="ow">in</span> <span class="n">effects</span><span class="p">:</span>
@@ -1566,166 +1716,181 @@ The id is used to create unique names for the samples in the model.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.effects.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.effects.base.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a></code></p>
 
 
       <p>Represents a Hill effect in a time series model.</p>
 
 
-<p><span class="doc-section-title">Attributes:</span></p>
+<p><span class="doc-section-title">Parameters:</span></p>
     <table>
       <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
           <th>Description</th>
+          <th>Default</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.HillEffect.half_max_prior">half_max_prior</span></code></td>
+            <td><code>half_max_prior</code></td>
             <td>
+                  <code><span title="numpyro.distributions.Distribution">Distribution</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Prior distribution for the half-maximum parameter.</p>
+                <p>Prior distribution for the half-maximum parameter</p>
               </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.HillEffect.slope_prior">slope_prior</span></code></td>
+            <td><code>slope_prior</code></td>
             <td>
+                  <code><span title="numpyro.distributions.Distribution">Distribution</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Prior distribution for the slope parameter.</p>
+                <p>Prior distribution for the slope parameter</p>
               </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.HillEffect.max_effect_prior">max_effect_prior</span></code></td>
+            <td><code>max_effect_prior</code></td>
             <td>
+                  <code><span title="numpyro.distributions.Distribution">Distribution</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Prior distribution for the maximum effect parameter.</p>
+                <p>Prior distribution for the maximum effect parameter</p>
               </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.HillEffect.effect_mode">effect_mode</span></code></td>
+            <td><code>effect_mode</code></td>
             <td>
+                  <code>effects_application</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Mode of the effect (either "additive" or "multiplicative").</p>
+                <p>Mode of the effect (either "additive" or "multiplicative")</p>
               </div>
+            </td>
+            <td>
+                  <code>&#39;multiplicative&#39;</code>
             </td>
           </tr>
       </tbody>
     </table>
 
               <details class="quote">
-                <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">HillEffect</span><span class="p">(</span><span class="n">AbstractEffect</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Represents a Hill effect in a time series model.</span>
+                <summary>Source code in <code>src/prophetverse/effects/hill.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">HillEffect</span><span class="p">(</span><span class="n">AbstractEffect</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a Hill effect in a time series model.</span>
 
-<span class="sd">    Attributes:</span>
-<span class="sd">        half_max_prior: Prior distribution for the half-maximum parameter.</span>
-<span class="sd">        slope_prior: Prior distribution for the slope parameter.</span>
-<span class="sd">        max_effect_prior: Prior distribution for the maximum effect parameter.</span>
-<span class="sd">        effect_mode: Mode of the effect (either &quot;additive&quot; or &quot;multiplicative&quot;).</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    half_max_prior : Distribution, optional</span>
+<span class="sd">        Prior distribution for the half-maximum parameter</span>
+<span class="sd">    slope_prior : Distribution, optional</span>
+<span class="sd">        Prior distribution for the slope parameter</span>
+<span class="sd">    max_effect_prior : Distribution, optional</span>
+<span class="sd">        Prior distribution for the maximum effect parameter</span>
+<span class="sd">    effect_mode : effects_application, optional</span>
+<span class="sd">        Mode of the effect (either &quot;additive&quot; or &quot;multiplicative&quot;)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">half_max_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">slope_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">max_effect_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">effect_mode</span><span class="o">=</span><span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
+        <span class="n">half_max_prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Distribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">slope_prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Distribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_effect_prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Distribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">effect_mode</span><span class="p">:</span> <span class="n">EFFECT_APPLICATION_TYPE</span> <span class="o">=</span> <span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-
-        <span class="k">if</span> <span class="n">half_max_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">half_max_prior</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">slope_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">slope_prior</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">max_effect_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">max_effect_prior</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">half_max_prior</span> <span class="o">=</span> <span class="n">half_max_prior</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">slope_prior</span> <span class="o">=</span> <span class="n">slope_prior</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_effect_prior</span> <span class="o">=</span> <span class="n">max_effect_prior</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">half_max_prior</span> <span class="o">=</span> <span class="n">half_max_prior</span> <span class="ow">or</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slope_prior</span> <span class="o">=</span> <span class="n">slope_prior</span> <span class="ow">or</span> <span class="n">dist</span><span class="o">.</span><span class="n">HalfNormal</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_effect_prior</span> <span class="o">=</span> <span class="n">max_effect_prior</span> <span class="ow">or</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">=</span> <span class="n">effect_mode</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Computes the effect using the log transformation.</span>
+    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the effect using the log transformation.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            trend: The trend component.</span>
-<span class="sd">            data: The input data.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trend : jnp.ndarray</span>
+<span class="sd">            The trend component of the hierarchical prophet model.</span>
+<span class="sd">        data : jnp.ndarray</span>
+<span class="sd">            The data used to compute the effect.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            The computed effect.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        jnp.ndarray</span>
+<span class="sd">            The computed effect based on the given trend and data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="n">half_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;half_max&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">half_max_prior</span><span class="p">)</span>
         <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;slope&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slope_prior</span><span class="p">)</span>
         <span class="n">max_effect</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;max_effect&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_effect_prior</span><span class="p">)</span>
@@ -1762,7 +1927,7 @@ The id is used to create unique names for the samples in the model.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Computes the effect using the log transformation.</p>
+      <p>Compute the effect using the log transformation.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1779,10 +1944,11 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>trend</code></td>
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The trend component.</p>
+                <p>The trend component of the hierarchical prophet model.</p>
               </div>
             </td>
             <td>
@@ -1792,10 +1958,11 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>data</code></td>
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The input data.</p>
+                <p>The data used to compute the effect.</p>
               </div>
             </td>
             <td>
@@ -1817,10 +1984,11 @@ The id is used to create unique names for the samples in the model.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The computed effect.</p>
+                <p>The computed effect based on the given trend and data.</p>
               </div>
             </td>
           </tr>
@@ -1828,40 +1996,46 @@ The id is used to create unique names for the samples in the model.</p>
     </table>
 
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Computes the effect using the log transformation.</span>
+              <summary>Source code in <code>src/prophetverse/effects/hill.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the effect using the log transformation.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        trend: The trend component.</span>
-<span class="sd">        data: The input data.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    trend : jnp.ndarray</span>
+<span class="sd">        The trend component of the hierarchical prophet model.</span>
+<span class="sd">    data : jnp.ndarray</span>
+<span class="sd">        The data used to compute the effect.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        The computed effect.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jnp.ndarray</span>
+<span class="sd">        The computed effect based on the given trend and data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="n">half_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;half_max&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">half_max_prior</span><span class="p">)</span>
     <span class="n">slope</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;slope&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slope_prior</span><span class="p">)</span>
     <span class="n">max_effect</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;max_effect&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_effect_prior</span><span class="p">)</span>
@@ -1899,7 +2073,7 @@ The id is used to create unique names for the samples in the model.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.effects.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.effects.base.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a></code></p>
 
 
       <p>Represents a linear effect in a hierarchical prophet model.</p>
@@ -1917,20 +2091,6 @@ The id is used to create unique names for the samples in the model.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>id</code></td>
-            <td>
-                  <code>str</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The identifier for the effect.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
             <td><code>prior</code></td>
             <td>
                   <code><span title="numpyro.distributions.Distribution">Distribution</span></code>
@@ -1947,11 +2107,11 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>effect_mode</code></td>
             <td>
-                  <code>str</code>
+                  <code>effects_application</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The mode of the effect, either "multiplicative" or "additive".</p>
+                <p>Either "multiplicative" or "additive" by default "multiplicative".</p>
               </div>
             </td>
             <td>
@@ -1961,178 +2121,98 @@ The id is used to create unique names for the samples in the model.</p>
       </tbody>
     </table>
 
-
-<p><span class="doc-section-title">Attributes:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.LinearEffect.dist">dist</span></code></td>
-            <td>
-                  <code>type</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The distribution class used for sampling coefficients.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.LinearEffect.dist_args">dist_args</span></code></td>
-            <td>
-                  <code>tuple</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The arguments passed to the distribution class.</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td><code><span title="prophetverse.effects.LinearEffect.effect_mode">effect_mode</span></code></td>
-            <td>
-                  <code>str</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The mode of the effect, either "multiplicative" or "additive".</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Methods:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-            <tr class="doc-section-item">
-              <td><code><a class="autorefs autorefs-internal" title="prophetverse.effects.LinearEffect.compute_effect" href="#prophetverse.effects.LinearEffect.compute_effect">compute_effect</a></code></td>
-              <td>
-                <div class="doc-md-description">
-                  <p>Computes the effect based on the given trend and data.</p>
-                </div>
-              </td>
-            </tr>
-      </tbody>
-    </table>
-
               <details class="quote">
-                <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span>
-<span class="normal">156</span>
-<span class="normal">157</span>
-<span class="normal">158</span>
-<span class="normal">159</span>
-<span class="normal">160</span>
-<span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">LinearEffect</span><span class="p">(</span><span class="n">AbstractEffect</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Represents a linear effect in a hierarchical prophet model.</span>
+                <summary>Source code in <code>src/prophetverse/effects/linear.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">LinearEffect</span><span class="p">(</span><span class="n">AbstractEffect</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a linear effect in a hierarchical prophet model.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        id (str): The identifier for the effect.</span>
-<span class="sd">        prior (dist.Distribution): A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)</span>
-<span class="sd">        effect_mode (str): The mode of the effect, either &quot;multiplicative&quot; or &quot;additive&quot;.</span>
-
-<span class="sd">    Attributes:</span>
-<span class="sd">        dist (type): The distribution class used for sampling coefficients.</span>
-<span class="sd">        dist_args (tuple): The arguments passed to the distribution class.</span>
-<span class="sd">        effect_mode (str): The mode of the effect, either &quot;multiplicative&quot; or &quot;additive&quot;.</span>
-
-<span class="sd">    Methods:</span>
-<span class="sd">        compute_effect(trend, data): Computes the effect based on the given trend and data.</span>
-
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    prior : Distribution, optional</span>
+<span class="sd">        A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)</span>
+<span class="sd">    effect_mode : effects_application, optional</span>
+<span class="sd">        Either &quot;multiplicative&quot; or &quot;additive&quot; by default &quot;multiplicative&quot;.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">effect_mode</span><span class="o">=</span><span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
-        <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Distribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">effect_mode</span><span class="p">:</span> <span class="n">EFFECT_APPLICATION_TYPE</span> <span class="o">=</span> <span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prior</span> <span class="o">=</span> <span class="n">prior</span> <span class="ow">or</span> <span class="n">dist</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">=</span> <span class="n">effect_mode</span>
+
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Computes the effect based on the given trend and data.</span>
+    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the Linear effect.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            trend: The trend component of the hierarchical prophet model.</span>
-<span class="sd">            data: The data used to compute the effect.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trend : jnp.ndarray</span>
+<span class="sd">            The trend component of the hierarchical prophet model.</span>
+<span class="sd">        data : jnp.ndarray</span>
+<span class="sd">            The data used to compute the effect.</span>
 
-<span class="sd">        Returns:</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        jnp.ndarray</span>
 <span class="sd">            The computed effect based on the given trend and data.</span>
-
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n_features</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
         <span class="k">with</span> <span class="n">numpyro</span><span class="o">.</span><span class="n">plate</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">_plate&quot;</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
-            <span class="n">coefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
-                <span class="s2">&quot;coefs&quot;</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">prior</span>
-            <span class="p">)</span>
+            <span class="n">coefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;coefs&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">coefficients</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">coefficients</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -2141,7 +2221,7 @@ The id is used to create unique names for the samples in the model.</p>
             <span class="n">coefficients</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">==</span> <span class="s2">&quot;multiplicative&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">multiplicative_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">additive_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">additive_effect</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -2168,7 +2248,7 @@ The id is used to create unique names for the samples in the model.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Computes the effect based on the given trend and data.</p>
+      <p>Compute the Linear effect.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2185,6 +2265,7 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>trend</code></td>
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2198,6 +2279,7 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>data</code></td>
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2223,6 +2305,7 @@ The id is used to create unique names for the samples in the model.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2234,53 +2317,53 @@ The id is used to create unique names for the samples in the model.</p>
     </table>
 
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Computes the effect based on the given trend and data.</span>
+              <summary>Source code in <code>src/prophetverse/effects/linear.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the Linear effect.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        trend: The trend component of the hierarchical prophet model.</span>
-<span class="sd">        data: The data used to compute the effect.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    trend : jnp.ndarray</span>
+<span class="sd">        The trend component of the hierarchical prophet model.</span>
+<span class="sd">    data : jnp.ndarray</span>
+<span class="sd">        The data used to compute the effect.</span>
 
-<span class="sd">    Returns:</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jnp.ndarray</span>
 <span class="sd">        The computed effect based on the given trend and data.</span>
-
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">n_features</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
     <span class="k">with</span> <span class="n">numpyro</span><span class="o">.</span><span class="n">plate</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">_plate&quot;</span><span class="p">,</span> <span class="n">n_features</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
-        <span class="n">coefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span>
-            <span class="s2">&quot;coefs&quot;</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">prior</span>
-        <span class="p">)</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;coefs&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prior</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">coefficients</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">coefficients</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -2289,7 +2372,7 @@ The id is used to create unique names for the samples in the model.</p>
         <span class="n">coefficients</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">coefficients</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">==</span> <span class="s2">&quot;multiplicative&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">multiplicative_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">additive_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">additive_effect</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2317,13 +2400,10 @@ The id is used to create unique names for the samples in the model.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.effects.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="prophetverse.effects.base.AbstractEffect" href="#prophetverse.effects.AbstractEffect">AbstractEffect</a></code></p>
 
 
-      <p>Log effect for a variable.</p>
-<p>Computes the effect using the formula:</p>
-<p>effect = scale * log(rate * data + 1)</p>
-<p>A gamma prior is used for the scale and rate parameters.</p>
+      <p>Represents a log effect as effect = scale * log(rate * data + 1).</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2338,27 +2418,13 @@ The id is used to create unique names for the samples in the model.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>id</code></td>
-            <td>
-                  <code>str</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The identifier for the effect.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
             <td><code>scale_prior</code></td>
             <td>
-                  <code><span title="numpyro.distributions.Distribution">Distribution</span></code>
+                  <code><span title="typing.Optional">Optional</span>[<span title="numpyro.distributions.Distribution">Distribution</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The prior distribution for the scale parameter.</p>
+                <p>The prior distribution for the scale parameter., by default Gamma</p>
               </div>
             </td>
             <td>
@@ -2368,118 +2434,134 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>rate_prior</code></td>
             <td>
-                  <code><span title="numpyro.distributions.Distribution">Distribution</span></code>
+                  <code><span title="typing.Optional">Optional</span>[<span title="numpyro.distributions.Distribution">Distribution</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The prior distribution for the rate parameter.</p>
+                <p>The prior distribution for the rate parameter., by default Gamma</p>
               </div>
             </td>
             <td>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code>effect_mode</code></td>
+            <td>
+                  <code>effects_application</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Either "additive" or "multiplicative", by default "multiplicative"</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;multiplicative&#39;</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
               <details class="quote">
-                <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">LogEffect</span><span class="p">(</span><span class="n">AbstractEffect</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Log effect for a variable.</span>
+                <summary>Source code in <code>src/prophetverse/effects/log.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">LogEffect</span><span class="p">(</span><span class="n">AbstractEffect</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a log effect as effect = scale * log(rate * data + 1).</span>
 
-<span class="sd">    Computes the effect using the formula:</span>
-
-<span class="sd">    effect = scale * log(rate * data + 1)</span>
-
-<span class="sd">    A gamma prior is used for the scale and rate parameters.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        id (str): The identifier for the effect.</span>
-<span class="sd">        scale_prior (dist.Distribution): The prior distribution for the scale parameter.</span>
-<span class="sd">        rate_prior (dist.Distribution): The prior distribution for the rate parameter.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    scale_prior : Optional[Distribution], optional</span>
+<span class="sd">        The prior distribution for the scale parameter., by default Gamma</span>
+<span class="sd">    rate_prior : Optional[Distribution], optional</span>
+<span class="sd">        The prior distribution for the rate parameter., by default Gamma</span>
+<span class="sd">    effect_mode : effects_application, optional</span>
+<span class="sd">        Either &quot;additive&quot; or &quot;multiplicative&quot;, by default &quot;multiplicative&quot;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">scale_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">rate_prior</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">effect_mode</span><span class="o">=</span><span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
+        <span class="n">scale_prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Distribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">rate_prior</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Distribution</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">effect_mode</span><span class="p">:</span> <span class="n">EFFECT_APPLICATION_TYPE</span> <span class="o">=</span> <span class="s2">&quot;multiplicative&quot;</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="k">if</span> <span class="n">scale_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">scale_prior</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">rate_prior</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">rate_prior</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">scale_prior</span> <span class="o">=</span> <span class="n">scale_prior</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rate_prior</span> <span class="o">=</span> <span class="n">rate_prior</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_prior</span> <span class="o">=</span> <span class="n">scale_prior</span> <span class="ow">or</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rate_prior</span> <span class="o">=</span> <span class="n">rate_prior</span> <span class="ow">or</span> <span class="n">dist</span><span class="o">.</span><span class="n">Gamma</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">=</span> <span class="n">effect_mode</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Computes the effect using the log transformation.</span>
+    <span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the effect using the log transformation.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            trend: The trend component.</span>
-<span class="sd">            data: The input data.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trend : jnp.ndarray</span>
+<span class="sd">            The trend component.</span>
+<span class="sd">        data : jnp.ndarray</span>
+<span class="sd">            The input data.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            The computed effect.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        jnp.ndarray</span>
+<span class="sd">            The computed effect based on the given trend and data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;log_scale&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_prior</span><span class="p">)</span>
         <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;log_rate&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_prior</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">jnp</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="n">data</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t take log of negative values or zero.&quot;</span><span class="p">)</span>
+
         <span class="n">effect</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="n">data</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">==</span> <span class="s2">&quot;additive&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">effect</span>
         <span class="k">return</span> <span class="n">trend</span> <span class="o">*</span> <span class="n">effect</span>
@@ -2509,7 +2591,7 @@ The id is used to create unique names for the samples in the model.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Computes the effect using the log transformation.</p>
+      <p>Compute the effect using the log transformation.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2526,6 +2608,7 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>trend</code></td>
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2539,6 +2622,7 @@ The id is used to create unique names for the samples in the model.</p>
           <tr class="doc-section-item">
             <td><code>data</code></td>
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2564,10 +2648,11 @@ The id is used to create unique names for the samples in the model.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The computed effect.</p>
+                <p>The computed effect based on the given trend and data.</p>
               </div>
             </td>
           </tr>
@@ -2575,37 +2660,55 @@ The id is used to create unique names for the samples in the model.</p>
     </table>
 
             <details class="quote">
-              <summary>Source code in <code>src/prophetverse/effects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Computes the effect using the log transformation.</span>
+              <summary>Source code in <code>src/prophetverse/effects/log.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">compute_effect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the effect using the log transformation.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        trend: The trend component.</span>
-<span class="sd">        data: The input data.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    trend : jnp.ndarray</span>
+<span class="sd">        The trend component.</span>
+<span class="sd">    data : jnp.ndarray</span>
+<span class="sd">        The input data.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        The computed effect.</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jnp.ndarray</span>
+<span class="sd">        The computed effect based on the given trend and data.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;log_scale&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_prior</span><span class="p">)</span>
     <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="s2">&quot;log_rate&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rate_prior</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">jnp</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="n">data</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t take log of negative values or zero.&quot;</span><span class="p">)</span>
+
     <span class="n">effect</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">jnp</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">rate</span> <span class="o">*</span> <span class="n">data</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">effect_mode</span> <span class="o">==</span> <span class="s2">&quot;additive&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">effect</span>
     <span class="k">return</span> <span class="n">trend</span> <span class="o">*</span> <span class="n">effect</span>
@@ -2623,6 +2726,386 @@ The id is used to create unique names for the samples in the model.</p>
 
 </div>
 
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="prophetverse.effects.additive_effect" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">additive_effect</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Apply an additive effect.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>data</code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Data without the effect.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>coefficients</code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Effect vector with coefficients of each column.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Data with the effect applied.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>src/prophetverse/effects/effect_apply.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">additive_effect</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply an additive effect.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : jnp.ndarray</span>
+<span class="sd">        Data without the effect.</span>
+<span class="sd">    coefficients : jnp.ndarray</span>
+<span class="sd">        Effect vector with coefficients of each column.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jnp.ndarray</span>
+<span class="sd">        Data with the effect applied.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">matrix_multiplication</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="prophetverse.effects.matrix_multiplication" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">matrix_multiplication</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Perform matrix multiplication between two matrixes.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>data</code></td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="jax.numpy.ndarray">ndarray</span>, <span title="numpy.typing.NDArray">NDArray</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array to be multiplied.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>coefficients</code></td>
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="jax.numpy.ndarray">ndarray</span>, <span title="numpy.typing.NDArray">NDArray</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Array of coefficients used at matrix multiplication.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Union">Union</span>[<span title="jax.numpy.ndarray">ndarray</span>, <span title="numpy.typing.NDArray">NDArray</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Matrix multiplication between data and coefficients.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>src/prophetverse/utils/algebric_operations.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">matrix_multiplication</span><span class="p">(</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">],</span> <span class="n">coefficients</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform matrix multiplication between two matrixes.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : Union[jnp.ndarray, NDArray]</span>
+<span class="sd">        Array to be multiplied.</span>
+<span class="sd">    coefficients : Union[jnp.ndarray, NDArray]</span>
+<span class="sd">        Array of coefficients used at matrix multiplication.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Union[jnp.ndarray, NDArray]</span>
+<span class="sd">        Matrix multiplication between data and coefficients.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">data</span> <span class="o">@</span> <span class="n">coefficients</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="prophetverse.effects.multiplicative_effect" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">multiplicative_effect</span><span class="p">(</span><span class="n">trend</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+      <p>Apply a multiplicative effect.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>trend</code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Trend coefficient.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>data</code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Data without the effect.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>coefficients</code></td>
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Effect vector with coefficients of each column.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="jax.numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Data with the effect applied.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>src/prophetverse/effects/effect_apply.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">multiplicative_effect</span><span class="p">(</span>
+    <span class="n">trend</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply a multiplicative effect.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    trend : jnp.ndarray</span>
+<span class="sd">        Trend coefficient.</span>
+<span class="sd">    data : jnp.ndarray</span>
+<span class="sd">        Data without the effect.</span>
+<span class="sd">    coefficients : jnp.ndarray</span>
+<span class="sd">        Effect vector with coefficients of each column.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jnp.ndarray</span>
+<span class="sd">        Data with the effect applied.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">trend</span> <span class="o">*</span> <span class="n">matrix_multiplication</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
 
 
 
@@ -2680,7 +3163,7 @@ The id is used to create unique names for the samples in the model.</p>
     <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.ad660dcc.min.js"></script>
+      <script src="../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
       
     
   </body>

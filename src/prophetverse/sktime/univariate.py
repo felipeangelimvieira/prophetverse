@@ -36,7 +36,7 @@ _DISCRETE_LIKELIHOODS = ["negbinomial"]
 
 
 class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
-    """Univariate ``Prophetverse`` forecaster - prophet model implemented in numpyro.
+    """Univariate ``Prophetverse`` forecaster, with support for multiple likelihoods.
 
     Differences to facebook's prophet:
 

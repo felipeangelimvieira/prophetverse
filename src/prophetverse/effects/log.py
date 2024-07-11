@@ -6,13 +6,12 @@ import jax.numpy as jnp
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
-from prophetverse.effects.base import AbstractEffect
-from prophetverse.effects.effect_apply import EFFECT_APPLICATION_TYPE
+from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
 
 __all__ = ["LogEffect"]
 
 
-class LogEffect(AbstractEffect):
+class LogEffect(BaseEffect):
     """Represents a log effect as effect = scale * log(rate * data + 1).
 
     Parameters
@@ -27,17 +26,20 @@ class LogEffect(AbstractEffect):
 
     def __init__(
         self,
+        id: str = "",
+        regex: Optional[str] = None,
+        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         scale_prior: Optional[Distribution] = None,
         rate_prior: Optional[Distribution] = None,
-        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         **kwargs,
     ):
         self.scale_prior = scale_prior or dist.Gamma(1, 1)
         self.rate_prior = rate_prior or dist.Gamma(1, 1)
-        self.effect_mode = effect_mode
-        super().__init__(**kwargs)
+        super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
 
-    def compute_effect(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
+    def _apply(  # type: ignore[override]
+        self, trend: jnp.ndarray, data: jnp.ndarray, **kwargs
+    ) -> jnp.ndarray:
         """Compute the effect using the log transformation.
 
         Parameters
@@ -60,6 +62,4 @@ class LogEffect(AbstractEffect):
 
         effect = scale * jnp.log(rate * data + 1)
 
-        if self.effect_mode == "additive":
-            return effect
-        return trend * effect
+        return effect

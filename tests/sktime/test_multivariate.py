@@ -1,11 +1,5 @@
-import numpy as np
-import pandas as pd
 import pytest
 from numpyro import distributions as dist
-from sktime.forecasting.base import ForecastingHorizon
-from sktime.split import temporal_train_test_split
-from sktime.transformations.hierarchical.aggregate import Aggregator
-from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hierarchical
 
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime.multivariate import HierarchicalProphet
@@ -39,6 +33,9 @@ HYPERPARAMS = [
         exogenous_effects=[
             LinearEffect(id="lineareffect1", regex=r"(x1).*"),
             LinearEffect(id="lineareffect2", regex=r"(x2).*", prior=dist.Laplace(0, 1)),
+            LinearEffect(
+                id="lineareffect_no_match", regex=r"(x10).*", prior=dist.Laplace(0, 1)
+            ),
         ],
     ),
     dict(

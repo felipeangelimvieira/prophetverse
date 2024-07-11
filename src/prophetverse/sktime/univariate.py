@@ -291,7 +291,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         self._has_exogenous = ~X.columns.empty
         X = X.loc[y.index]
 
-        self._set_custom_effects(X.columns)
+        self._initialize_effects(X)
         exogenous_data = self._get_exogenous_data_array(X)
 
         y_array = jnp.array(y.values.flatten()).reshape((-1, 1))

@@ -34,12 +34,12 @@ def test_initialization_defaults():
     assert log_effect.effect_mode == "multiplicative"
 
 
-def test_compute_effect_multiplicative(log_effect_multiplicative):
+def test__apply_multiplicative(log_effect_multiplicative):
     trend = jnp.array([1.0, 2.0, 3.0])
     data = jnp.array([1.0, 2.0, 3.0])
 
     with seed(numpyro.handlers.seed, 0):
-        result = log_effect_multiplicative.compute_effect(trend, data)
+        result = log_effect_multiplicative.apply(trend, data=data)
 
     scale, rate = 0.5, 2.0
     expected_effect = scale * jnp.log(rate * data + 1)
@@ -48,12 +48,12 @@ def test_compute_effect_multiplicative(log_effect_multiplicative):
     assert jnp.allclose(result, expected_result)
 
 
-def test_compute_effect_additive(log_effect_additive):
+def test__apply_additive(log_effect_additive):
     trend = jnp.array([1.0, 2.0, 3.0])
     data = jnp.array([1.0, 2.0, 3.0])
 
     with seed(numpyro.handlers.seed, 0):
-        result = log_effect_additive.compute_effect(trend, data)
+        result = log_effect_additive._apply(trend, data)
 
     scale, rate = 0.5, 2.0
     expected_result = scale * jnp.log(rate * data + 1)
@@ -61,12 +61,12 @@ def test_compute_effect_additive(log_effect_additive):
     assert jnp.allclose(result, expected_result)
 
 
-def test_compute_effect_with_zero_data(log_effect_multiplicative):
+def test__apply_with_zero_data(log_effect_multiplicative):
     trend = jnp.array([1.0, 2.0, 3.0])
     data = jnp.array([0.0, 0.0, 0.0])
 
     with seed(numpyro.handlers.seed, 0):
-        result = log_effect_multiplicative.compute_effect(trend, data)
+        result = log_effect_multiplicative._apply(trend, data)
 
     scale, rate = 0.5, 2.0
     expected_effect = scale * jnp.log(rate * data + 1)
@@ -75,12 +75,12 @@ def test_compute_effect_with_zero_data(log_effect_multiplicative):
     assert jnp.allclose(result, expected_result)
 
 
-def test_compute_effect_with_empty_data(log_effect_multiplicative):
+def test__apply_with_empty_data(log_effect_multiplicative):
     trend = jnp.array([])
     data = jnp.array([])
 
     with seed(numpyro.handlers.seed, 0):
-        result = log_effect_multiplicative.compute_effect(trend, data)
+        result = log_effect_multiplicative._apply(trend, data)
 
     scale, rate = 0.5, 2.0
     expected_effect = scale * jnp.log(rate * data + 1)
@@ -89,9 +89,9 @@ def test_compute_effect_with_empty_data(log_effect_multiplicative):
     assert jnp.allclose(result, expected_result)
 
 
-def test_compute_effect_with_negative_data(log_effect_multiplicative):
+def test__apply_with_negative_data(log_effect_multiplicative):
     trend = jnp.array([1.0, 2.0, 3.0])
     data = jnp.array([-1.0, -2.0, -3.0])
 
     with pytest.raises(ValueError):
-        log_effect_multiplicative.compute_effect(trend, data)
+        log_effect_multiplicative._apply(trend, data)

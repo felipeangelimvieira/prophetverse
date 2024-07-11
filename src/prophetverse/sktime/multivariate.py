@@ -266,12 +266,12 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             X = X.loc[y_bottom.index]
             X = self.expand_columns_transformer_.transform(X)
 
-            self._set_custom_effects(feature_names=X.columns)
-            exogenous_data = self._get_exogenous_data_array(loc_bottom_series(X))
-
         else:
             self._exogenous_effects_and_columns = {}
             exogenous_data = {}
+
+        self._initialize_effects(X)
+        exogenous_data = self._get_exogenous_data_array(X)
 
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,

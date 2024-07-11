@@ -4,7 +4,6 @@ import pytest
 from numpyro import distributions as dist
 from numpyro.handlers import seed
 
-from prophetverse.effects.effect_apply import additive_effect, multiplicative_effect
 from prophetverse.effects.linear import LinearEffect
 
 
@@ -30,25 +29,25 @@ def test_initialization_defaults():
     assert linear_effect.effect_mode == "multiplicative"
 
 
-def test_compute_effect_multiplicative(linear_effect_multiplicative):
+def test__apply_multiplicative(linear_effect_multiplicative):
     trend = jnp.array([1.0, 2.0, 3.0])
     data = jnp.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
 
     with seed(numpyro.handlers.seed, 0):
-        result = linear_effect_multiplicative.compute_effect(trend, data)
+        result = linear_effect_multiplicative.apply(trend, data=data)
 
-    expected_result = multiplicative_effect(trend, data, jnp.array([1.0, 1.0]))
+    expected_result = trend * (data @ jnp.array([1.0, 1.0]).reshape((-1, 1)))
 
     assert jnp.allclose(result, expected_result)
 
 
-def test_compute_effect_additive(linear_effect_additive):
+def test__apply_additive(linear_effect_additive):
     trend = jnp.array([1.0, 2.0, 3.0])
     data = jnp.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
 
     with seed(numpyro.handlers.seed, 0):
-        result = linear_effect_additive.compute_effect(trend, data)
+        result = linear_effect_additive.apply(trend, data=data)
 
-    expected_result = additive_effect(data, jnp.array([1.0, 1.0]))
+    expected_result = data @ jnp.array([1.0, 1.0]).reshape((-1, 1))
 
     assert jnp.allclose(result, expected_result)

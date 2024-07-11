@@ -1,8 +1,8 @@
 """Base classes for sktime forecasters in prophetverse."""
 
 import itertools
-import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+import warnings
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -12,10 +12,10 @@ import numpyro.distributions as dist
 import pandas as pd
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
-from prophetverse.effects.base import AbstractEffect
+from prophetverse.effects.base import BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
-from prophetverse.utils import get_multiindex_loc, series_to_tensor
+from prophetverse.utils import get_multiindex_loc
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -765,14 +765,14 @@ class ExogenousEffectMixin:
     """
 
     def __init__(
-        self, exogenous_effects: List[AbstractEffect], default_effect=None, **kwargs
+        self, exogenous_effects: List[BaseEffect], default_effect=None, **kwargs
     ):
 
         self.exogenous_effects = exogenous_effects
         self.default_effect = default_effect
         super().__init__(**kwargs)
 
-    def _set_custom_effects(self, feature_names: pd.Index):
+    def _initialize_effects(self, X: Union[None, pd.DataFrame]):
         """
         Set custom effects for the features.
 
@@ -781,9 +781,9 @@ class ExogenousEffectMixin:
         feature_names : pd.Index
             List of feature names (obtained with X.columns)
         """
-        effects_and_columns: Dict[str, Tuple[set[str], AbstractEffect]] = {}
+        initialized_effects_dict: Dict[str, BaseEffect] = {}
         columns_with_effects: set[str] = set()
-        exogenous_effects: Union[list[AbstractEffect], set[Any]] = (
+        exogenous_effects: Union[list[BaseEffect], set[Any]] = (
             self.exogenous_effects or set()
         )
 
@@ -797,43 +797,39 @@ class ExogenousEffectMixin:
 
         for effect in exogenous_effects:
 
-            columns = effect.match_columns(feature_names)
+            effect.initialize(X)
+
+            columns: Sequence[str] = effect.input_feature_column_names
 
             if columns_with_effects.intersection(columns):
-                raise ValueError(
-                    "Columns {} are already set".format(
-                        columns_with_effects.intersection(columns)
-                    )
+                msg = "Columns {} are already set".format(
+                    columns_with_effects.intersection(columns)
                 )
 
+                warnings.warn(msg, UserWarning, stacklevel=2)
+
             if not len(columns):
-                logging.warning(f"No columns match the regex {effect.regex}")
+                msg = f"No columns match the regex {effect.regex}"
+                warnings.warn(msg, UserWarning, stacklevel=2)
 
             columns_with_effects = columns_with_effects.union(columns)
 
-            effects_and_columns.update(
-                {
-                    effect.id: (
-                        columns,
-                        effect,
-                    )
-                }
-            )
+            initialized_effects_dict.update({effect.id: effect})
 
-        features_without_effects: set = feature_names.difference(columns_with_effects)
+        if X is not None:
 
-        if len(features_without_effects):
+            features_without_effects: List[str] = X.columns.difference(
+                columns_with_effects
+            ).tolist()
 
-            effects_and_columns.update(
-                {
-                    "exogenous_variables_effect": (
-                        features_without_effects,
-                        default_effect,
-                    )
-                }
-            )
+            if len(features_without_effects) > 0:
+                default_effect.set_params(regex="|".join(features_without_effects))
+                default_effect.initialize(X[features_without_effects])
+                initialized_effects_dict.update(
+                    {"exogenous_variables_effect": default_effect}
+                )
 
-        self._exogenous_effects_and_columns = effects_and_columns
+        self._initialized_effects_dict = initialized_effects_dict
 
     def _get_exogenous_data_array(self, X: pd.DataFrame):
         """
@@ -850,17 +846,13 @@ class ExogenousEffectMixin:
             Dictionary of exogenous data arrays.
         """
         out = {}
-        for effect_name, (columns, _) in self._exogenous_effects_and_columns.items():
+        for effect_name, effect in self._initialized_effects_dict.items():
             # If no columns are found, skip
-            if len(columns) == 0:
+            if effect.should_skip_apply:
                 continue
 
-            if X.index.nlevels == 1:
-                array = jnp.array(X[columns].values)
-            else:
-                array = series_to_tensor(X[columns])
-
-            out[effect_name] = array
+            data: Dict[str, jnp.ndarray] = effect.prepare_input_data(X)
+            out[effect_name] = data
 
         return out
 
@@ -875,5 +867,7 @@ class ExogenousEffectMixin:
             Dictionary of exogenous effects.
         """
         return {
-            k: v[1] for k, v in self._exogenous_effects_and_columns.items() if len(v[0])
+            k: v
+            for k, v in self._initialized_effects_dict.items()
+            if not v.should_skip_apply
         }

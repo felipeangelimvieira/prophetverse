@@ -1,5 +1,6 @@
 """Module that stores abstract class of effects."""
 
+from enum import Enum
 from typing import Dict, List, Literal, Optional, Union
 
 import jax.numpy as jnp
@@ -13,6 +14,18 @@ __all__ = ["BaseEffect"]
 
 
 EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
+
+
+class Stage(Enum):
+    """
+    Enum class for stages of the forecasting model.
+
+    Used to indicate the stage of the model, either "train" or "predict", for the
+    effect preparation steps.
+    """
+
+    TRAIN: str = "train"
+    PREDICT: str = "predict"
 
 
 class BaseEffect(BaseObject):
@@ -143,7 +156,9 @@ class BaseEffect(BaseObject):
         """
         pass
 
-    def prepare_input_data(self, X: pd.DataFrame) -> Dict[str, jnp.ndarray]:
+    def prepare_input_data(
+        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
+    ) -> Dict[str, jnp.ndarray]:
         """Prepare input data to be passed to numpyro model.
 
         This method is called during `fit()` and `predict()` of the forecasting model.
@@ -157,6 +172,8 @@ class BaseEffect(BaseObject):
             The input DataFrame containing the exogenous variables for the training
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
+
+
 
         Returns
         -------
@@ -177,9 +194,11 @@ class BaseEffect(BaseObject):
             return {}
 
         X = X[self._input_feature_column_names]
-        return self._prepare_input_data(X)
+        return self._prepare_input_data(X, stage=stage)
 
-    def _prepare_input_data(self, X: pd.DataFrame) -> Dict[str, jnp.ndarray]:
+    def _prepare_input_data(
+        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
+    ) -> Dict[str, jnp.ndarray]:
         """Prepare the input data in a dict of jax arrays.
 
         This method is called by the `prepare_input_data()` method and can be overridden

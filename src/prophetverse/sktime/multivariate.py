@@ -11,7 +11,7 @@ from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 
 from prophetverse.models import multivariate_model
-from prophetverse.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin
+from prophetverse.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin, Stage
 from prophetverse.trend.piecewise import (
     PiecewiseLinearTrend,
     PiecewiseLogisticTrend,
@@ -271,7 +271,7 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             exogenous_data = {}
 
         self._initialize_effects(X)
-        exogenous_data = self._get_exogenous_data_array(X)
+        exogenous_data = self._get_exogenous_data_array(X, stage=Stage.TRAIN)
 
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,
@@ -365,7 +365,9 @@ class HierarchicalProphet(ExogenousEffectMixin, BaseBayesianForecaster):
             if self.feature_transformer is not None:
                 X = self.feature_transformer.transform(X)
             X = self.expand_columns_transformer_.transform(X)
-            exogenous_data = self._get_exogenous_data_array(loc_bottom_series(X))
+            exogenous_data = self._get_exogenous_data_array(
+                loc_bottom_series(X), stage=Stage.PREDICT
+            )
         else:
             exogenous_data = {}
 

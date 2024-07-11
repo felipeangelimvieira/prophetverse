@@ -15,7 +15,7 @@ from prophetverse.models import (
     univariate_model,
     univariate_negbinomial_model,
 )
-from prophetverse.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin
+from prophetverse.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin, Stage
 from prophetverse.trend.flat import FlatTrend
 from prophetverse.trend.piecewise import (
     PiecewiseLinearTrend,
@@ -292,7 +292,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         X = X.loc[y.index]
 
         self._initialize_effects(X)
-        exogenous_data = self._get_exogenous_data_array(X)
+        exogenous_data = self._get_exogenous_data_array(X, stage=Stage.TRAIN)
 
         y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
 
@@ -343,7 +343,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
             X = self.feature_transformer.transform(X)
 
         exogenous_data = (
-            self._get_exogenous_data_array(X.loc[fh_as_index])
+            self._get_exogenous_data_array(X.loc[fh_as_index], stage=Stage.PREDICT)
             if self._has_exogenous
             else None
         )

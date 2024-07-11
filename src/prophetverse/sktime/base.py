@@ -12,7 +12,7 @@ import numpyro.distributions as dist
 import pandas as pd
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
-from prophetverse.effects.base import BaseEffect
+from prophetverse.effects.base import BaseEffect, Stage
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
 from prophetverse.utils import get_multiindex_loc
@@ -831,7 +831,7 @@ class ExogenousEffectMixin:
 
         self._initialized_effects_dict = initialized_effects_dict
 
-    def _get_exogenous_data_array(self, X: pd.DataFrame):
+    def _get_exogenous_data_array(self, X: pd.DataFrame, stage: Stage = Stage.TRAIN):
         """
         Get exogenous data array.
 
@@ -851,7 +851,7 @@ class ExogenousEffectMixin:
             if effect.should_skip_apply:
                 continue
 
-            data: Dict[str, jnp.ndarray] = effect.prepare_input_data(X)
+            data: Dict[str, jnp.ndarray] = effect.prepare_input_data(X, stage=stage)
             out[effect_name] = data
 
         return out

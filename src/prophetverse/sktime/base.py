@@ -782,13 +782,20 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
 
     @property
     def _exogenous_effects(self):
+        """Return exogenous effects.
+
+        This property is for compatibility with _HeterogenousMetaEstimator.
+        """
         if self.exogenous_effects is None:
             return []
         return [(name, effect) for name, effect, _ in self.exogenous_effects]
 
     @_exogenous_effects.setter
     def _exogenous_effects(self, value):
+        """Set exogenous effects.
 
+        This property is for compatibility with _HeterogenousMetaEstimator.
+        """
         # Ensure that user is passing list of (name, effect) or
         # (name, effect, regex) tuples
         assert len(value[0]) in [2, 3], "Invalid value for exogenous_effects"

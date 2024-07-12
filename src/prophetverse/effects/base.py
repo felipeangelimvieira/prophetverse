@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Dict, List, Literal
 
 import jax.numpy as jnp
-import numpyro
 import pandas as pd
 from skbase.base import BaseObject
 
@@ -217,10 +216,6 @@ class BaseEffect(BaseObject):
         """
         array = series_to_tensor_or_array(X)
         return {"data": array}
-
-    def sample(self, name: str, *args, **kwargs):
-        """Sample a random variable with a unique name."""
-        return numpyro.sample(f"{self.id}__{name}", *args, **kwargs)
 
     def predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Apply and return the effect values.

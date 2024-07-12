@@ -47,6 +47,7 @@ HYPERPARAMS = [
         ),
         exogenous_effects=[
             ("lineareffect1", LinearEffect(), r"(x1).*"),
+            ("lineareffect1_repeated", LinearEffect(), r"(x1).*"),
             ("lineareffect2", LinearEffect(prior=dist.Laplace(0, 1)), r"(x2).*"),
             (
                 "lineareffect_no_match",

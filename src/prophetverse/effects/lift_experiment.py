@@ -11,6 +11,8 @@ from prophetverse.utils.frame_to_array import series_to_tensor_or_array
 
 from .base import BaseEffect, Stage
 
+__all__ = ["LiftExperimentLikelihood"]
+
 
 class LiftExperimentLikelihood(BaseEffect):
     """Wrap an effect and applies a normal likelihood to its output.
@@ -27,8 +29,6 @@ class LiftExperimentLikelihood(BaseEffect):
         have the same index as the input data.
     prior_scale : float
         The scale of the prior distribution for the likelihood.
-
-
     """
 
     _tags = {"skip_predict_if_no_match": False, "supports_multivariate": False}
@@ -48,7 +48,7 @@ class LiftExperimentLikelihood(BaseEffect):
 
         super().__init__()
 
-    def fit(self, X: pd.DataFrame, scale: float = 1):
+    def _fit(self, X: pd.DataFrame, scale: float = 1):
         """Initialize this effect and its wrapped effect.
 
         Parameters
@@ -94,7 +94,7 @@ class LiftExperimentLikelihood(BaseEffect):
         data_dict["observed_lift"] = lift_array / self.timeseries_scale
         return data_dict
 
-    def predict(
+    def _predict(
         self,
         trend: jnp.ndarray,
         **kwargs,

@@ -797,7 +797,7 @@ class ExogenousEffectMixin:
 
         for effect in exogenous_effects:
 
-            effect.initialize(X)
+            effect.initialize(X, scale=self._scale)  # type: ignore[attr-defined]
 
             columns: Sequence[str] = effect.input_feature_column_names
 
@@ -824,7 +824,10 @@ class ExogenousEffectMixin:
 
             if len(features_without_effects) > 0:
                 default_effect.set_params(regex="|".join(features_without_effects))
-                default_effect.initialize(X[features_without_effects])
+                default_effect.initialize(
+                    X[features_without_effects],
+                    scale=self._scale,  # type: ignore[attr-defined]
+                )
                 initialized_effects_dict.update(
                     {"exogenous_variables_effect": default_effect}
                 )

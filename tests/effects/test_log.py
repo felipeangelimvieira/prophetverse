@@ -87,11 +87,3 @@ def test__apply_with_empty_data(log_effect_multiplicative):
     expected_result = trend * expected_effect
 
     assert jnp.allclose(result, expected_result)
-
-
-def test__apply_with_negative_data(log_effect_multiplicative):
-    trend = jnp.array([1.0, 2.0, 3.0])
-    data = jnp.array([-1.0, -2.0, -3.0])
-
-    with pytest.raises(ValueError):
-        log_effect_multiplicative._apply(trend, data)

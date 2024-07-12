@@ -6,12 +6,15 @@ import jax.numpy as jnp
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
-from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
+from prophetverse.effects.base import (
+    EFFECT_APPLICATION_TYPE,
+    BaseAdditiveOrMultiplicativeEffect,
+)
 
 __all__ = ["LogEffect"]
 
 
-class LogEffect(BaseEffect):
+class LogEffect(BaseAdditiveOrMultiplicativeEffect):
     """Represents a log effect as effect = scale * log(rate * data + 1).
 
     Parameters
@@ -38,7 +41,7 @@ class LogEffect(BaseEffect):
         super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
 
     def _apply(  # type: ignore[override]
-        self, trend: jnp.ndarray, data: jnp.ndarray, **kwargs
+        self, trend: jnp.ndarray, **kwargs
     ) -> jnp.ndarray:
         """Compute the effect using the log transformation.
 
@@ -54,12 +57,10 @@ class LogEffect(BaseEffect):
         jnp.ndarray
             The computed effect based on the given trend and data.
         """
+        data: jnp.ndarray = kwargs.pop("data")
+
         scale = self.sample("log_scale", self.scale_prior)
         rate = self.sample("log_rate", self.rate_prior)
-
-        if jnp.any(rate * data + 1 <= 0):
-            raise ValueError("Can't take log of negative values or zero.")
-
-        effect = scale * jnp.log(rate * data + 1)
+        effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))
 
         return effect

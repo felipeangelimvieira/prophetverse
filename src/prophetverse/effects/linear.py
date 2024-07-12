@@ -7,13 +7,16 @@ import numpyro
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
-from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
+from prophetverse.effects.base import (
+    EFFECT_APPLICATION_TYPE,
+    BaseAdditiveOrMultiplicativeEffect,
+)
 from prophetverse.utils.algebric_operations import matrix_multiplication
 
 __all__ = ["LinearEffect"]
 
 
-class LinearEffect(BaseEffect):
+class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
     """Represents a linear effect in a hierarchical prophet model.
 
     Parameters
@@ -40,9 +43,7 @@ class LinearEffect(BaseEffect):
 
         super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
 
-    def _apply(  # type: ignore[override]
-        self, trend: jnp.ndarray, data: jnp.ndarray, **kwargs
-    ) -> jnp.ndarray:
+    def _apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Compute the Linear effect.
 
         Parameters
@@ -57,6 +58,8 @@ class LinearEffect(BaseEffect):
         jnp.ndarray
             The computed effect based on the given trend and data.
         """
+        data = kwargs.pop("data")
+
         n_features = data.shape[-1]
 
         with numpyro.plate(f"{self.id}_plate", n_features, dim=-1):

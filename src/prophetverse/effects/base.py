@@ -8,9 +8,9 @@ import numpyro
 import pandas as pd
 from skbase.base import BaseObject
 
-from prophetverse.utils import series_to_tensor
+from prophetverse.utils import series_to_tensor_or_array
 
-__all__ = ["BaseEffect"]
+__all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
 
 EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
@@ -75,13 +75,10 @@ class BaseEffect(BaseObject):
         self,
         id: str = "",
         regex: Optional[str] = None,
-        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
     ):
         self.id = id
         self.regex = regex
-        self.effect_mode = effect_mode
         self._input_feature_column_names: List[str] = []
-        self._should_skip_apply = False
         self._is_initialized = False
 
     @property
@@ -104,7 +101,7 @@ class BaseEffect(BaseObject):
             return True
         return False
 
-    def initialize(self, X: pd.DataFrame):
+    def initialize(self, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
 
         This method is called during `fit()` of the forecasting model.
@@ -118,6 +115,10 @@ class BaseEffect(BaseObject):
         ----------
         X : pd.DataFrame
             The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
 
         Returns
         -------
@@ -140,10 +141,10 @@ class BaseEffect(BaseObject):
         else:
             self._input_feature_column_names = self.match_columns(X.columns).tolist()
 
-        self._initialize(X)
+        self._initialize(X, scale=scale)
         self._is_initialized = True
 
-    def _initialize(self, X: pd.DataFrame):
+    def _initialize(self, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
 
         This method is called by the `initialize()` method and can be overridden by
@@ -190,10 +191,11 @@ class BaseEffect(BaseObject):
         if not self._is_initialized:
             raise ValueError("You must call initialize() before calling this method")
 
-        if not len(self._input_feature_column_names):
+        # If apply should be skipped, return an empty dictionary
+        if self.should_skip_apply:
             return {}
 
-        X = X[self._input_feature_column_names]
+        X = X[self.input_feature_column_names]
         return self._prepare_input_data(X, stage=stage)
 
     def _prepare_input_data(
@@ -218,10 +220,7 @@ class BaseEffect(BaseObject):
             dictionary should be the names of the arguments of the `apply` method, and
             the values should be the corresponding data as jnp.ndarray.
         """
-        if X.index.nlevels == 1:
-            array = jnp.array(X.values)
-        else:
-            array = series_to_tensor(X)
+        array = series_to_tensor_or_array(X)
         return {"data": array}
 
     def match_columns(self, columns: Union[pd.Index, List[str]]) -> pd.Index:
@@ -268,9 +267,7 @@ class BaseEffect(BaseObject):
         """
         x = self._apply(trend, **kwargs)
 
-        if self.effect_mode == "additive":
-            return x
-        return trend * x
+        return x
 
     def _apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Apply the effect.
@@ -296,3 +293,46 @@ class BaseEffect(BaseObject):
     def __call__(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.apply(trend, **kwargs)
+
+
+class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
+    """
+    Base class for effects that can be applied in additive or multiplicative mode.
+
+    In additive mode, the effect is directly returned. In multiplicative mode,
+    the effect is multiplied by the trend before being returned.
+
+    Parameters
+    ----------
+    id : str, optional
+        The id of the effect, by default "".
+    regex : Optional[str], optional
+        A regex pattern to match the columns of the exogenous variables dataframe,
+        by default None. If None, and _tags["skip_apply_if_no_match"] is True, the
+        effect will be skipped if no columns are found.
+    effect_mode : EFFECT_APPLICATION_TYPE, optional. Can be "additive"
+        or "multiplicative".
+    """
+
+    def __init__(self, id="", regex=None, effect_mode="multiplicative"):
+
+        self.effect_mode = effect_mode
+        super().__init__(id=id, regex=regex)
+
+    def apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+        """Apply the effect.
+
+        Parameters
+        ----------
+        trend : jnp.ndarray
+            The trend of the model.
+
+        Returns
+        -------
+        jnp.ndarray
+            The computed effect.
+        """
+        x = super().apply(trend, **kwargs)
+        if self.effect_mode == "additive":
+            return x
+        return trend * x

@@ -5,6 +5,7 @@ from .frame_to_array import (
     convert_index_to_days_since_epoch,
     iterate_all_series,
     series_to_tensor,
+    series_to_tensor_or_array,
 )
 from .multiindex import (
     get_bottom_series_idx,
@@ -21,6 +22,7 @@ __all__ = [
     "iterate_all_series",
     "convert_index_to_days_since_epoch",
     "series_to_tensor",
+    "series_to_tensor_or_array",
     "convert_dataframe_to_tensors",
     "reindex_time_series",
     "exact",

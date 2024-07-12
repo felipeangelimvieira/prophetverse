@@ -7,7 +7,7 @@ import numpyro
 import pandas as pd
 import pytest
 
-from prophetverse.effects.base import BaseEffect
+from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect
 
 warnings.filterwarnings("ignore")
 
@@ -30,7 +30,7 @@ def sample_data():
     )
 
 
-class ConcreteEffect(BaseEffect):
+class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
     """Most simple class to test abstracteffect methods."""
 
     _tags = {"skip_apply_if_no_match": False}

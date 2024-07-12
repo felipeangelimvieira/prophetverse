@@ -6,13 +6,16 @@ import jax.numpy as jnp
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
-from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
+from prophetverse.effects.base import (
+    EFFECT_APPLICATION_TYPE,
+    BaseAdditiveOrMultiplicativeEffect,
+)
 from prophetverse.utils.algebric_operations import _exponent_safe
 
 __all__ = ["HillEffect"]
 
 
-class HillEffect(BaseEffect):
+class HillEffect(BaseAdditiveOrMultiplicativeEffect):
     """Represents a Hill effect in a time series model.
 
     Parameters
@@ -43,9 +46,7 @@ class HillEffect(BaseEffect):
 
         super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
 
-    def _apply(  # type: ignore[override]
-        self, trend: jnp.ndarray, data: jnp.ndarray, **kwargs
-    ) -> jnp.ndarray:
+    def _apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Compute the effect using the log transformation.
 
         Parameters
@@ -60,6 +61,8 @@ class HillEffect(BaseEffect):
         jnp.ndarray
             The computed effect based on the given trend and data.
         """
+        data: jnp.ndarray = kwargs.pop("data")
+
         half_max = self.sample("half_max", self.half_max_prior)
         slope = self.sample("slope", self.slope_prior)
         max_effect = self.sample("max_effect", self.max_effect_prior)

@@ -11,7 +11,6 @@ from prophetverse.utils.algebric_operations import _exponent_safe
 @pytest.fixture
 def hill_effect_multiplicative():
     return HillEffect(
-        id="test_hill_effect",
         half_max_prior=dist.Delta(0.5),
         slope_prior=dist.Delta(1.0),
         max_effect_prior=dist.Delta(1.5),
@@ -22,7 +21,6 @@ def hill_effect_multiplicative():
 @pytest.fixture
 def hill_effect_additive():
     return HillEffect(
-        id="test_hill_effect",
         half_max_prior=dist.Delta(0.5),
         slope_prior=dist.Delta(1.0),
         max_effect_prior=dist.Delta(1.5),
@@ -31,7 +29,7 @@ def hill_effect_additive():
 
 
 def test_initialization_defaults():
-    hill_effect = HillEffect(id="test_hill_effect")
+    hill_effect = HillEffect()
     assert isinstance(hill_effect.half_max_prior, dist.Gamma)
     assert isinstance(hill_effect.slope_prior, dist.HalfNormal)
     assert isinstance(hill_effect.max_effect_prior, dist.Gamma)

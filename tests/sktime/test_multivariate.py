@@ -31,10 +31,12 @@ HYPERPARAMS = [
             yearly_seasonality=True, weekly_seasonality=True
         ),
         exogenous_effects=[
-            LinearEffect(id="lineareffect1", regex=r"(x1).*"),
-            LinearEffect(id="lineareffect2", regex=r"(x2).*", prior=dist.Laplace(0, 1)),
-            LinearEffect(
-                id="lineareffect_no_match", regex=r"(x10).*", prior=dist.Laplace(0, 1)
+            ("lineareffect1", LinearEffect(), r"(x1).*"),
+            ("lineareffect2", LinearEffect(prior=dist.Laplace(0, 1)), r"(x2).*"),
+            (
+                "lineareffect_no_match",
+                LinearEffect(prior=dist.Laplace(0, 1)),
+                r"(x10).*",
             ),
         ],
     ),

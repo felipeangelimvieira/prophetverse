@@ -3,6 +3,7 @@
 from typing import Any, Dict, List
 
 import jax.numpy as jnp
+import numpyro
 import numpyro.distributions as dist
 import pandas as pd
 
@@ -45,9 +46,9 @@ class LiftExperimentLikelihood(BaseEffect):
 
         assert self.prior_scale > 0, "prior_scale must be greater than 0"
 
-        super().__init__(id=self.effect.id, regex=None)
+        super().__init__()
 
-    def initialize(self, X: pd.DataFrame, scale: float = 1):
+    def fit(self, X: pd.DataFrame, scale: float = 1):
         """Initialize this effect and its wrapped effect.
 
         Parameters
@@ -57,18 +58,16 @@ class LiftExperimentLikelihood(BaseEffect):
         scale : float
             The scale of the timeseries. This is used to normalize the lift effect.
         """
-        self.effect.initialize(X)
+        self.effect.fit(X)
         self.timeseries_scale = scale
-        super().initialize(X)
+        super().fit(X)
 
     @property
     def input_feature_column_names(self) -> List[str]:
         """Return the input feature columns names."""
         return self.effect._input_feature_column_names
 
-    def _prepare_input_data(
-        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
-    ) -> Dict[str, Any]:
+    def _transform(self, X: pd.DataFrame, stage: Stage = Stage.TRAIN) -> Dict[str, Any]:
         """Prepare the input data for the effect, and the custom likelihood.
 
         Parameters
@@ -84,7 +83,7 @@ class LiftExperimentLikelihood(BaseEffect):
         Dict[str, Any]
             The dictionary of data passed to _apply and the likelihood.
         """
-        data_dict = self.effect._prepare_input_data(X, stage)
+        data_dict = self.effect._transform(X, stage)
 
         if stage == Stage.PREDICT:
             data_dict["observed_lift"] = None
@@ -95,7 +94,7 @@ class LiftExperimentLikelihood(BaseEffect):
         data_dict["observed_lift"] = lift_array / self.timeseries_scale
         return data_dict
 
-    def apply(
+    def predict(
         self,
         trend: jnp.ndarray,
         **kwargs,
@@ -116,10 +115,10 @@ class LiftExperimentLikelihood(BaseEffect):
         """
         observed_lift = kwargs.pop("observed_lift")
 
-        x = self.effect.apply(trend, **kwargs)
+        x = self.effect.predict(trend, **kwargs)
 
-        self.sample(
-            f"lift_experiment_{self.effect.id}",
+        numpyro.sample(
+            "lift_experiment",
             dist.Normal(x, self.prior_scale),
             obs=observed_lift,
         )

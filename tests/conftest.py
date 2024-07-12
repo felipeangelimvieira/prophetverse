@@ -35,10 +35,7 @@ class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
 
     _tags = {"skip_apply_if_no_match": False}
 
-    def __init__(self, id: str, regex=None, effect_mode="additive"):
-        super().__init__(id=id, regex=regex, effect_mode=effect_mode)
-
-    def _apply(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
+    def _predict(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
         """Calculate simple effect."""
         return jnp.mean(data, axis=0)
 
@@ -46,10 +43,10 @@ class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
 @pytest.fixture(name="effect_with_regex")
 def effect_with_regex():
     """Most simple class of abstracteffect with optional regex."""
-    return ConcreteEffect(id="test_effect", regex="x1|x2")
+    return ConcreteEffect()
 
 
 @pytest.fixture
 def effect_without_regex():
     """Most simple class of abstracteffect without optional regex."""
-    return ConcreteEffect(id="test_effect")
+    return ConcreteEffect()

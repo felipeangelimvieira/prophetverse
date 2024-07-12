@@ -3,6 +3,7 @@
 from typing import Optional
 
 import jax.numpy as jnp
+import numpyro
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
@@ -29,18 +30,15 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
 
     def __init__(
         self,
-        id: str = "",
-        regex: Optional[str] = None,
         effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         scale_prior: Optional[Distribution] = None,
         rate_prior: Optional[Distribution] = None,
-        **kwargs,
     ):
         self.scale_prior = scale_prior or dist.Gamma(1, 1)
         self.rate_prior = rate_prior or dist.Gamma(1, 1)
-        super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
+        super().__init__(effect_mode=effect_mode)
 
-    def _apply(  # type: ignore[override]
+    def _predict(  # type: ignore[override]
         self, trend: jnp.ndarray, **kwargs
     ) -> jnp.ndarray:
         """Compute the effect using the log transformation.
@@ -59,8 +57,8 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
         """
         data: jnp.ndarray = kwargs.pop("data")
 
-        scale = self.sample("log_scale", self.scale_prior)
-        rate = self.sample("log_rate", self.rate_prior)
+        scale = numpyro.sample("log_scale", self.scale_prior)
+        rate = numpyro.sample("log_rate", self.rate_prior)
         effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))
 
         return effect

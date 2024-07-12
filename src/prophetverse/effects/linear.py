@@ -33,17 +33,14 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
     def __init__(
         self,
-        id: str = "",
-        regex: Optional[str] = None,
         effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         prior: Optional[Distribution] = None,
-        **kwargs,
     ):
         self.prior = prior or dist.Normal(0, 0.1)
 
-        super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
+        super().__init__(effect_mode=effect_mode)
 
-    def _apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Compute the Linear effect.
 
         Parameters
@@ -62,8 +59,8 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
         n_features = data.shape[-1]
 
-        with numpyro.plate(f"{self.id}_plate", n_features, dim=-1):
-            coefficients = self.sample("coefs", self.prior)
+        with numpyro.plate("features_plate", n_features, dim=-1):
+            coefficients = numpyro.sample("coefs", self.prior)
 
         if coefficients.ndim == 1:
             coefficients = jnp.expand_dims(coefficients, axis=-1)

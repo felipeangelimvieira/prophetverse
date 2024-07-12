@@ -3,6 +3,7 @@
 from typing import Optional
 
 import jax.numpy as jnp
+import numpyro
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
@@ -32,21 +33,18 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
 
     def __init__(
         self,
-        id: str = "",
-        regex: Optional[str] = None,
         effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         half_max_prior: Optional[Distribution] = None,
         slope_prior: Optional[Distribution] = None,
         max_effect_prior: Optional[Distribution] = None,
-        **kwargs,
     ):
         self.half_max_prior = half_max_prior or dist.Gamma(1, 1)
         self.slope_prior = slope_prior or dist.HalfNormal(10)
         self.max_effect_prior = max_effect_prior or dist.Gamma(1, 1)
 
-        super().__init__(id=id, regex=regex, effect_mode=effect_mode, **kwargs)
+        super().__init__(effect_mode=effect_mode)
 
-    def _apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Compute the effect using the log transformation.
 
         Parameters
@@ -63,9 +61,9 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         """
         data: jnp.ndarray = kwargs.pop("data")
 
-        half_max = self.sample("half_max", self.half_max_prior)
-        slope = self.sample("slope", self.slope_prior)
-        max_effect = self.sample("max_effect", self.max_effect_prior)
+        half_max = numpyro.sample("half_max", self.half_max_prior)
+        slope = numpyro.sample("slope", self.slope_prior)
+        max_effect = numpyro.sample("max_effect", self.max_effect_prior)
 
         x = _exponent_safe(data / half_max, -slope)
         effect = max_effect / (1 + x)

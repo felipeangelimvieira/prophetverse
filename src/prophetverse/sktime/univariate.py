@@ -15,7 +15,7 @@ from prophetverse.models import (
     univariate_model,
     univariate_negbinomial_model,
 )
-from prophetverse.sktime.base import BaseBayesianForecaster, ExogenousEffectMixin, Stage
+from prophetverse.sktime.base import BaseEffectsBayesianForecaster, Stage
 from prophetverse.trend.flat import FlatTrend
 from prophetverse.trend.piecewise import (
     PiecewiseLinearTrend,
@@ -35,7 +35,7 @@ _LIKELIHOOD_MODEL_MAP = {
 _DISCRETE_LIKELIHOODS = ["negbinomial"]
 
 
-class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
+class Prophetverse(BaseEffectsBayesianForecaster):
     """Univariate ``Prophetverse`` forecaster, with support for multiple likelihoods.
 
     Differences to facebook's prophet:
@@ -291,8 +291,8 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         self._has_exogenous = ~X.columns.empty
         X = X.loc[y.index]
 
-        self._initialize_effects(X)
-        exogenous_data = self._get_exogenous_data_array(X, stage=Stage.TRAIN)
+        self._fit_effects(X)
+        exogenous_data = self._transform_effects(X, stage=Stage.TRAIN)
 
         y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
 
@@ -302,7 +302,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
             "noise_scale": self.noise_scale,
             "scale": self._scale,
             "exogenous_effects": (
-                self.exogenous_effect_dict if self._has_exogenous else None
+                self.non_skipped_exogenous_effect if self._has_exogenous else None
             ),
         }
 
@@ -343,7 +343,7 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
             X = self.feature_transformer.transform(X)
 
         exogenous_data = (
-            self._get_exogenous_data_array(X.loc[fh_as_index], stage=Stage.PREDICT)
+            self._transform_effects(X.loc[fh_as_index], stage=Stage.PREDICT)
             if self._has_exogenous
             else None
         )

@@ -10,7 +10,6 @@ from prophetverse.effects.log import LogEffect
 @pytest.fixture
 def log_effect_multiplicative():
     return LogEffect(
-        id="test_log_effect",
         scale_prior=dist.Delta(0.5),
         rate_prior=dist.Delta(2.0),
         effect_mode="multiplicative",
@@ -20,7 +19,6 @@ def log_effect_multiplicative():
 @pytest.fixture
 def log_effect_additive():
     return LogEffect(
-        id="test_log_effect",
         scale_prior=dist.Delta(0.5),
         rate_prior=dist.Delta(2.0),
         effect_mode="additive",
@@ -28,7 +26,7 @@ def log_effect_additive():
 
 
 def test_initialization_defaults():
-    log_effect = LogEffect(id="test_log_effect")
+    log_effect = LogEffect()
     assert isinstance(log_effect.scale_prior, dist.Gamma)
     assert isinstance(log_effect.rate_prior, dist.Gamma)
     assert log_effect.effect_mode == "multiplicative"

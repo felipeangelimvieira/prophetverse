@@ -230,10 +230,10 @@ def _compute_mean_univariate(
     # Exogenous effects
     if exogenous_effects is not None:
 
-        for key, exog_effect in exogenous_effects.items():
-
-            exog_data = data[key]  # type: ignore[index]
-            effect = exog_effect(trend=trend, **exog_data)
-            effect = numpyro.deterministic(key, effect)
+        for exog_effect_name, exog_effect in exogenous_effects.items():
+            with numpyro.handlers.scope(prefix=exog_effect_name):
+                exog_data = data[exog_effect_name]  # type: ignore[index]
+                effect = exog_effect(trend=trend, **exog_data)
+            effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect
     return mean

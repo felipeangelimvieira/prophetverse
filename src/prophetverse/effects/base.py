@@ -1,7 +1,7 @@
 """Module that stores abstract class of effects."""
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal
 
 import jax.numpy as jnp
 import numpyro
@@ -71,15 +71,9 @@ class BaseEffect(BaseObject):
         "skip_apply_if_no_match": True,
     }
 
-    def __init__(
-        self,
-        id: str = "",
-        regex: Optional[str] = None,
-    ):
-        self.id = id
-        self.regex = regex
+    def __init__(self):
         self._input_feature_column_names: List[str] = []
-        self._is_initialized = False
+        self._is_fitted = False
 
     @property
     def input_feature_column_names(self) -> List[str]:
@@ -101,7 +95,7 @@ class BaseEffect(BaseObject):
             return True
         return False
 
-    def initialize(self, X: pd.DataFrame, scale: float = 1.0):
+    def fit(self, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
 
         This method is called during `fit()` of the forecasting model.
@@ -136,15 +130,16 @@ class BaseEffect(BaseObject):
                     f"The effect of if {self.id} does not "
                     + "support multivariate data"
                 )
-        if self.regex is None:
+
+        if X is None or X.empty:
             self._input_feature_column_names = []
         else:
-            self._input_feature_column_names = self.match_columns(X.columns).tolist()
+            self._input_feature_column_names = X.columns.tolist()
 
-        self._initialize(X, scale=scale)
-        self._is_initialized = True
+        self._fit(X, scale=scale)
+        self._is_fitted = True
 
-    def _initialize(self, X: pd.DataFrame, scale: float = 1.0):
+    def _fit(self, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
 
         This method is called by the `initialize()` method and can be overridden by
@@ -157,7 +152,7 @@ class BaseEffect(BaseObject):
         """
         pass
 
-    def prepare_input_data(
+    def transform(
         self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
     ) -> Dict[str, jnp.ndarray]:
         """Prepare input data to be passed to numpyro model.
@@ -188,7 +183,7 @@ class BaseEffect(BaseObject):
         ValueError
             If the effect has not been initialized.
         """
-        if not self._is_initialized:
+        if not self._is_fitted:
             raise ValueError("You must call initialize() before calling this method")
 
         # If apply should be skipped, return an empty dictionary
@@ -196,9 +191,9 @@ class BaseEffect(BaseObject):
             return {}
 
         X = X[self.input_feature_column_names]
-        return self._prepare_input_data(X, stage=stage)
+        return self._transform(X, stage=stage)
 
-    def _prepare_input_data(
+    def _transform(
         self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
     ) -> Dict[str, jnp.ndarray]:
         """Prepare the input data in a dict of jax arrays.
@@ -223,36 +218,11 @@ class BaseEffect(BaseObject):
         array = series_to_tensor_or_array(X)
         return {"data": array}
 
-    def match_columns(self, columns: Union[pd.Index, List[str]]) -> pd.Index:
-        """Match the columns of the DataFrame with the regex pattern.
-
-        Parameters
-        ----------
-        columns : pd.Index
-            Columns of the dataframe.
-
-        Returns
-        -------
-        pd.Index
-            The columns that match the regex pattern.
-
-        Raises
-        ------
-        ValueError
-            Indicates the abscence of required regex pattern.
-        """
-        if isinstance(columns, List):
-            columns = pd.Index(columns)
-
-        if self.regex is None:
-            raise ValueError("To use this method, you must set the regex pattern")
-        return columns[columns.str.match(self.regex)]
-
     def sample(self, name: str, *args, **kwargs):
         """Sample a random variable with a unique name."""
         return numpyro.sample(f"{self.id}__{name}", *args, **kwargs)
 
-    def apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Apply and return the effect values.
 
         Parameters
@@ -265,11 +235,11 @@ class BaseEffect(BaseObject):
         jnp.ndarray
             The effect values.
         """
-        x = self._apply(trend, **kwargs)
+        x = self._predict(trend, **kwargs)
 
         return x
 
-    def _apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Apply the effect.
 
         This method is called by the `apply()` method and must be overridden by
@@ -292,7 +262,7 @@ class BaseEffect(BaseObject):
 
     def __call__(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
-        return self.apply(trend, **kwargs)
+        return self.predict(trend, **kwargs)
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
@@ -314,12 +284,12 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         or "multiplicative".
     """
 
-    def __init__(self, id="", regex=None, effect_mode="multiplicative"):
+    def __init__(self, effect_mode="multiplicative"):
 
         self.effect_mode = effect_mode
-        super().__init__(id=id, regex=regex)
+        super().__init__()
 
-    def apply(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Apply the effect.
 
         Parameters
@@ -332,7 +302,7 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         jnp.ndarray
             The computed effect.
         """
-        x = super().apply(trend, **kwargs)
+        x = super().predict(trend, **kwargs)
         if self.effect_mode == "additive":
             return x
         return trend * x

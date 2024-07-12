@@ -9,20 +9,16 @@ from prophetverse.effects.linear import LinearEffect
 
 @pytest.fixture
 def linear_effect_multiplicative():
-    return LinearEffect(
-        id="test_linear_effect", prior=dist.Delta(1.0), effect_mode="multiplicative"
-    )
+    return LinearEffect(prior=dist.Delta(1.0), effect_mode="multiplicative")
 
 
 @pytest.fixture
 def linear_effect_additive():
-    return LinearEffect(
-        id="test_linear_effect", prior=dist.Delta(1.0), effect_mode="additive"
-    )
+    return LinearEffect(prior=dist.Delta(1.0), effect_mode="additive")
 
 
 def test_initialization_defaults():
-    linear_effect = LinearEffect(id="test_linear_effect")
+    linear_effect = LinearEffect()
     assert isinstance(linear_effect.prior, dist.Normal)
     assert linear_effect.prior.loc == 0
     assert linear_effect.prior.scale == 0.1

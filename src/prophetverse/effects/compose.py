@@ -31,7 +31,7 @@ class LiftExperimentLikelihood(BaseEffect):
 
     """
 
-    _tags = {"skip_apply_if_no_match": False, "supports_multivariate": False}
+    _tags = {"skip_predict_if_no_match": False, "supports_multivariate": False}
 
     def __init__(
         self,
@@ -81,7 +81,7 @@ class LiftExperimentLikelihood(BaseEffect):
         Returns
         -------
         Dict[str, Any]
-            The dictionary of data passed to _apply and the likelihood.
+            The dictionary of data passed to _predict and the likelihood.
         """
         data_dict = self.effect._transform(X, stage)
 

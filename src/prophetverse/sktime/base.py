@@ -839,7 +839,7 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
                 warnings.warn(msg, UserWarning, stacklevel=2)
 
             if not len(columns):
-                msg = f"No columns match the regex {effect.regex}"
+                msg = f"No columns match the regex {regex}"
                 warnings.warn(msg, UserWarning, stacklevel=2)
 
             columns_with_effects = columns_with_effects.union(columns)
@@ -894,7 +894,7 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
         out = {}
         for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
-            if effect.should_skip_apply:
+            if effect.should_skip_predict:
                 continue
 
             data: Dict[str, jnp.ndarray] = effect.transform(X[columns], stage=stage)
@@ -915,7 +915,7 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
         return {
             effect_name: effect
             for effect_name, effect, _ in self.exogenous_effects_
-            if not effect.should_skip_apply
+            if not effect.should_skip_predict
         }
 
     def match_columns(

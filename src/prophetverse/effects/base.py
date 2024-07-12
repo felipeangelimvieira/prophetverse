@@ -44,7 +44,7 @@ class BaseEffect(BaseObject):
         By default the columns of the dataframe that match the regex pattern are
         selected, and the result is converted to a jnp.ndarray with key "data"
 
-    * _apply: This method is called during `fit()` and `predict()` of the forecasting
+    * _predict: This method is called during `fit()` and `predict()` of the forecasting
         model. It receives the trend values as a jnp.ndarray, and the data needed for
         the effect as named arguments. It should return the effect values as a
         jnp.ndarray.
@@ -56,7 +56,7 @@ class BaseEffect(BaseObject):
         The id of the effect, by default "". Used to identify the effect in the model.
     regex : Optional[str], optional
         A regex pattern to match the columns of the exogenous variables dataframe,
-        by default None. If None, and _tags["skip_apply_if_no_match"] is True, the
+        by default None. If None, and _tags["skip_predict_if_no_match"] is True, the
         effect will be skipped if no columns are found.
     effect_mode : EFFECT_APPLICATION_TYPE, optional
         The mode of the effect, either "additive" or "multiplicative", by default
@@ -67,8 +67,8 @@ class BaseEffect(BaseObject):
     _tags = {
         "supports_multivariate": False,
         # If no columns are found, should
-        # _apply be skipped?
-        "skip_apply_if_no_match": True,
+        # _predict be skipped?
+        "skip_predict_if_no_match": True,
     }
 
     def __init__(self):
@@ -81,7 +81,7 @@ class BaseEffect(BaseObject):
         return self._input_feature_column_names
 
     @property
-    def should_skip_apply(self) -> bool:
+    def should_skip_predict(self) -> bool:
         """Return if the effect should be skipped by the forecaster.
 
         Returns
@@ -90,7 +90,7 @@ class BaseEffect(BaseObject):
             If the effect should be skipped by the forecaster.
         """
         if not self._input_feature_column_names and self.get_tag(
-            "skip_apply_if_no_match"
+            "skip_predict_if_no_match"
         ):
             return True
         return False
@@ -187,7 +187,7 @@ class BaseEffect(BaseObject):
             raise ValueError("You must call initialize() before calling this method")
 
         # If apply should be skipped, return an empty dictionary
-        if self.should_skip_apply:
+        if self.should_skip_predict:
             return {}
 
         X = X[self.input_feature_column_names]
@@ -258,7 +258,7 @@ class BaseEffect(BaseObject):
         jnp.ndarray
             The effect values.
         """
-        raise NotImplementedError("Subclasses must implement _apply()")
+        raise NotImplementedError("Subclasses must implement _predict()")
 
     def __call__(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
@@ -278,13 +278,13 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         The id of the effect, by default "".
     regex : Optional[str], optional
         A regex pattern to match the columns of the exogenous variables dataframe,
-        by default None. If None, and _tags["skip_apply_if_no_match"] is True, the
+        by default None. If None, and _tags["skip_predict_if_no_match"] is True, the
         effect will be skipped if no columns are found.
     effect_mode : EFFECT_APPLICATION_TYPE, optional. Can be "additive"
         or "multiplicative".
     """
 
-    def __init__(self, effect_mode="multiplicative"):
+    def __init__(self, effect_mode="additive"):
 
         self.effect_mode = effect_mode
         super().__init__()

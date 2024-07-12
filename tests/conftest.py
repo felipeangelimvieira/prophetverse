@@ -33,7 +33,7 @@ def sample_data():
 class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
     """Most simple class to test abstracteffect methods."""
 
-    _tags = {"skip_apply_if_no_match": False}
+    _tags = {"skip_predict_if_no_match": False}
 
     def _predict(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
         """Calculate simple effect."""

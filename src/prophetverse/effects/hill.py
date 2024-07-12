@@ -67,7 +67,4 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
 
         x = _exponent_safe(data / half_max, -slope)
         effect = max_effect / (1 + x)
-
-        if self.effect_mode == "additive":
-            return effect
-        return trend * effect
+        return effect

@@ -47,11 +47,12 @@ def multivariate_model(
     # Exogenous effects
     if exogenous_effects is not None:
 
-        for key, exog_effect in exogenous_effects.items():
+        for exog_effect_name, exog_effect in exogenous_effects.items():
 
-            exog_data = data[key]  # type: ignore[index]
-            effect = exog_effect(trend=trend, **exog_data)
-            effect = numpyro.deterministic(key, effect)
+            exog_data = data[exog_effect_name]  # type: ignore[index]
+            with numpyro.handlers.scope(prefix=exog_effect_name):
+                effect = exog_effect(trend=trend, **exog_data)
+            effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect
 
     std_observation = numpyro.sample(
@@ -231,8 +232,8 @@ def _compute_mean_univariate(
     if exogenous_effects is not None:
 
         for exog_effect_name, exog_effect in exogenous_effects.items():
+            exog_data = data[exog_effect_name]  # type: ignore[index]
             with numpyro.handlers.scope(prefix=exog_effect_name):
-                exog_data = data[exog_effect_name]  # type: ignore[index]
                 effect = exog_effect(trend=trend, **exog_data)
             effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect

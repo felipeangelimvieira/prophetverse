@@ -63,14 +63,14 @@ class BaseBayesianForecaster(BaseForecaster):
 
     def __init__(
         self,
-        rng_key: jax.typing.ArrayLike,
-        inference_method: str,
-        mcmc_samples: int,
-        mcmc_warmup: int,
-        mcmc_chains: int,
-        optimizer_steps: int,
-        optimizer_name: str,
-        optimizer_kwargs: dict,
+        rng_key: jax.typing.ArrayLike = None,
+        inference_method: str = "map",
+        mcmc_samples: int = 2000,
+        mcmc_warmup: int = 200,
+        mcmc_chains: int = 4,
+        optimizer_steps: int = 100_000,
+        optimizer_name: str = "Adam",
+        optimizer_kwargs: Optional[dict] = None,
         scale=None,
         *args,
         **kwargs,
@@ -772,13 +772,30 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
         self,
         exogenous_effects: List[BaseEffect],
         default_effect: Optional[BaseEffect] = None,
-        *args,
-        **kwargs,
+        rng_key: jax.typing.ArrayLike = None,
+        inference_method: str = "map",
+        mcmc_samples: int = 2000,
+        mcmc_warmup: int = 200,
+        mcmc_chains: int = 4,
+        optimizer_steps: int = 100_000,
+        optimizer_name: str = "Adam",
+        optimizer_kwargs: Optional[dict] = None,
+        scale=None,
     ):
 
         self.exogenous_effects = exogenous_effects
         self.default_effect = default_effect
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            rng_key=rng_key,
+            inference_method=inference_method,
+            mcmc_samples=mcmc_samples,
+            mcmc_warmup=mcmc_warmup,
+            mcmc_chains=mcmc_chains,
+            optimizer_steps=optimizer_steps,
+            optimizer_name=optimizer_name,
+            optimizer_kwargs=optimizer_kwargs,
+            scale=scale,
+        )
 
     @property
     def _exogenous_effects(self):
@@ -802,15 +819,10 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
         len_values = np.all([len(x) == len(value[0]) for x in value])
         assert len_values, "All tuples must have the same length"
 
-        if len(value[0]) == 2:
-            self.exogenous_effects = [
-                (name, effect, regex)
-                for ((name, effect), (_, _, regex)) in zip(
-                    value, self.exogenous_effects
-                )
-            ]
-        else:
-            self.exogenous_effects = value
+        self.exogenous_effects = [
+            (name, effect, regex)
+            for ((name, effect), (_, _, regex)) in zip(value, self.exogenous_effects)
+        ]
 
     def _fit_effects(self, X: Union[None, pd.DataFrame]):
         """

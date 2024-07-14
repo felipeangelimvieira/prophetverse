@@ -48,7 +48,7 @@ class LiftExperimentLikelihood(BaseEffect):
 
         super().__init__()
 
-    def _fit(self, X: pd.DataFrame, scale: float = 1):
+    def fit(self, X: pd.DataFrame, scale: float = 1):
         """Initialize this effect and its wrapped effect.
 
         Parameters
@@ -61,11 +61,6 @@ class LiftExperimentLikelihood(BaseEffect):
         self.effect.fit(X)
         self.timeseries_scale = scale
         super().fit(X)
-
-    @property
-    def input_feature_column_names(self) -> List[str]:
-        """Return the input feature columns names."""
-        return self.effect._input_feature_column_names
 
     def _transform(self, X: pd.DataFrame, stage: Stage = Stage.TRAIN) -> Dict[str, Any]:
         """Prepare the input data for the effect, and the custom likelihood.
@@ -124,3 +119,8 @@ class LiftExperimentLikelihood(BaseEffect):
         )
 
         return x
+
+    @property
+    def input_feature_column_names(self) -> List[str]:
+        """Return the input feature columns names."""
+        return self.effect._input_feature_column_names

@@ -15,7 +15,7 @@ __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
 
 
-class Stage(Enum):
+class Stage(str, Enum):
     """
     Enum class for stages of the forecasting model.
 
@@ -89,7 +89,7 @@ class BaseEffect(BaseObject):
             If the effect should be skipped by the forecaster.
         """
         if not self._input_feature_column_names and self.get_tag(
-            "skip_predict_if_no_match"
+            "skip_predict_if_no_match", True
         ):
             return True
         return False
@@ -123,7 +123,7 @@ class BaseEffect(BaseObject):
             If the effect does not support multivariate data and the DataFrame has more
             than one level of index.
         """
-        if not self.get_tag("supports_multivariate"):
+        if not self.get_tag("supports_multivariate", False):
             if X.index.nlevels > 1:
                 raise ValueError(
                     f"The effect of if {self.id} does not "

@@ -6,10 +6,12 @@ The classes in this module take a model, the data and perform inference using Nu
 from typing import Callable
 
 import jax
+import jax.numpy as jnp
 import numpyro
 from numpyro.infer import MCMC, NUTS, SVI, Predictive, Trace_ELBO
 from numpyro.infer.autoguide import AutoDelta
 from numpyro.infer.initialization import init_to_mean
+from numpyro.infer.svi import SVIRunResult
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
 
@@ -127,13 +129,38 @@ class MAPInferenceEngine(InferenceEngine):
         """
         self.guide_ = AutoDelta(self.model, init_loc_fn=init_to_mean())
         svi_ = SVI(self.model, self.guide_, self.optimizer_factory(), loss=Trace_ELBO())
-        self.run_results_ = svi_.run(
+        self.run_results_: SVIRunResult = svi_.run(
             rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
         )
+
+        self.raise_error_if_nan_loss(self.run_results_)
+
         self.posterior_samples_ = self.guide_.sample_posterior(
             self.rng_key, params=self.run_results_.params, **kwargs
         )
         return self
+
+    def raise_error_if_nan_loss(self, run_results: SVIRunResult):
+        """
+        Raise an error if the loss is NaN.
+
+        Parameters
+        ----------
+        run_results : SVIRunResult
+            The result of the SVI run.
+
+        Raises
+        ------
+        MAPInferenceEngineError
+            If the last loss is NaN.
+        """
+        losses = run_results.losses
+        if jnp.isnan(losses)[-1]:
+            msg = "NaN losses in MAPInferenceEngine."
+            msg += " Try decreasing the learning rate or changing the model specs."
+            msg += " If the problem persists, please open an issue at"
+            msg += " https://github.com/felipeangelimvieira/prophetverse"
+            raise MAPInferenceEngineError(msg)
 
     def predict(self, **kwargs):
         """
@@ -258,3 +285,11 @@ class MCMCInferenceEngine(InferenceEngine):
         numpyro.samples_predictive_ = predictive(self.rng_key, **kwargs)
         numpyro.samples_ = self.mcmc_.get_samples()
         return numpyro.samples_predictive_
+
+
+class MAPInferenceEngineError(Exception):
+    """Exception raised for NaN losses in MAPInferenceEngine."""
+
+    def __init__(self, message="NaN losses in MAPInferenceEngine"):
+        self.message = message
+        super().__init__(self.message)

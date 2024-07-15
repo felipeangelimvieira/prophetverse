@@ -277,7 +277,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         else:
             self.trend_model_.initialize(y)
 
-        trend_data = self.trend_model_.prepare_input_data(fh)
+        trend_data = self.trend_model_.fit(fh)
 
         # Exogenous features
 
@@ -334,7 +334,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         fh_dates = self.fh_to_index(fh)
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
-        trend_data = self.trend_model_.prepare_input_data(fh_as_index)
+        trend_data = self.trend_model_.fit(fh_as_index)
 
         if X is None:
             X = pd.DataFrame(index=fh_as_index)

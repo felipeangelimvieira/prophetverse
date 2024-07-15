@@ -962,5 +962,5 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
             columns = pd.Index(columns)
 
         if regex is None:
-            raise ValueError("To use this method, you must set the regex pattern")
+            return []
         return columns[columns.str.match(regex)]

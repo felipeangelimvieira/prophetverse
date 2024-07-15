@@ -33,7 +33,7 @@ class FlatTrend(TrendModel):
         """
         self.changepoint_prior_loc = y.mean().values
 
-    def prepare_input_data(self, idx: pd.PeriodIndex) -> dict:
+    def fit(self, idx: pd.PeriodIndex) -> dict:
         """Prepare input data (a constant factor in this case).
 
         Parameters

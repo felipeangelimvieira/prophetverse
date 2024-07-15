@@ -15,6 +15,7 @@ from .multiindex import (
 )
 from .regex import exact, starts_with
 
+no_input_columns = None
 __all__ = [
     "get_bottom_series_idx",
     "get_multiindex_loc",
@@ -27,4 +28,5 @@ __all__ = [
     "reindex_time_series",
     "exact",
     "starts_with",
+    "no_input_columns",
 ]

@@ -36,7 +36,7 @@ class BaseEffect(BaseObject):
         It receives the exogenous variables dataframe, and should be used to initialize
         any necessary parameters or data structures.
 
-    * _prepare_input_data (optional): This method is called during `fit()` and
+    * _fit (optional): This method is called during `fit()` and
         `predict()` of the forecasting model. It receives the exogenous variables
         dataframe, and should return a dictionary containing the data needed for the
         effect. Those data will be passed to the `apply` method as named arguments.
@@ -197,7 +197,7 @@ class BaseEffect(BaseObject):
     ) -> Dict[str, jnp.ndarray]:
         """Prepare the input data in a dict of jax arrays.
 
-        This method is called by the `prepare_input_data()` method and can be overridden
+        This method is called by the `fit()` method and can be overridden
         by subclasses to provide additional data preparation logic.
 
         Parameters

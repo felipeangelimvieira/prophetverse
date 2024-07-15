@@ -243,7 +243,7 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
 
         self.trend_model_.initialize(y_bottom)
         fh = y.index.get_level_values(-1).unique()
-        trend_data = self.trend_model_.prepare_input_data(fh)
+        trend_data = self.trend_model_.fit(fh)
 
         # Exog variables
 
@@ -349,7 +349,7 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
         if not isinstance(fh, ForecastingHorizon):
             fh = self._check_fh(fh)
 
-        trend_data = self.trend_model_.prepare_input_data(fh_as_index)
+        trend_data = self.trend_model_.fit(fh_as_index)
 
         if self._has_exogenous_variables:
             if X is None or X.shape[1] == 0:

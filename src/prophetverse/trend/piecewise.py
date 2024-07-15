@@ -93,7 +93,7 @@ class PiecewiseLinearTrend(TrendModel):
         self._setup_changepoints(t_scaled)
         self._setup_changepoint_prior_vectors(y)
 
-    def prepare_input_data(self, idx: pd.PeriodIndex) -> dict:
+    def fit(self, idx: pd.PeriodIndex) -> dict:
         """
         Prepare the input data for the piecewise trend model.
 

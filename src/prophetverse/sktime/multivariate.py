@@ -358,8 +358,7 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             X = pd.DataFrame(index=idx)
             X = self.aggregator_.transform(X)
 
-            X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
-
+        X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
         if self._has_exogenous_variables:
             assert (
                 X.index.get_level_values(-1).nunique() == fh_as_index.nunique()

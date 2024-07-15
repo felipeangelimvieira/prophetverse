@@ -213,8 +213,35 @@ def univariate_negbinomial_model(
         )
 
 
-def _to_positive(x, threshold):
-    return jnp.where(x < threshold, jnp.exp(x - threshold) * threshold, x)
+def _to_positive(
+    x: jnp.ndarray, smooth_threshold: float, threshold: float = 1e-10
+) -> jnp.ndarray:
+    """Force the values of x to be positive.
+
+    Applies a smooth threshold to the values of x to force positive-only outputs.
+    Further clips the values of x to avoid zeros due to numerical precision.
+
+    Parameters
+    ----------
+    x : jnp.ndarray
+        The array to be transformed.
+    smooth_threshold : float
+        The threshold value for the exponential function.
+    threshold : float, optional
+        The threshold value for clipping, by default 1e-10.
+
+    Returns
+    -------
+    jnp.ndarray
+        The transformed array.
+    """
+    return jnp.clip(
+        jnp.where(
+            x < smooth_threshold, jnp.exp(x - smooth_threshold) * smooth_threshold, x
+        ),
+        threshold,
+        None,
+    )
 
 
 def _compute_mean_univariate(

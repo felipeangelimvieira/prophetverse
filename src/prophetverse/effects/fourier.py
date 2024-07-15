@@ -9,6 +9,7 @@ from sktime.transformations.series.fourier import FourierFeatures
 
 from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect, Stage
 from prophetverse.effects.linear import LinearEffect
+from prophetverse.sktime._expand_column_per_level import ExpandColumnPerLevel
 
 __all__ = ["LinearFourierSeasonality"]
 
@@ -54,6 +55,7 @@ class LinearFourierSeasonality(BaseEffect):
         self.freq = freq
         self.prior_scale = prior_scale
         self.effect_mode = effect_mode
+        self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
 
     def _fit(self, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
@@ -64,8 +66,9 @@ class LinearFourierSeasonality(BaseEffect):
         ----------
         X : pd.DataFrame
             The DataFrame to initialize the effect.
+        scale: float, optional
+            The scale of the timeseries, by default 1.0.
         """
-        # Do something with X, scale, and other parameters
         self.fourier_features_ = FourierFeatures(
             sp_list=self.sp_list,
             fourier_terms_list=self.fourier_terms_list,
@@ -75,6 +78,10 @@ class LinearFourierSeasonality(BaseEffect):
 
         self.fourier_features_.fit(X=X)
         X = self.fourier_features_.transform(X)
+
+        if X.index.nlevels > 1 and X.index.droplevel(-1).nunique() > 1:
+            self.expand_column_per_level_ = ExpandColumnPerLevel([".*"]).fit(X=X)
+            X = self.expand_column_per_level_.transform(X)  # type: ignore
 
         self.linear_effect_ = LinearEffect(
             prior=dist.Normal(0, self.prior_scale), effect_mode=self.effect_mode
@@ -107,6 +114,10 @@ class LinearFourierSeasonality(BaseEffect):
             A dictionary containing the data needed for the effect.
         """
         X = self.fourier_features_.transform(X)
+
+        if self.expand_column_per_level_ is not None:
+            X = self.expand_column_per_level_.transform(X)
+
         array = self.linear_effect_.transform(X, stage)
 
         return array

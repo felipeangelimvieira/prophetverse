@@ -963,4 +963,6 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
 
         if regex is None:
             return []
+
+        columns = columns.astype(str)
         return columns[columns.str.match(regex)]

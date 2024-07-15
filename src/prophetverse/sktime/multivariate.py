@@ -249,7 +249,7 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
 
         # If no exogenous variables, create empty DataFrame
         # Else, aggregate exogenous variables and transform them
-        if (X is None or X.columns.empty) and self.feature_transformer is not None:
+        if X is None or X.columns.empty:
             X = pd.DataFrame(index=y.index)
         if self.feature_transformer is not None:
             X = self.feature_transformer.fit_transform(X)
@@ -270,8 +270,10 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             self._exogenous_effects_and_columns = {}
             exogenous_data = {}
 
-        self._fit_effects(X)
-        exogenous_data = self._transform_effects(X, stage=Stage.TRAIN)
+        self._fit_effects(loc_bottom_series(X))
+        exogenous_data = self._transform_effects(
+            loc_bottom_series(X), stage=Stage.TRAIN
+        )
 
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,
@@ -351,25 +353,24 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
 
         trend_data = self.trend_model_.fit(fh_as_index)
 
-        if self._has_exogenous_variables:
-            if X is None or X.shape[1] == 0:
-                idx = reindex_time_series(self._y, fh_as_index).index
-                X = pd.DataFrame(index=idx)
-                X = self.aggregator_.transform(X)
+        if X is None or X.shape[1] == 0:
+            idx = reindex_time_series(self._y, fh_as_index).index
+            X = pd.DataFrame(index=idx)
+            X = self.aggregator_.transform(X)
 
             X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
 
+        if self._has_exogenous_variables:
             assert (
                 X.index.get_level_values(-1).nunique() == fh_as_index.nunique()
             ), "Missing exogenous variables for some series or dates."
             if self.feature_transformer is not None:
                 X = self.feature_transformer.transform(X)
             X = self.expand_columns_transformer_.transform(X)
-            exogenous_data = self._transform_effects(
-                loc_bottom_series(X), stage=Stage.PREDICT
-            )
-        else:
-            exogenous_data = {}
+
+        exogenous_data = self._transform_effects(
+            loc_bottom_series(X), stage=Stage.PREDICT
+        )
 
         return dict(
             y=None,

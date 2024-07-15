@@ -82,11 +82,14 @@ class LiftExperimentLikelihood(BaseEffect):
 
         if stage == Stage.PREDICT:
             data_dict["observed_lift"] = None
+            data_dict["obs_mask"] = None
             return data_dict
 
         X_lift = self.lift_test_results.loc[X.index]
         lift_array = series_to_tensor_or_array(X_lift)
         data_dict["observed_lift"] = lift_array / self.timeseries_scale
+        data_dict["obs_mask"] = ~jnp.isnan(data_dict["observed_lift"])
+
         return data_dict
 
     def _predict(
@@ -109,6 +112,7 @@ class LiftExperimentLikelihood(BaseEffect):
             The effect applied to the input data.
         """
         observed_lift = kwargs.pop("observed_lift")
+        obs_mask = kwargs.pop("obs_mask")
 
         x = self.effect.predict(trend, **kwargs)
 
@@ -116,6 +120,7 @@ class LiftExperimentLikelihood(BaseEffect):
             "lift_experiment",
             dist.Normal(x, self.prior_scale),
             obs=observed_lift,
+            obs_mask=obs_mask,
         )
 
         return x

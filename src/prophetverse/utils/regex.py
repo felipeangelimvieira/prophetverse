@@ -1,6 +1,8 @@
 """Regex utilities to facilitate the definition of columns for effects."""
 
-__all__ = ["starts_with", "exact"]
+__all__ = ["starts_with", "exact", "no_input_columns"]
+
+no_input_columns = r"^$"
 
 
 def starts_with(prefixes):

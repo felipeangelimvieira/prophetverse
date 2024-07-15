@@ -1,17 +1,17 @@
 """Effects that define relationships between variables and the target."""
 
-from .base import AbstractEffect
-from .effect_apply import additive_effect, matrix_multiplication, multiplicative_effect
+from .base import BaseEffect
+from .fourier import LinearFourierSeasonality
 from .hill import HillEffect
+from .lift_experiment import LiftExperimentLikelihood
 from .linear import LinearEffect
 from .log import LogEffect
 
 __all__ = [
-    "AbstractEffect",
-    "additive_effect",
-    "multiplicative_effect",
-    "matrix_multiplication",
+    "BaseEffect",
     "HillEffect",
     "LinearEffect",
     "LogEffect",
+    "LiftExperimentLikelihood",
+    "LinearFourierSeasonality",
 ]

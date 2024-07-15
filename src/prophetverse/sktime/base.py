@@ -1,7 +1,7 @@
 """Base classes for sktime forecasters in prophetverse."""
 
 import itertools
-import logging
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jax
@@ -10,12 +10,13 @@ import numpy as np
 import numpyro
 import numpyro.distributions as dist
 import pandas as pd
+from sktime.base import _HeterogenousMetaEstimator
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
-from prophetverse.effects.base import AbstractEffect
+from prophetverse.effects.base import BaseEffect, Stage
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
-from prophetverse.utils import get_multiindex_loc, series_to_tensor
+from prophetverse.utils import get_multiindex_loc
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -62,14 +63,14 @@ class BaseBayesianForecaster(BaseForecaster):
 
     def __init__(
         self,
-        rng_key: jax.typing.ArrayLike,
-        inference_method: str,
-        mcmc_samples: int,
-        mcmc_warmup: int,
-        mcmc_chains: int,
-        optimizer_steps: int,
-        optimizer_name: str,
-        optimizer_kwargs: dict,
+        rng_key: jax.typing.ArrayLike = None,
+        inference_method: str = "map",
+        mcmc_samples: int = 2000,
+        mcmc_warmup: int = 200,
+        mcmc_chains: int = 4,
+        optimizer_steps: int = 100_000,
+        optimizer_name: str = "Adam",
+        optimizer_kwargs: Optional[dict] = None,
         scale=None,
         *args,
         **kwargs,
@@ -84,7 +85,7 @@ class BaseBayesianForecaster(BaseForecaster):
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
         self.scale = scale
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
     @property
     def should_skip_scaling(self):
@@ -750,29 +751,80 @@ class BaseBayesianForecaster(BaseForecaster):
         return pd.concat(outs, axis=0)
 
 
-class ExogenousEffectMixin:
-    """
-    Mixin that handles the connection between exogenous effects and input data.
+class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
+    """Base class for Bayesian estimators with Effects objects.
 
     Parameters
     ----------
-    exogenous_effects : List[AbstractEffect]
-        List of exogenous effects.
-    default_effect : AbstractEffect, optional
-        Default effect to apply. Default is None.
-    kwargs : dict
-        Additional keyword arguments.
+    exogenous_effects : List[Tuple[str, BaseEffect, str]]
+        List of exogenous effects to apply to the data. Each item of the list
+        is a tuple with the name of the effect, the effect object, and the regex
+        pattern to match the columns of the dataframe.
+    default_effect : Optional[BaseEffect]
+        Default effect to apply to the columns that do not match any regex pattern.
+        If None, a LinearEffect is used.
     """
 
+    _steps_attr = "_exogenous_effects"
+    _steps_fitted_attr = "exogenous_effects_"
+
     def __init__(
-        self, exogenous_effects: List[AbstractEffect], default_effect=None, **kwargs
+        self,
+        exogenous_effects: List[BaseEffect],
+        default_effect: Optional[BaseEffect] = None,
+        rng_key: jax.typing.ArrayLike = None,
+        inference_method: str = "map",
+        mcmc_samples: int = 2000,
+        mcmc_warmup: int = 200,
+        mcmc_chains: int = 4,
+        optimizer_steps: int = 100_000,
+        optimizer_name: str = "Adam",
+        optimizer_kwargs: Optional[dict] = None,
+        scale=None,
     ):
 
         self.exogenous_effects = exogenous_effects
         self.default_effect = default_effect
-        super().__init__(**kwargs)
+        super().__init__(
+            rng_key=rng_key,
+            inference_method=inference_method,
+            mcmc_samples=mcmc_samples,
+            mcmc_warmup=mcmc_warmup,
+            mcmc_chains=mcmc_chains,
+            optimizer_steps=optimizer_steps,
+            optimizer_name=optimizer_name,
+            optimizer_kwargs=optimizer_kwargs,
+            scale=scale,
+        )
 
-    def _set_custom_effects(self, feature_names: pd.Index):
+    @property
+    def _exogenous_effects(self):
+        """Return exogenous effects.
+
+        This property is for compatibility with _HeterogenousMetaEstimator.
+        """
+        if self.exogenous_effects is None:
+            return []
+        return [(name, effect) for name, effect, _ in self.exogenous_effects]
+
+    @_exogenous_effects.setter
+    def _exogenous_effects(self, value):
+        """Set exogenous effects.
+
+        This property is for compatibility with _HeterogenousMetaEstimator.
+        """
+        # Ensure that user is passing list of (name, effect) or
+        # (name, effect, regex) tuples
+        assert len(value[0]) in [2, 3], "Invalid value for exogenous_effects"
+        len_values = np.all([len(x) == len(value[0]) for x in value])
+        assert len_values, "All tuples must have the same length"
+
+        self.exogenous_effects = [
+            (name, effect, regex)
+            for ((name, effect), (_, _, regex)) in zip(value, self.exogenous_effects)
+        ]
+
+    def _fit_effects(self, X: Union[None, pd.DataFrame]):
         """
         Set custom effects for the features.
 
@@ -781,61 +833,71 @@ class ExogenousEffectMixin:
         feature_names : pd.Index
             List of feature names (obtained with X.columns)
         """
-        effects_and_columns: Dict[str, Tuple[set[str], AbstractEffect]] = {}
+        fitted_effects_list_: List[Tuple[str, BaseEffect, List[str]]] = []
         columns_with_effects: set[str] = set()
-        exogenous_effects: Union[list[AbstractEffect], set[Any]] = (
-            self.exogenous_effects or set()
+        exogenous_effects: Union[List[Tuple[str, BaseEffect, str]], List] = (
+            self.exogenous_effects or []
         )
 
-        default_effect = self.default_effect
-        if default_effect is None:
-            default_effect = LinearEffect(
-                id="exogenous_variables_effect",
-                prior=dist.Normal(0, 1),
-                effect_mode="additive",
-            )
+        for effect_name, effect, regex in exogenous_effects:
 
-        for effect in exogenous_effects:
+            if X is not None:
+                columns = self.match_columns(X.columns, regex)
+                X_columns = X[columns]
+            else:
+                X_columns = None
 
-            columns = effect.match_columns(feature_names)
+            effect = effect.clone()
+
+            effect.fit(X_columns, scale=self._scale)  # type: ignore[attr-defined]
 
             if columns_with_effects.intersection(columns):
-                raise ValueError(
-                    "Columns {} are already set".format(
-                        columns_with_effects.intersection(columns)
+                msg = "Columns {} are already set".format(
+                    columns_with_effects.intersection(columns)
+                )
+
+                warnings.warn(msg, UserWarning, stacklevel=2)
+
+            if not len(columns):
+                msg = f"No columns match the regex {regex}"
+                warnings.warn(msg, UserWarning, stacklevel=2)
+
+            columns_with_effects = columns_with_effects.union(columns)
+            fitted_effects_list_.append((effect_name, effect, columns))
+
+        if X is not None:
+
+            features_without_effects: List[str] = X.columns.difference(
+                columns_with_effects
+            ).tolist()
+
+            if len(features_without_effects) > 0:
+                X_columns = X[features_without_effects]
+
+                if self.default_effect is None:
+                    default_effect = LinearEffect(
+                        prior=dist.Normal(0, 1),
+                        effect_mode="additive",
+                    )
+                else:
+                    default_effect = self.default_effect
+
+                default_effect = default_effect.clone()
+                default_effect.fit(
+                    X[features_without_effects],
+                    scale=self._scale,  # type: ignore[attr-defined]
+                )
+                fitted_effects_list_.append(
+                    (
+                        "exogenous_variables_effect",
+                        default_effect,
+                        features_without_effects,
                     )
                 )
 
-            if not len(columns):
-                logging.warning(f"No columns match the regex {effect.regex}")
+        self.exogenous_effects_ = fitted_effects_list_
 
-            columns_with_effects = columns_with_effects.union(columns)
-
-            effects_and_columns.update(
-                {
-                    effect.id: (
-                        columns,
-                        effect,
-                    )
-                }
-            )
-
-        features_without_effects: set = feature_names.difference(columns_with_effects)
-
-        if len(features_without_effects):
-
-            effects_and_columns.update(
-                {
-                    "exogenous_variables_effect": (
-                        features_without_effects,
-                        default_effect,
-                    )
-                }
-            )
-
-        self._exogenous_effects_and_columns = effects_and_columns
-
-    def _get_exogenous_data_array(self, X: pd.DataFrame):
+    def _transform_effects(self, X: pd.DataFrame, stage: Stage = Stage.TRAIN):
         """
         Get exogenous data array.
 
@@ -850,22 +912,18 @@ class ExogenousEffectMixin:
             Dictionary of exogenous data arrays.
         """
         out = {}
-        for effect_name, (columns, _) in self._exogenous_effects_and_columns.items():
+        for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
-            if len(columns) == 0:
+            if effect.should_skip_predict:
                 continue
 
-            if X.index.nlevels == 1:
-                array = jnp.array(X[columns].values)
-            else:
-                array = series_to_tensor(X[columns])
-
-            out[effect_name] = array
+            data: Dict[str, jnp.ndarray] = effect.transform(X[columns], stage=stage)
+            out[effect_name] = data
 
         return out
 
     @property
-    def exogenous_effect_dict(self):
+    def non_skipped_exogenous_effect(self) -> dict[str, BaseEffect]:
         """
         Return exogenous effect dictionary.
 
@@ -875,5 +933,36 @@ class ExogenousEffectMixin:
             Dictionary of exogenous effects.
         """
         return {
-            k: v[1] for k, v in self._exogenous_effects_and_columns.items() if len(v[0])
+            effect_name: effect
+            for effect_name, effect, _ in self.exogenous_effects_
+            if not effect.should_skip_predict
         }
+
+    def match_columns(
+        self, columns: Union[pd.Index, List[str]], regex: Union[str, None]
+    ) -> pd.Index:
+        """Match the columns of the DataFrame with the regex pattern.
+
+        Parameters
+        ----------
+        columns : pd.Index
+            Columns of the dataframe.
+
+        Returns
+        -------
+        pd.Index
+            The columns that match the regex pattern.
+
+        Raises
+        ------
+        ValueError
+            Indicates the abscence of required regex pattern.
+        """
+        if isinstance(columns, List):
+            columns = pd.Index(columns)
+
+        if regex is None:
+            return []
+
+        columns = columns.astype(str)
+        return columns[columns.str.match(regex)]

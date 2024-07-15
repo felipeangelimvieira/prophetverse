@@ -7,7 +7,7 @@ import numpyro
 import pandas as pd
 import pytest
 
-from prophetverse.effects.base import AbstractEffect
+from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect
 
 warnings.filterwarnings("ignore")
 
@@ -30,21 +30,23 @@ def sample_data():
     )
 
 
-class ConcreteEffect(AbstractEffect):
+class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
     """Most simple class to test abstracteffect methods."""
 
-    def compute_effect(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
+    _tags = {"skip_predict_if_no_match": False}
+
+    def _predict(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
         """Calculate simple effect."""
-        return trend + jnp.mean(data, axis=0)
+        return jnp.mean(data, axis=0)
 
 
 @pytest.fixture(name="effect_with_regex")
 def effect_with_regex():
     """Most simple class of abstracteffect with optional regex."""
-    return ConcreteEffect(id="test_effect", regex="x1|x2")
+    return ConcreteEffect()
 
 
 @pytest.fixture
 def effect_without_regex():
     """Most simple class of abstracteffect without optional regex."""
-    return ConcreteEffect(id="test_effect")
+    return ConcreteEffect()

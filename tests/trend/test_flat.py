@@ -1,13 +1,10 @@
-from datetime import datetime
-
 import jax.numpy as jnp
 import numpyro
 import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 
-from prophetverse.trend.flat import \
-    FlatTrend  # Assuming this is the import path
+from prophetverse.trend.flat import FlatTrend  # Assuming this is the import path
 
 
 @pytest.fixture
@@ -34,9 +31,9 @@ def test_initialize(trend_model, timeseries_data):
     assert_almost_equal(trend_model.changepoint_prior_loc, expected_loc)
 
 
-def test_prepare_input_data(trend_model, timeseries_data):
+def test_fit(trend_model, timeseries_data):
     idx = timeseries_data.index.to_period("D")
-    result = trend_model.prepare_input_data(idx)
+    result = trend_model.fit(idx)
     assert "constant_vector" in result
     assert result["constant_vector"].shape == (len(idx), 1)
     assert jnp.all(result["constant_vector"] == 1)
@@ -45,7 +42,7 @@ def test_prepare_input_data(trend_model, timeseries_data):
 def test_compute_trend(trend_model, timeseries_data):
     idx = timeseries_data.index.to_period("D")
     trend_model.initialize(timeseries_data)
-    data = trend_model.prepare_input_data(idx)
+    data = trend_model.fit(idx)
     constant_vector = data["constant_vector"]
 
     with numpyro.handlers.seed(rng_seed=0):

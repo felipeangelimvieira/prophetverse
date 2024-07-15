@@ -77,6 +77,25 @@ def series_to_tensor(y: pd.DataFrame) -> jnp.ndarray:
     return jnp.array(array)
 
 
+def series_to_tensor_or_array(y: pd.DataFrame) -> jnp.ndarray:
+    """
+    Convert hierarchical (univariate) to three (two) dimensional JAX tensor.
+
+    Parameters
+    ----------
+    y : pd.DataFrame
+        The hierarchical time series.
+
+    Returns
+    -------
+    jnp.ndarray
+        The JAX tensor or the array representing all series.
+    """
+    if y.index.nlevels == 1:
+        return jnp.array(y.values)
+    return series_to_tensor(y)
+
+
 def extract_timetensor_from_dataframe(df: pd.DataFrame) -> jnp.array:
     """
     Extract the time array from a pandas DataFrame.

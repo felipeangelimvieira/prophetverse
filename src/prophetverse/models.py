@@ -7,7 +7,7 @@ import numpyro
 from numpyro import distributions as dist
 
 from prophetverse.distributions import GammaReparametrized
-from prophetverse.effects.base import AbstractEffect
+from prophetverse.effects.base import BaseEffect
 from prophetverse.trend.base import TrendModel
 
 
@@ -16,7 +16,7 @@ def multivariate_model(
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
-    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
+    exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
     noise_scale=0.05,
     correlation_matrix_concentration=1.0,
     is_single_series=False,
@@ -47,11 +47,12 @@ def multivariate_model(
     # Exogenous effects
     if exogenous_effects is not None:
 
-        for key, exog_effect in exogenous_effects.items():
+        for exog_effect_name, exog_effect in exogenous_effects.items():
 
-            exog_data = data[key]  # type: ignore[index]
-            effect = exog_effect(trend=trend, data=exog_data)
-            effect = numpyro.deterministic(key, effect)
+            exog_data = data[exog_effect_name]  # type: ignore[index]
+            with numpyro.handlers.scope(prefix=exog_effect_name):
+                effect = exog_effect(trend=trend, **exog_data)
+            effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect
 
     std_observation = numpyro.sample(
@@ -96,7 +97,7 @@ def univariate_model(
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
-    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
+    exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
     noise_scale=0.5,
     **kwargs,
 ):
@@ -134,7 +135,7 @@ def univariate_gamma_model(
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
-    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
+    exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
     noise_scale=0.5,
     **kwargs,
 ):
@@ -174,7 +175,7 @@ def univariate_negbinomial_model(
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
-    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
+    exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
     noise_scale=0.5,
     scale=1,
     **kwargs,
@@ -220,7 +221,7 @@ def _compute_mean_univariate(
     trend_model: TrendModel,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
-    exogenous_effects: Optional[Dict[str, AbstractEffect]] = None,
+    exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
 ):
     trend = trend_model(**trend_data)
 
@@ -230,10 +231,10 @@ def _compute_mean_univariate(
     # Exogenous effects
     if exogenous_effects is not None:
 
-        for key, exog_effect in exogenous_effects.items():
-
-            exog_data = data[key]  # type: ignore[index]
-            effect = exog_effect(trend=trend, data=exog_data)
-            effect = numpyro.deterministic(key, effect)
+        for exog_effect_name, exog_effect in exogenous_effects.items():
+            exog_data = data[exog_effect_name]  # type: ignore[index]
+            with numpyro.handlers.scope(prefix=exog_effect_name):
+                effect = exog_effect(trend=trend, **exog_data)
+            effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect
     return mean

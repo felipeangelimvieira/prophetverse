@@ -3,16 +3,19 @@
 from typing import Optional
 
 import jax.numpy as jnp
+import numpyro
 from numpyro import distributions as dist
 from numpyro.distributions import Distribution
 
-from prophetverse.effects.base import AbstractEffect
-from prophetverse.effects.effect_apply import EFFECT_APPLICATION_TYPE
+from prophetverse.effects.base import (
+    EFFECT_APPLICATION_TYPE,
+    BaseAdditiveOrMultiplicativeEffect,
+)
 
 __all__ = ["LogEffect"]
 
 
-class LogEffect(AbstractEffect):
+class LogEffect(BaseAdditiveOrMultiplicativeEffect):
     """Represents a log effect as effect = scale * log(rate * data + 1).
 
     Parameters
@@ -27,17 +30,17 @@ class LogEffect(AbstractEffect):
 
     def __init__(
         self,
+        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         scale_prior: Optional[Distribution] = None,
         rate_prior: Optional[Distribution] = None,
-        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
-        **kwargs,
     ):
         self.scale_prior = scale_prior or dist.Gamma(1, 1)
         self.rate_prior = rate_prior or dist.Gamma(1, 1)
-        self.effect_mode = effect_mode
-        super().__init__(**kwargs)
+        super().__init__(effect_mode=effect_mode)
 
-    def compute_effect(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
+    def _predict(  # type: ignore[override]
+        self, trend: jnp.ndarray, **kwargs
+    ) -> jnp.ndarray:
         """Compute the effect using the log transformation.
 
         Parameters
@@ -52,14 +55,10 @@ class LogEffect(AbstractEffect):
         jnp.ndarray
             The computed effect based on the given trend and data.
         """
-        scale = self.sample("log_scale", self.scale_prior)
-        rate = self.sample("log_rate", self.rate_prior)
+        data: jnp.ndarray = kwargs.pop("data")
 
-        if jnp.any(rate * data + 1 <= 0):
-            raise ValueError("Can't take log of negative values or zero.")
+        scale = numpyro.sample("log_scale", self.scale_prior)
+        rate = numpyro.sample("log_rate", self.rate_prior)
+        effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))
 
-        effect = scale * jnp.log(rate * data + 1)
-
-        if self.effect_mode == "additive":
-            return effect
-        return trend * effect
+        return effect

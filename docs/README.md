@@ -8,27 +8,29 @@
 [![PyPI version](https://badge.fury.io/py/prophetverse.svg)](https://badge.fury.io/py/prophetverse)
 [![codecov](https://codecov.io/gh/felipeangelimvieira/prophetverse/graph/badge.svg?token=O37PGJI3ZX)](https://codecov.io/gh/felipeangelimvieira/prophetverse)
 
-
-This library was created to provide new versions of the Prophet model for timeseries forecasting. Implemented with numpyro, it allows to provide custom priors for specific groups of exogenous variables, and also offers a multivariate implementation for hierarchical forecasting, with potentially shared coefficients between timeseries. All implementations are based on sktime interface.
-
+Prophetverse leverages the theory behind the Prophet model for time series forecasting and expands it into a more general framework, enabling custom priors and non-linear effects for exogenous variables. Built on top of [sktime](https://www.sktime.net/en/stable/) and [numpyro](https://num.pyro.ai/en/stable/), Prophetverse aims to provide a flexible and easy-to-use library for time series forecasting with a focus on interpretability and customizability. It is particularly useful for Marketing Mix Modeling, where understanding the effect of different marketing channels on sales is crucial.
 
 ### Features
 
+
+
+
 ✅ Univariate and multivariate forecasting
 
-✅ Gamma-likelihood and Negative Binomial likelihood for count data
+📊 Gamma-likelihood and Negative Binomial likelihood for count data
 
-✅ Custom prior distributions for exogenous variables
+🎲 Custom prior distributions for exogenous variables
 
-✅ Non-linear effects for exogenous variables (one may create custom effects inheriting AbstractEffect class)
+🎯 Non-linear and customizable effects for exogenous variables
 
-✅ Shared coefficients between timeseries (multi-variate model)
+🔗 Shared coefficients between timeseries (multi-variate model)
 
-✅ Sktime interface
+🌐 Sktime interface
 
-✅ Capacity parameter of logistic trend as a random variable
+📈 Capacity parameter of logistic trend as a random variable, and customizable trends.
 
-✅ MCMC and MAP inference
+✨ MCMC and MAP inference
+
 
 
 ## Installation

@@ -30,23 +30,32 @@ class Stage(str, Enum):
 class BaseEffect(BaseObject):
     """Base class for effects.
 
+    Effects are objects which are responsible for preparing the data and applying
+    a specific effect to the forecast. During preparation of the data (which happens in
+    `transform` method), the effect receives the exogenous variables dataframe and can
+    use them to prepare the jax arrays that will be used at inference time. During
+    inference time, the `predict` method is called, and it should output a new component
+    to the additive model of Prophetverse.
+
+    Remember that Prophetverse's models are Generalized Additive Models, which are
+    composed of many terms summed together to form the final forecast. Each term is
+    represented by an effect.
+
     Children classes should implement the following methods:
 
-    * _initialize (optional): This method is called during `fit()` of the forecasting.
+    * _fit (optional): This method is called during `fit()` of the forecasting.
         It receives the exogenous variables dataframe, and should be used to initialize
         any necessary parameters or data structures.
 
-    * _fit (optional): This method is called during `fit()` and
-        `predict()` of the forecasting model. It receives the exogenous variables
+    * _transform (optional): This method receives the exogenous variables
         dataframe, and should return a dictionary containing the data needed for the
-        effect. Those data will be passed to the `apply` method as named arguments.
+        effect. Those data will be passed to the `prdict` method as named arguments.
         By default the columns of the dataframe that match the regex pattern are
         selected, and the result is converted to a jnp.ndarray with key "data"
 
-    * _predict: This method is called during `fit()` and `predict()` of the forecasting
-        model. It receives the trend values as a jnp.ndarray, and the data needed for
-        the effect as named arguments. It should return the effect values as a
-        jnp.ndarray.
+    * _predict: This method receives the trend values as a jnp.ndarray, and the data
+        needed for the effect as named arguments. It should return the effect values as
+        a jnp.ndarray.
 
 
     Parameters
@@ -61,6 +70,17 @@ class BaseEffect(BaseObject):
         The mode of the effect, either "additive" or "multiplicative", by default
         "multiplicative". If "multiplicative", the effect multiplies the trend values
         before returning them.
+
+
+    Attributes
+    ----------
+    input_feature_column_names : List[str]
+        The names of the input feature columns. This is set during the `fit()` method.
+    should_skip_predict : bool
+        If True, the effect should be skipped during prediction. This is determined by
+        the `skip_predict_if_no_match` tag and the presence of input feature columns
+        names. If the tag is True and there are no input feature columns names, the
+        effect should be skipped during prediction.
     """
 
     _tags = {
@@ -265,7 +285,10 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
     Base class for effects that can be applied in additive or multiplicative mode.
 
     In additive mode, the effect is directly returned. In multiplicative mode,
-    the effect is multiplied by the trend before being returned.
+    the effect is multiplied by the trend before being returned. In other words:
+
+    Additive effect: effect = _predict(trend, **kwargs)
+    Multiplicative effect: effect = trend * _predict(trend, **kwargs)
 
     Parameters
     ----------

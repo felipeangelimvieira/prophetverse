@@ -305,6 +305,13 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
     def __init__(self, effect_mode="additive"):
 
         self.effect_mode = effect_mode
+
+        if effect_mode not in ["additive", "multiplicative"]:
+            raise ValueError(
+                f"Invalid effect mode: {effect_mode}. "
+                + "Effect mode must be 'additive' or 'multiplicative'."
+            )
+
         super().__init__()
 
     def predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:

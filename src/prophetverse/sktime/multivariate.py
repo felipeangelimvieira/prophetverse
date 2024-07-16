@@ -435,6 +435,6 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
         """
         return [
             {
-                "optimizer_steps": 1_000,
+                "optimizer_steps": 1,
             }
         ]

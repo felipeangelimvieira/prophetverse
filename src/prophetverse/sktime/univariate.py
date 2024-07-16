@@ -421,7 +421,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
             params.append(
                 {
                     "likelihood": likelihood,
-                    "optimizer_steps": 10,
+                    "optimizer_steps": 1,
                 }
             )
         return params

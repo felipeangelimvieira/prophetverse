@@ -161,7 +161,7 @@ class BaseEffect(BaseObject):
     def _fit(self, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
 
-        This method is called by the `initialize()` method and can be overridden by
+        This method is called by the `fit()` method and can be overridden by
         subclasses to provide additional initialization logic.
 
         Parameters
@@ -179,7 +179,7 @@ class BaseEffect(BaseObject):
         This method is called during `fit()` and `predict()` of the forecasting model.
         It receives the Exogenous variables DataFrame and should return a dictionary
         containing the data needed for the effect. Those data will be passed to the
-        `apply` method as named arguments.
+        `predict` method as named arguments.
 
         Parameters
         ----------
@@ -194,16 +194,16 @@ class BaseEffect(BaseObject):
         -------
         Dict[str, jnp.ndarray]
             A dictionary containing the data needed for the effect. The keys of the
-            dictionary should be the names of the arguments of the `apply` method, and
+            dictionary should be the names of the arguments of the `predict` method, and
             the values should be the corresponding data as jnp.ndarray.
 
         Raises
         ------
         ValueError
-            If the effect has not been initialized.
+            If the effect has not been fitted.
         """
         if not self._is_fitted:
-            raise ValueError("You must call initialize() before calling this method")
+            raise ValueError("You must call fit() before calling this method")
 
         # If apply should be skipped, return an empty dictionary
         if self.should_skip_predict:
@@ -231,7 +231,7 @@ class BaseEffect(BaseObject):
         -------
         Dict[str, jnp.ndarray]
             A dictionary containing the data needed for the effect. The keys of the
-            dictionary should be the names of the arguments of the `apply` method, and
+            dictionary should be the names of the arguments of the `predict` method, and
             the values should be the corresponding data as jnp.ndarray.
         """
         array = series_to_tensor_or_array(X)
@@ -257,7 +257,7 @@ class BaseEffect(BaseObject):
     def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
         """Apply the effect.
 
-        This method is called by the `apply()` method and must be overridden by
+        This method is called by the `predict()` method and must be overridden by
         subclasses to provide the actual effect computation logic.
 
         Parameters

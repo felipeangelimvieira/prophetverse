@@ -6,10 +6,16 @@ from typing import Dict, List, Union
 import jax.numpy as jnp
 import numpyro
 import pandas as pd
+from deprecated.sphinx import deprecated  # type: ignore
 
 __all__ = ["AbstractEffect"]
 
 
+@deprecated(
+    version="0.3.0",
+    reason="The effects api will be refactored in 0.4.0",
+    category=FutureWarning,
+)
 class AbstractEffect(ABC):
     """Abstract class for effects.
 

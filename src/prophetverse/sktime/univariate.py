@@ -5,6 +5,8 @@ the `prophet` library.
 
 """
 
+import warnings
+
 import jax.numpy as jnp
 import pandas as pd
 from numpyro import distributions as dist
@@ -185,6 +187,14 @@ class Prophetverse(ExogenousEffectMixin, BaseBayesianForecaster):
         self.capacity_prior_loc = capacity_prior_loc
         self.trend = trend
         self.likelihood = likelihood
+
+        if exogenous_effects is not None:
+            warnings.warn(
+                "The exogenous_effects argument and the Effects API"
+                + " will change in version 0.4.0.",
+                FutureWarning,
+                stacklevel=2,
+            )
 
         super().__init__(
             rng_key=rng_key,

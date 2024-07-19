@@ -8,7 +8,49 @@
 [![PyPI version](https://badge.fury.io/py/prophetverse.svg)](https://badge.fury.io/py/prophetverse)
 [![codecov](https://codecov.io/gh/felipeangelimvieira/prophetverse/graph/badge.svg?token=O37PGJI3ZX)](https://codecov.io/gh/felipeangelimvieira/prophetverse)
 
-Prophetverse leverages the theory behind the Prophet model for time series forecasting and expands it into a more general framework, enabling custom priors and non-linear effects for exogenous variables. Built on top of [sktime](https://www.sktime.net/en/stable/) and [numpyro](https://num.pyro.ai/en/stable/), Prophetverse aims to provide a flexible and easy-to-use library for time series forecasting with a focus on interpretability and customizability. It is particularly useful for Marketing Mix Modeling, where understanding the effect of different marketing channels on sales is crucial.
+Prophetverse leverages the theory behind the Prophet model for time series forecasting and expands it into __a more general framework__, enabling custom priors, non-linear effects for exogenous variables and other likelihoods. Built on top of [sktime](https://www.sktime.net/en/stable/) and [numpyro](https://num.pyro.ai/en/stable/), Prophetverse aims to provide a flexible and easy-to-use library for time series forecasting with a focus on interpretability and customizability. It is particularly useful for Marketing Mix Modeling, where understanding the effect of different marketing channels on sales is crucial.
+
+
+<div class="grid cards" markdown>
+
+-   :material-clock-fast:{ .lg .middle } __Set up in 5 minutes__
+
+    ---
+
+    Install `Prophetverse` with `pip` and get up
+    and forecasting in minutes
+
+    [:octicons-arrow-right-24: Getting started](getting-started)
+
+-   :material-school:{ .lg .middle } __Theory__
+
+    ---
+
+    Understand the idea behind the model and how it works
+
+    [:octicons-arrow-right-24: Read the post](the-theory)
+
+-   :material-file:{ .lg .middle } __Examples__
+
+    ---
+
+    Go the example gallery and see how to use the model, and its features!
+
+    [:octicons-arrow-right-24: Examples](examples/univariate)
+
+-   :material-book:{ .lg .middle } __Reference__
+
+    ---
+
+    Take a look at the API Reference to see all the available options
+
+    [:octicons-arrow-right-24: Reference](reference/sktime/prophetverse/)
+
+
+</div>
+
+
+
 
 ### Features
 
@@ -30,22 +72,6 @@ Prophetverse leverages the theory behind the Prophet model for time series forec
 📈 Capacity parameter of logistic trend as a random variable, and customizable trends.
 
 ✨ MCMC and MAP inference
-
-
-
-## Installation
-
-To install with pip:
-
-```bash
-pip install prophetverse
-```
-
-Or with poetry:
-
-```bash
-poetry add prophetverse
-```
 
 
 ## Differences between this Prophet and the original one

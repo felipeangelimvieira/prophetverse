@@ -1,6 +1,6 @@
 """Definition of Hill Effect class."""
 
-from typing import Optional
+from typing import Dict, Optional
 
 import jax.numpy as jnp
 import numpyro
@@ -44,7 +44,11 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
 
         super().__init__(effect_mode=effect_mode)
 
-    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def _predict(
+        self,
+        data: Dict[str, jnp.ndarray],
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+    ) -> jnp.ndarray:
         """Compute the effect using the log transformation.
 
         Parameters
@@ -59,8 +63,6 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         jnp.ndarray
             The computed effect based on the given trend and data.
         """
-        data: jnp.ndarray = kwargs.pop("data")
-
         half_max = numpyro.sample("half_max", self.half_max_prior)
         slope = numpyro.sample("slope", self.slope_prior)
         max_effect = numpyro.sample("max_effect", self.max_effect_prior)

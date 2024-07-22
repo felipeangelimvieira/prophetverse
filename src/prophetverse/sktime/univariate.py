@@ -5,23 +5,25 @@ the `prophet` library.
 
 """
 
+from typing import Union
+
 import jax.numpy as jnp
 import pandas as pd
 from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 
+from prophetverse.effects import BaseEffect
+from prophetverse.effects.trend import (
+    FlatTrend,
+    PiecewiseLinearTrend,
+    PiecewiseLogisticTrend,
+)
 from prophetverse.models import (
     univariate_gamma_model,
     univariate_model,
     univariate_negbinomial_model,
 )
-from prophetverse.sktime.base import BaseEffectsBayesianForecaster, Stage
-from prophetverse.trend.flat import FlatTrend
-from prophetverse.trend.piecewise import (
-    PiecewiseLinearTrend,
-    PiecewiseLogisticTrend,
-    TrendModel,
-)
+from prophetverse.sktime.base import BaseEffectsBayesianForecaster
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
@@ -216,7 +218,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         return _LIKELIHOOD_MODEL_MAP[self.likelihood]
 
     @property
-    def should_skip_scaling(self) -> bool:
+    def _likelihood_is_discrete(self) -> bool:
         """Skip scaling if the likelihood is discrete.
 
         In the case of discrete likelihoods, the data is not scaled since this can
@@ -240,7 +242,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         if self.offset_prior_scale <= 0:
             raise ValueError("offset_prior_scale must be greater than 0.")
         if self.trend not in ["linear", "logistic", "flat"] and not isinstance(
-            self.trend, TrendModel
+            self.trend, BaseEffect
         ):
             raise ValueError('trend must be either "linear" or "logistic".')
 
@@ -272,12 +274,12 @@ class Prophetverse(BaseEffectsBayesianForecaster):
 
         self.trend_model_ = self._get_trend_model()
 
-        if self.should_skip_scaling:
-            self.trend_model_.initialize(y / self._scale)
+        if self._likelihood_is_discrete:
+            # Scale the data, since _get_fit_data receives
+            # a non-scaled y for discrete likelihoods
+            self.trend_model_.fit(X=X, y=y / self._scale)
         else:
-            self.trend_model_.initialize(y)
-
-        trend_data = self.trend_model_.fit(fh)
+            self.trend_model_.fit(X=X, y=y)
 
         # Exogenous features
 
@@ -291,8 +293,10 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         self._has_exogenous = ~X.columns.empty
         X = X.loc[y.index]
 
-        self._fit_effects(X)
-        exogenous_data = self._transform_effects(X, stage=Stage.TRAIN)
+        trend_data = self.trend_model_.transform(X=X, fh=fh)
+
+        self._fit_effects(X, y)
+        exogenous_data = self._transform_effects(X, fh=fh)
 
         y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
 
@@ -315,7 +319,9 @@ class Prophetverse(BaseEffectsBayesianForecaster):
 
         return inputs
 
-    def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> dict:
+    def _get_predict_data(
+        self, X: Union[pd.DataFrame, None], fh: ForecastingHorizon
+    ) -> dict:
         """
         Prepare the data for making predictions.
 
@@ -334,18 +340,16 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         fh_dates = self.fh_to_index(fh)
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
-        trend_data = self.trend_model_.fit(fh_as_index)
-
         if X is None:
             X = pd.DataFrame(index=fh_as_index)
 
         if self.feature_transformer is not None:
             X = self.feature_transformer.transform(X)
 
+        trend_data = self.trend_model_.transform(X=X, fh=fh_as_index)
+
         exogenous_data = (
-            self._transform_effects(X.loc[fh_as_index], stage=Stage.PREDICT)
-            if self._has_exogenous
-            else None
+            self._transform_effects(X, fh_as_index) if self._has_exogenous else None
         )
 
         return dict(
@@ -395,7 +399,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         elif self.trend == "flat":
             return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
 
-        elif isinstance(self.trend, TrendModel):
+        elif isinstance(self.trend, BaseEffect):
             return self.trend
 
         raise ValueError(

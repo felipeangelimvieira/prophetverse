@@ -10,13 +10,13 @@ from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 
-from prophetverse.models import multivariate_model
-from prophetverse.sktime.base import BaseEffectsBayesianForecaster, Stage
-from prophetverse.trend.piecewise import (
+from prophetverse.effects.trend import (
+    FlatTrend,
     PiecewiseLinearTrend,
     PiecewiseLogisticTrend,
-    TrendModel,
 )
+from prophetverse.models import multivariate_model
+from prophetverse.sktime.base import BaseEffect, BaseEffectsBayesianForecaster
 from prophetverse.utils import loc_bottom_series, reindex_time_series, series_to_tensor
 
 from ._expand_column_per_level import ExpandColumnPerLevel
@@ -198,6 +198,7 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
         # Handling series without __total indexes
         self.aggregator_ = Aggregator()
         self.original_y_indexes_ = y.index
+        fh = y.index.get_level_values(-1).unique()
         y = self.aggregator_.fit_transform(y)
 
         # Updating internal _y of sktime because BaseBayesianForecaster
@@ -209,51 +210,19 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
         y_bottom = loc_bottom_series(y)
         y_bottom_arrays = series_to_tensor(y_bottom)
 
-        # Changepoints and trend
-        if self.trend == "linear":
-            self.trend_model_ = PiecewiseLinearTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-                squeeze_if_single_series=False,
-            )
-
-        elif self.trend == "logistic":
-            self.trend_model_ = PiecewiseLogisticTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-                capacity_prior=dist.TransformedDistribution(
-                    dist.HalfNormal(self.capacity_prior_scale),
-                    dist.transforms.AffineTransform(
-                        loc=self.capacity_prior_loc, scale=1
-                    ),
-                ),
-                squeeze_if_single_series=False,
-            )
-
-        elif isinstance(self.trend, TrendModel):
-            self.trend_model_ = self.trend
-        else:
-            raise ValueError(
-                "trend must be either 'linear', 'logistic' or a TrendModel instance."
-            )
-
-        self.trend_model_.initialize(y_bottom)
-        fh = y.index.get_level_values(-1).unique()
-        trend_data = self.trend_model_.fit(fh)
-
-        # Exog variables
-
         # If no exogenous variables, create empty DataFrame
         # Else, aggregate exogenous variables and transform them
         if X is None or X.columns.empty:
             X = pd.DataFrame(index=y.index)
+
+        X_bottom = loc_bottom_series(X)
+
         if self.feature_transformer is not None:
-            X = self.feature_transformer.fit_transform(X)
-        self._has_exogenous_variables = X is not None and not X.columns.empty
+            X_bottom = self.feature_transformer.fit_transform(X_bottom)
+
+        self._has_exogenous_variables = (
+            X_bottom is not None and not X_bottom.columns.empty
+        )
 
         if self._has_exogenous_variables:
             shared_features = self.shared_features
@@ -261,19 +230,21 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
                 shared_features = []
 
             self.expand_columns_transformer_ = ExpandColumnPerLevel(
-                X.columns.difference(shared_features).to_list()
-            ).fit(X)
-            X = X.loc[y_bottom.index]
-            X = self.expand_columns_transformer_.transform(X)
+                X_bottom.columns.difference(shared_features).to_list()
+            ).fit(X_bottom)
+            X_bottom = self.expand_columns_transformer_.transform(X_bottom)
 
         else:
             self._exogenous_effects_and_columns = {}
             exogenous_data = {}
 
-        self._fit_effects(loc_bottom_series(X))
-        exogenous_data = self._transform_effects(
-            loc_bottom_series(X), stage=Stage.TRAIN
-        )
+        # Trend model
+        self.trend_model_ = self._get_trend_model()
+        self.trend_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
+        trend_data = self.trend_model_.transform(X=X_bottom, fh=fh)
+
+        self._fit_effects(X_bottom, y_bottom)
+        exogenous_data = self._transform_effects(X_bottom, fh=fh)
 
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,
@@ -288,6 +259,100 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             data=exogenous_data,
             trend_data=trend_data,
             **self.fit_and_predict_data_,
+        )
+
+    def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
+        """Generate samples for the given exogenous variables and forecasting horizon.
+
+        Parameters
+        ----------
+        X: pd.DataFrame
+            Exogenous variables.
+        fh: ForecastingHorizon
+            Forecasting horizon.
+
+        Returns
+        -------
+        np.ndarray
+            Predicted samples.
+        """
+        fh_dates = fh.to_absolute(
+            cutoff=self.internal_y_indexes_.get_level_values(-1).max()
+        )
+        fh_as_index = pd.Index(list(fh_dates.to_numpy()))
+
+        if not isinstance(fh, ForecastingHorizon):
+            fh = self._check_fh(fh)
+
+        if X is None or X.shape[1] == 0:
+            idx = reindex_time_series(self._y, fh_as_index).index
+            X = pd.DataFrame(index=idx)
+            X = self.aggregator_.transform(X)
+
+        if self._has_exogenous_variables:
+
+            assert fh_as_index.isin(
+                X.index.get_level_values(-1)
+            ).all(), "Missing exogenous variables for some series or dates."
+            if self.feature_transformer is not None:
+                X = self.feature_transformer.transform(X)
+            X = self.expand_columns_transformer_.transform(X)
+
+        trend_data = self.trend_model_.transform(X=loc_bottom_series(X), fh=fh_as_index)
+        exogenous_data = self._transform_effects(X=loc_bottom_series(X), fh=fh_as_index)
+
+        return dict(
+            y=None,
+            data=exogenous_data,
+            trend_data=trend_data,
+            **self.fit_and_predict_data_,
+        )
+
+    def _get_trend_model(self):
+        """
+        Return the trend model based on the specified trend parameter.
+
+        Returns
+        -------
+        TrendModel
+            The trend model based on the specified trend parameter.
+
+        Raises
+        ------
+        ValueError
+            If the trend parameter is not one of 'linear', 'logistic', 'flat'
+            or a TrendModel instance.
+        """
+        # Changepoints and trend
+        if self.trend == "linear":
+            return PiecewiseLinearTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
+            )
+
+        elif self.trend == "logistic":
+            return PiecewiseLogisticTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
+                capacity_prior=dist.TransformedDistribution(
+                    dist.HalfNormal(self.capacity_prior_scale),
+                    dist.transforms.AffineTransform(
+                        loc=self.capacity_prior_loc, scale=1
+                    ),
+                ),
+            )
+        elif self.trend == "flat":
+            return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
+
+        elif isinstance(self.trend, BaseEffect):
+            return self.trend
+
+        raise ValueError(
+            "trend must be either 'linear', 'logistic' or a TrendModel instance."
         )
 
     def _get_exogenous_matrix_from_X(self, X: pd.DataFrame) -> jnp.ndarray:
@@ -327,56 +392,6 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
         samples = super().predict_samples(X=X, fh=fh)
 
         return self.aggregator_.transform(samples)
-
-    def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon) -> np.ndarray:
-        """Generate samples for the given exogenous variables and forecasting horizon.
-
-        Parameters
-        ----------
-        X: pd.DataFrame
-            Exogenous variables.
-        fh: ForecastingHorizon
-            Forecasting horizon.
-
-        Returns
-        -------
-        np.ndarray
-            Predicted samples.
-        """
-        fh_dates = fh.to_absolute(
-            cutoff=self.internal_y_indexes_.get_level_values(-1).max()
-        )
-        fh_as_index = pd.Index(list(fh_dates.to_numpy()))
-
-        if not isinstance(fh, ForecastingHorizon):
-            fh = self._check_fh(fh)
-
-        trend_data = self.trend_model_.fit(fh_as_index)
-
-        if X is None or X.shape[1] == 0:
-            idx = reindex_time_series(self._y, fh_as_index).index
-            X = pd.DataFrame(index=idx)
-            X = self.aggregator_.transform(X)
-
-        X = X.loc[X.index.get_level_values(-1).isin(fh_as_index)]
-        if self._has_exogenous_variables:
-            assert (
-                X.index.get_level_values(-1).nunique() == fh_as_index.nunique()
-            ), "Missing exogenous variables for some series or dates."
-            if self.feature_transformer is not None:
-                X = self.feature_transformer.transform(X)
-            X = self.expand_columns_transformer_.transform(X)
-
-        exogenous_data = self._transform_effects(
-            loc_bottom_series(X), stage=Stage.PREDICT
-        )
-
-        return dict(
-            y=None,
-            data=exogenous_data,
-            trend_data=trend_data,
-            **self.fit_and_predict_data_,
-        )
 
     def _filter_series_tuples(self, levels: List[Tuple]) -> List[Tuple]:
         """Filter series tuples, returning only series of interest.

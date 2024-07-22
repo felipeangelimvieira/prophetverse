@@ -39,24 +39,11 @@ def multivariate_model(
         correlation_matrix_concentration (float): Concentration parameter for the LKJ
         distribution.
     """
-    trend = trend_model(**trend_data)
-
-    numpyro.deterministic("trend", trend)
-
-    mean = trend
-    # Exogenous effects
-    if exogenous_effects is not None:
-
-        for exog_effect_name, exog_effect in exogenous_effects.items():
-
-            exog_data = data[exog_effect_name]  # type: ignore[index]
-            with numpyro.handlers.scope(prefix=exog_effect_name):
-                effect = exog_effect(trend=trend, **exog_data)
-            effect = numpyro.deterministic(exog_effect_name, effect)
-            mean += effect
-
-    std_observation = numpyro.sample(
-        "std_observation", dist.HalfNormal(jnp.array([noise_scale] * mean.shape[0]))
+    mean = _compute_mean_univariate(
+        trend_model=trend_model,
+        trend_data=trend_data,
+        data=data,
+        exogenous_effects=exogenous_effects,
     )
 
     if y is not None:
@@ -64,12 +51,20 @@ def multivariate_model(
 
     if is_single_series:
 
+        mean = mean.reshape((-1, 1))
+        std_observation = numpyro.sample(
+            "std_observation", dist.HalfNormal(jnp.array(noise_scale))
+        )
+
         with numpyro.plate("time", mean.shape[-1], dim=-2):
-            numpyro.sample(
-                "obs", dist.Normal(mean.squeeze(-1).T, std_observation), obs=y
-            )
+            numpyro.sample("obs", dist.Normal(mean, std_observation), obs=y)
 
     else:
+
+        std_observation = numpyro.sample(
+            "std_observation", dist.HalfNormal(jnp.array([noise_scale] * mean.shape[0]))
+        )
+
         correlation_matrix = numpyro.sample(
             "corr_matrix",
             dist.LKJCholesky(
@@ -250,7 +245,10 @@ def _compute_mean_univariate(
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
 ):
-    trend = trend_model(**trend_data)
+
+    trend = trend_model(data=trend_data)
+    predicted_effects = {}
+    predicted_effects["trend"] = trend
 
     numpyro.deterministic("trend", trend)
 
@@ -259,9 +257,10 @@ def _compute_mean_univariate(
     if exogenous_effects is not None:
 
         for exog_effect_name, exog_effect in exogenous_effects.items():
-            exog_data = data[exog_effect_name]  # type: ignore[index]
+            transformed_data = data[exog_effect_name]  # type: ignore[index]
             with numpyro.handlers.scope(prefix=exog_effect_name):
-                effect = exog_effect(trend=trend, **exog_data)
+                effect = exog_effect(transformed_data, predicted_effects)
             effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect
+            predicted_effects[exog_effect_name] = effect
     return mean

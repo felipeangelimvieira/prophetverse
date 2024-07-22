@@ -2,6 +2,7 @@
 
 import itertools
 import warnings
+from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jax
@@ -13,7 +14,7 @@ import pandas as pd
 from sktime.base import _HeterogenousMetaEstimator
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
-from prophetverse.effects.base import BaseEffect, Stage
+from prophetverse.effects.base import BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
 from prophetverse.utils import get_multiindex_loc
@@ -88,7 +89,7 @@ class BaseBayesianForecaster(BaseForecaster):
         super().__init__()
 
     @property
-    def should_skip_scaling(self):
+    def _likelihood_is_discrete(self):
         """Property that indicates whether the forecaster uses a discrete likelihood.
 
         As a consequence, the target variable must be integer-valued and will not be
@@ -495,7 +496,7 @@ class BaseBayesianForecaster(BaseForecaster):
         This method assumes that the scaling factor has already been computed and stored
         in the `_scale` attribute of the class.
         """
-        if self.should_skip_scaling:
+        if self._likelihood_is_discrete:
             return y
 
         if isinstance(self._scale, float):
@@ -531,7 +532,7 @@ class BaseBayesianForecaster(BaseForecaster):
         This method assumes that the scaling factor has already been computed and stored
         in the `_scale` attribute of the class.
         """
-        if self.should_skip_scaling:
+        if self._likelihood_is_discrete:
             return y
 
         if isinstance(self._scale, float):
@@ -824,7 +825,9 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
             for ((name, effect), (_, _, regex)) in zip(value, self.exogenous_effects)
         ]
 
-    def _fit_effects(self, X: Union[None, pd.DataFrame]):
+    def _fit_effects(
+        self, X: Union[None, pd.DataFrame], y: Optional[pd.DataFrame] = None
+    ):
         """
         Set custom effects for the features.
 
@@ -849,7 +852,7 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
 
             effect = effect.clone()
 
-            effect.fit(X_columns, scale=self._scale)  # type: ignore[attr-defined]
+            effect.fit(X_columns, y, scale=self._scale)  # type: ignore[attr-defined]
 
             if columns_with_effects.intersection(columns):
                 msg = "Columns {} are already set".format(
@@ -885,6 +888,7 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
                 default_effect = default_effect.clone()
                 default_effect.fit(
                     X[features_without_effects],
+                    y,
                     scale=self._scale,  # type: ignore[attr-defined]
                 )
                 fitted_effects_list_.append(
@@ -897,7 +901,7 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
 
         self.exogenous_effects_ = fitted_effects_list_
 
-    def _transform_effects(self, X: pd.DataFrame, stage: Stage = Stage.TRAIN):
+    def _transform_effects(self, X: pd.DataFrame, fh: pd.Index) -> OrderedDict:
         """
         Get exogenous data array.
 
@@ -905,19 +909,21 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
         ----------
         X : pd.DataFrame
             Input data.
+        fh : pd.Index
+            Forecasting horizon as an index.
 
         Returns
         -------
         dict
             Dictionary of exogenous data arrays.
         """
-        out = {}
+        out = OrderedDict()
         for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
             if effect.should_skip_predict:
                 continue
 
-            data: Dict[str, jnp.ndarray] = effect.transform(X[columns], stage=stage)
+            data: Dict[str, jnp.ndarray] = effect.transform(X[columns], fh=fh)
             out[effect_name] = data
 
         return out

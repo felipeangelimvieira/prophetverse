@@ -1,6 +1,6 @@
 """Definition of Linear Effect class."""
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import jax.numpy as jnp
 import numpyro
@@ -40,7 +40,11 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
         super().__init__(effect_mode=effect_mode)
 
-    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def _predict(
+        self,
+        data: Any,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+    ) -> jnp.ndarray:
         """Compute the Linear effect.
 
         Parameters
@@ -55,8 +59,6 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         jnp.ndarray
             The computed effect based on the given trend and data.
         """
-        data = kwargs.pop("data")
-
         n_features = data.shape[-1]
 
         with numpyro.plate("features_plate", n_features, dim=-1):

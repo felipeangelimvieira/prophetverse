@@ -1,13 +1,13 @@
 """Fourier effects for time series forecasting with seasonality."""
 
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pandas as pd
 from sktime.transformations.series.fourier import FourierFeatures
 
-from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect, Stage
+from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime._expand_column_per_level import ExpandColumnPerLevel
 
@@ -57,7 +57,9 @@ class LinearFourierSeasonality(BaseEffect):
         self.effect_mode = effect_mode
         self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
 
-    def _fit(self, X: pd.DataFrame, scale: float = 1.0):
+    def _fit(
+        self, X: pd.DataFrame, y: Optional[pd.DataFrame] = None, scale: float = 1.0
+    ):
         """Customize the initialization of the effect.
 
         Fit the fourier feature transformer and the linear effect.
@@ -73,7 +75,7 @@ class LinearFourierSeasonality(BaseEffect):
             sp_list=self.sp_list,
             fourier_terms_list=self.fourier_terms_list,
             freq=self.freq,
-            keep_original_columns=True,
+            keep_original_columns=False,
         )
 
         self.fourier_features_.fit(X=X)
@@ -87,11 +89,9 @@ class LinearFourierSeasonality(BaseEffect):
             prior=dist.Normal(0, self.prior_scale), effect_mode=self.effect_mode
         )
 
-        self.linear_effect_.fit(X=X, scale=scale)
+        self.linear_effect_.fit(X=X, y=y, scale=scale)
 
-    def _transform(
-        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
-    ) -> Dict[str, jnp.ndarray]:
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, jnp.ndarray]:
         """Prepare the input data in a dict of jax arrays.
 
         Creates the fourier terms and the linear effect.
@@ -103,10 +103,6 @@ class LinearFourierSeasonality(BaseEffect):
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
 
-        stage : Stage, optional
-            The stage of the effect, by default Stage.TRAIN. This can be used to
-            differentiate between training and prediction stages and apply different
-            transformations accordingly.
 
         Returns
         -------
@@ -118,11 +114,15 @@ class LinearFourierSeasonality(BaseEffect):
         if self.expand_column_per_level_ is not None:
             X = self.expand_column_per_level_.transform(X)
 
-        array = self.linear_effect_.transform(X, stage)
+        array = self.linear_effect_.transform(X, fh)
 
         return array
 
-    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def _predict(
+        self,
+        data: Dict,
+        predicted_effects: Dict[str, jnp.ndarray],
+    ) -> jnp.ndarray:
         """Apply the effect.
 
         Apply linear seasonality.
@@ -140,4 +140,6 @@ class LinearFourierSeasonality(BaseEffect):
         jnp.ndarray
             The effect values.
         """
-        return self.linear_effect_.predict(trend, **kwargs)
+        return self.linear_effect_.predict(
+            data=data, predicted_effects=predicted_effects
+        )

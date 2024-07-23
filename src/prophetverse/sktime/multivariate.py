@@ -314,14 +314,14 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
 
         Returns
         -------
-        TrendModel
+        BaseEffect
             The trend model based on the specified trend parameter.
 
         Raises
         ------
         ValueError
             If the trend parameter is not one of 'linear', 'logistic', 'flat'
-            or a TrendModel instance.
+            or a BaseEffect instance.
         """
         # Changepoints and trend
         if self.trend == "linear":
@@ -352,7 +352,7 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             return self.trend
 
         raise ValueError(
-            "trend must be either 'linear', 'logistic' or a TrendModel instance."
+            "trend must be either 'linear', 'logistic' or a BaseEffect instance."
         )
 
     def _get_exogenous_matrix_from_X(self, X: pd.DataFrame) -> jnp.ndarray:

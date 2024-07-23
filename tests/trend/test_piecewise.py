@@ -2,10 +2,8 @@ import numpy as np
 import numpyro
 import pandas as pd
 import pytest
-from numpyro.distributions import Normal
 
-from prophetverse.trend.base import TrendModel
-from prophetverse.trend.piecewise import (
+from prophetverse.effects.trend.piecewise import (
     PiecewiseLinearTrend,
     PiecewiseLogisticTrend,
     _enforce_array_if_zero_dim,
@@ -13,7 +11,6 @@ from prophetverse.trend.piecewise import (
     _get_changepoint_timeindexes,
     _suggest_logistic_rate_and_offset,
     _to_list_if_scalar,
-    series_to_tensor,
 )
 
 
@@ -63,7 +60,7 @@ def piecewise_logistic_trend():
 
 # Tests for PiecewiseLinearTrend
 def test_piecewise_linear_initialize(piecewise_linear_trend, mock_dataframe):
-    piecewise_linear_trend.initialize(mock_dataframe)
+    piecewise_linear_trend.fit(mock_dataframe, mock_dataframe)
     assert hasattr(
         piecewise_linear_trend, "_changepoint_ts"
     ), "Changepoint ts not set during initialization."
@@ -71,7 +68,10 @@ def test_piecewise_linear_initialize(piecewise_linear_trend, mock_dataframe):
 
 # Tests for PiecewiseLogisticTrend
 def test_piecewise_logistic_initialize(piecewise_logistic_trend, mock_dataframe):
-    piecewise_logistic_trend.initialize(mock_dataframe)
+    piecewise_logistic_trend.fit(mock_dataframe, mock_dataframe)
+    piecewise_logistic_trend.transform(
+        mock_dataframe, fh=mock_dataframe.index.get_level_values(-1)
+    )
     assert hasattr(
         piecewise_logistic_trend, "_changepoint_ts"
     ), "Changepoint ts not set during initialization."
@@ -87,11 +87,11 @@ def test_piecewise_compute_trend(
     df = make_df()
 
     for trend_model in [piecewise_linear_trend, piecewise_logistic_trend]:
-        trend_model.initialize(df)
+        trend_model.fit(df, df)
         period_index = pd.period_range(start="2020-01-01", periods=100, freq="D")
         changepoint_matrix = trend_model.get_changepoint_matrix(period_index)
         with numpyro.handlers.seed(rng_seed=0):
-            trend = trend_model.compute_trend(changepoint_matrix)
+            trend = trend_model.predict(changepoint_matrix, predicted_effects={})
         assert (
             trend.ndim == expected_ndim
         ), f"Dimensions are incorrect for trend_model {trend_model.__class__.__name__}"
@@ -124,7 +124,7 @@ def test_get_changepoint_timeindexes():
 def test_piecewise_linear_get_changepoint_matrix(
     piecewise_linear_trend, mock_dataframe
 ):
-    piecewise_linear_trend.initialize(mock_dataframe)
+    piecewise_linear_trend.fit(mock_dataframe, mock_dataframe)
     period_index = pd.period_range(start="2020-01-01", periods=100, freq="D")
     result = piecewise_linear_trend.get_changepoint_matrix(period_index)
 

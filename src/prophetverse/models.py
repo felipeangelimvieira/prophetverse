@@ -8,12 +8,11 @@ from numpyro import distributions as dist
 
 from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects.base import BaseEffect
-from prophetverse.trend.base import TrendModel
 
 
 def multivariate_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -31,7 +30,7 @@ def multivariate_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -89,7 +88,7 @@ def multivariate_model(
 
 def univariate_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -102,7 +101,7 @@ def univariate_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -127,7 +126,7 @@ def univariate_model(
 
 def univariate_gamma_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -140,7 +139,7 @@ def univariate_gamma_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -167,7 +166,7 @@ def univariate_gamma_model(
 
 def univariate_negbinomial_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -181,7 +180,7 @@ def univariate_negbinomial_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -240,14 +239,15 @@ def _to_positive(
 
 
 def _compute_mean_univariate(
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
 ):
 
-    trend = trend_model(data=trend_data)
-    predicted_effects = {}
+    predicted_effects: Dict[str, jnp.ndarray] = {}
+
+    trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
     predicted_effects["trend"] = trend
 
     numpyro.deterministic("trend", trend)

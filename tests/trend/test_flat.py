@@ -4,7 +4,9 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 
-from prophetverse.trend.flat import FlatTrend  # Assuming this is the import path
+from prophetverse.effects.trend.flat import (
+    FlatTrend,  # Assuming this is the import path
+)
 
 
 @pytest.fixture

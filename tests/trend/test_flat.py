@@ -28,27 +28,28 @@ def test_initialization(trend_model):
 
 
 def test_initialize(trend_model, timeseries_data):
-    trend_model.initialize(timeseries_data)
+    trend_model.fit(X=None, y=timeseries_data)
     expected_loc = timeseries_data["data"].mean()
     assert_almost_equal(trend_model.changepoint_prior_loc, expected_loc)
 
 
 def test_fit(trend_model, timeseries_data):
-    idx = timeseries_data.index.to_period("D")
-    result = trend_model.fit(idx)
-    assert "constant_vector" in result
-    assert result["constant_vector"].shape == (len(idx), 1)
-    assert jnp.all(result["constant_vector"] == 1)
+    idx = timeseries_data.index
+    trend_model.fit(X=None, y=timeseries_data)
+    result = trend_model.transform(X=pd.DataFrame(index=timeseries_data.index), fh=idx)
+    assert result.shape == (len(idx), 1)
+    assert jnp.all(result == 1)
 
 
 def test_compute_trend(trend_model, timeseries_data):
-    idx = timeseries_data.index.to_period("D")
-    trend_model.initialize(timeseries_data)
-    data = trend_model.fit(idx)
-    constant_vector = data["constant_vector"]
+    idx = timeseries_data.index
+    trend_model.fit(X=None, y=timeseries_data)
+    constant_vector = trend_model.transform(
+        X=pd.DataFrame(index=timeseries_data.index), fh=idx
+    )
 
     with numpyro.handlers.seed(rng_seed=0):
-        trend_result = trend_model.compute_trend(constant_vector)
+        trend_result = trend_model.predict(constant_vector, None)
 
     assert jnp.unique(trend_result).shape == (1,)
     assert trend_result.shape == (len(idx), 1)

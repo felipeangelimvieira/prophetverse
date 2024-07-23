@@ -16,6 +16,11 @@ from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
 from prophetverse.effects.base import BaseEffect
 from prophetverse.effects.linear import LinearEffect
+from prophetverse.effects.trend import (
+    FlatTrend,
+    PiecewiseLinearTrend,
+    PiecewiseLogisticTrend,
+)
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
 from prophetverse.utils import get_multiindex_loc
 
@@ -752,15 +757,48 @@ class BaseBayesianForecaster(BaseForecaster):
         return pd.concat(outs, axis=0)
 
 
-class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
+class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
     """Base class for Bayesian estimators with Effects objects.
 
     Parameters
     ----------
+    trend : Union[str, BaseEffect], optional, one of "linear" (default) or "logistic"
+        Type of trend to use. Can also be a custom effect object.
+
+    changepoint_interval : int, optional, default=25
+        Number of potential changepoints to sample in the history.
+
+    changepoint_range : float or int, optional, default=0.8
+        Proportion of the history in which trend changepoints will be estimated.
+
+        * if float, must be between 0 and 1.
+          The range will be that proportion of the training history.
+
+        * if int, can be positive or negative.
+          Absolute value must be less than number of training points.
+          The range will be that number of points.
+          A negative int indicates number of points
+          counting from the end of the history, a positive int from the beginning.
+
+    changepoint_prior_scale : float, optional, default=0.001
+        Regularization parameter controlling the flexibility
+        of the automatic changepoint selection.
+
+    offset_prior_scale : float, optional, default=0.1
+        Scale parameter for the prior distribution of the offset.
+        The offset is the constant term in the piecewise trend equation.
+
+    capacity_prior_scale : float, optional, default=0.2
+        Scale parameter for the prior distribution of the capacity.
+
+    capacity_prior_loc : float, optional, default=1.1
+        Location parameter for the prior distribution of the capacity.
+
     exogenous_effects : List[Tuple[str, BaseEffect, str]]
         List of exogenous effects to apply to the data. Each item of the list
         is a tuple with the name of the effect, the effect object, and the regex
         pattern to match the columns of the dataframe.
+
     default_effect : Optional[BaseEffect]
         Default effect to apply to the columns that do not match any regex pattern.
         If None, a LinearEffect is used.
@@ -771,7 +809,14 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
 
     def __init__(
         self,
-        exogenous_effects: List[BaseEffect],
+        trend: Union[BaseEffect, str] = "linear",
+        changepoint_interval: int = 25,
+        changepoint_range: Union[float, int] = 0.8,
+        changepoint_prior_scale: float = 0.001,
+        offset_prior_scale: float = 0.1,
+        capacity_prior_scale=0.2,
+        capacity_prior_loc=1.1,
+        exogenous_effects: Optional[List[BaseEffect]] = None,
         default_effect: Optional[BaseEffect] = None,
         rng_key: jax.typing.ArrayLike = None,
         inference_method: str = "map",
@@ -784,6 +829,16 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
         scale=None,
     ):
 
+        # Trend related hyperparams
+        self.trend = trend
+        self.changepoint_interval = changepoint_interval
+        self.changepoint_range = changepoint_range
+        self.changepoint_prior_scale = changepoint_prior_scale
+        self.offset_prior_scale = offset_prior_scale
+        self.capacity_prior_scale = capacity_prior_scale
+        self.capacity_prior_loc = capacity_prior_loc
+
+        # Exogenous variables related hyperparams
         self.exogenous_effects = exogenous_effects
         self.default_effect = default_effect
         super().__init__(
@@ -943,6 +998,53 @@ class BaseEffectsBayesianForecaster(_HeterogenousMetaEstimator, BaseBayesianFore
             for effect_name, effect, _ in self.exogenous_effects_
             if not effect.should_skip_predict
         }
+
+    def _get_trend_model(self):
+        """
+        Return the trend model based on the specified trend parameter.
+
+        Returns
+        -------
+        BaseEffect
+            The trend model based on the specified trend parameter.
+
+        Raises
+        ------
+        ValueError
+            If the trend parameter is not one of 'linear', 'logistic', 'flat'
+            or a BaseEffect instance.
+        """
+        # Changepoints and trend
+        if self.trend == "linear":
+            return PiecewiseLinearTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
+            )
+
+        elif self.trend == "logistic":
+            return PiecewiseLogisticTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
+                capacity_prior=dist.TransformedDistribution(
+                    dist.HalfNormal(self.capacity_prior_scale),
+                    dist.transforms.AffineTransform(
+                        loc=self.capacity_prior_loc, scale=1
+                    ),
+                ),
+            )
+        elif self.trend == "flat":
+            return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
+
+        elif isinstance(self.trend, BaseEffect):
+            return self.trend
+
+        raise ValueError(
+            "trend must be either 'linear', 'logistic' or a BaseEffect instance."
+        )
 
     def match_columns(
         self, columns: Union[pd.Index, List[str]], regex: Union[str, None]

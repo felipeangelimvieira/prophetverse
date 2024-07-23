@@ -5,25 +5,19 @@ the `prophet` library.
 
 """
 
-from typing import Union
+from typing import List, Optional, Union
 
 import jax.numpy as jnp
 import pandas as pd
-from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 
 from prophetverse.effects import BaseEffect
-from prophetverse.effects.trend import (
-    FlatTrend,
-    PiecewiseLinearTrend,
-    PiecewiseLogisticTrend,
-)
 from prophetverse.models import (
     univariate_gamma_model,
     univariate_model,
     univariate_negbinomial_model,
 )
-from prophetverse.sktime.base import BaseEffectsBayesianForecaster
+from prophetverse.sktime.base import BaseProphetForecaster
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
@@ -37,7 +31,7 @@ _LIKELIHOOD_MODEL_MAP = {
 _DISCRETE_LIKELIHOODS = ["negbinomial"]
 
 
-class Prophetverse(BaseEffectsBayesianForecaster):
+class Prophetverse(BaseProphetForecaster):
     """Univariate ``Prophetverse`` forecaster, with support for multiple likelihoods.
 
     Differences to facebook's prophet:
@@ -60,6 +54,9 @@ class Prophetverse(BaseEffectsBayesianForecaster):
 
     Parameters
     ----------
+    trend : Union[str, BaseEffect], optional, one of "linear" (default) or "logistic"
+        Type of trend to use. Can also be a custom effect object.
+
     changepoint_interval : int, optional, default=25
         Number of potential changepoints to sample in the history.
 
@@ -69,7 +66,7 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         * if float, must be between 0 and 1.
           The range will be that proportion of the training history.
 
-        * if int, ca nbe positive or negative.
+        * if int, can be positive or negative.
           Absolute value must be less than number of training points.
           The range will be that number of points.
           A negative int indicates number of points
@@ -83,21 +80,19 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         Scale parameter for the prior distribution of the offset.
         The offset is the constant term in the piecewise trend equation.
 
-    feature_transformer : sktime transformer, BaseTransformer, optional, default=None
-        Transformer object to generate Fourier terms, holiday or other features.
-        If None, no additional features are used.
-        For multiple features, pass a ``FeatureUnion`` object with the transformers.
-
     capacity_prior_scale : float, optional, default=0.2
         Scale parameter for the prior distribution of the capacity.
 
     capacity_prior_loc : float, optional, default=1.1
         Location parameter for the prior distribution of the capacity.
 
+    feature_transformer : sktime transformer, BaseTransformer, optional, default=None
+        Transformer object to generate Fourier terms, holiday or other features.
+        If None, no additional features are used.
+        For multiple features, pass a ``FeatureUnion`` object with the transformers.
+
     noise_scale : float, optional, default=0.05
         Scale parameter for the observation noise.
-    trend : str, optional, one of "linear" (default) or "logistic"
-        Type of trend to use. Can be "linear" or "logistic".
 
     mcmc_samples : int, optional, default=2000
         Number of MCMC samples to draw.
@@ -154,15 +149,17 @@ class Prophetverse(BaseEffectsBayesianForecaster):
 
     def __init__(
         self,
-        changepoint_interval=25,
-        changepoint_range=0.8,
-        changepoint_prior_scale=0.001,
-        offset_prior_scale=0.1,
-        feature_transformer=None,
+        trend: Union[BaseEffect, str] = "linear",
+        changepoint_interval: int = 25,
+        changepoint_range: Union[float, int] = 0.8,
+        changepoint_prior_scale: float = 0.001,
+        offset_prior_scale: float = 0.1,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
+        exogenous_effects: Optional[List[BaseEffect]] = None,
+        default_effect: Optional[BaseEffect] = None,
+        feature_transformer=None,
         noise_scale=0.05,
-        trend="linear",
         mcmc_samples=2000,
         mcmc_warmup=200,
         mcmc_chains=4,
@@ -170,27 +167,27 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         optimizer_name="Adam",
         optimizer_kwargs=None,
         optimizer_steps=100_000,
-        exogenous_effects=None,
         likelihood="normal",
-        default_effect=None,
         scale=None,
         rng_key=None,
     ):
         """Initialize the Prophet model."""
-        self.changepoint_interval = changepoint_interval
-        self.changepoint_range = changepoint_range
-        self.changepoint_prior_scale = changepoint_prior_scale
-        self.offset_prior_scale = offset_prior_scale
         self.noise_scale = noise_scale
         self.feature_transformer = feature_transformer
-        self.capacity_prior_scale = capacity_prior_scale
-        self.capacity_prior_loc = capacity_prior_loc
-        self.trend = trend
+
         self.likelihood = likelihood
 
         super().__init__(
             rng_key=rng_key,
-            # ExogenousEffectMixin
+            # Trend
+            trend=trend,
+            changepoint_interval=changepoint_interval,
+            changepoint_range=changepoint_range,
+            changepoint_prior_scale=changepoint_prior_scale,
+            offset_prior_scale=offset_prior_scale,
+            capacity_prior_scale=capacity_prior_scale,
+            capacity_prior_loc=capacity_prior_loc,
+            # Exog
             default_effect=default_effect,
             exogenous_effects=exogenous_effects,
             # BaseBayesianForecaster
@@ -357,53 +354,6 @@ class Prophetverse(BaseEffectsBayesianForecaster):
             data=exogenous_data,
             trend_data=trend_data,
             **self.fit_and_predict_data_,
-        )
-
-    def _get_trend_model(self):
-        """
-        Return the trend model based on the specified trend parameter.
-
-        Returns
-        -------
-        BaseEffect
-            The trend model based on the specified trend parameter.
-
-        Raises
-        ------
-        ValueError
-            If the trend parameter is not one of 'linear', 'logistic', 'flat'
-            or a BaseEffect instance.
-        """
-        # Changepoints and trend
-        if self.trend == "linear":
-            return PiecewiseLinearTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-            )
-
-        elif self.trend == "logistic":
-            return PiecewiseLogisticTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-                capacity_prior=dist.TransformedDistribution(
-                    dist.HalfNormal(self.capacity_prior_scale),
-                    dist.transforms.AffineTransform(
-                        loc=self.capacity_prior_loc, scale=1
-                    ),
-                ),
-            )
-        elif self.trend == "flat":
-            return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
-
-        elif isinstance(self.trend, BaseEffect):
-            return self.trend
-
-        raise ValueError(
-            "trend must be either 'linear', 'logistic' or a BaseEffect instance."
         )
 
     @classmethod

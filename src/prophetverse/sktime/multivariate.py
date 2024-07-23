@@ -1,28 +1,21 @@
 """Contains the implementation of the HierarchicalProphet forecaster."""
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
-import jax.numpy as jnp
 import numpy as np
 import pandas as pd
-from numpyro import distributions as dist
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 
-from prophetverse.effects.trend import (
-    FlatTrend,
-    PiecewiseLinearTrend,
-    PiecewiseLogisticTrend,
-)
 from prophetverse.models import multivariate_model
-from prophetverse.sktime.base import BaseEffect, BaseEffectsBayesianForecaster
+from prophetverse.sktime.base import BaseEffect, BaseProphetForecaster
 from prophetverse.utils import loc_bottom_series, reindex_time_series, series_to_tensor
 
 from ._expand_column_per_level import ExpandColumnPerLevel
 
 
-class HierarchicalProphet(BaseEffectsBayesianForecaster):
+class HierarchicalProphet(BaseProphetForecaster):
     """A Bayesian hierarchical time series forecasting model based on the Prophet.
 
     This class forecasts all series in a hierarchy at once, using a MultivariateNormal
@@ -34,49 +27,77 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
 
     Parameters
     ----------
-    changepoint_interval : int
-        The number of points between each potential changepoint.
-    changepoint_range : float
+    trend : Union[str, BaseEffect], optional, one of "linear" (default) or "logistic"
+        Type of trend to use. Can also be a custom effect object.
+
+    changepoint_interval : int, optional, default=25
+        Number of potential changepoints to sample in the history.
+
+    changepoint_range : float or int, optional, default=0.8
         Proportion of the history in which trend changepoints will be estimated.
-        If a float between 0 and 1, the range will be that proportion of the history.
-        If an int, the range will be that number of points. A negative int indicates the
-        number of points counting from the end of the history.
-    changepoint_prior_scale : float
-        Parameter controlling the flexibility of the automatic changepoint selection.
+
+        * if float, must be between 0 and 1.
+          The range will be that proportion of the training history.
+
+        * if int, can be positive or negative.
+          Absolute value must be less than number of training points.
+          The range will be that number of points.
+          A negative int indicates number of points
+          counting from the end of the history, a positive int from the beginning.
+
+    changepoint_prior_scale : float, optional, default=0.001
+        Regularization parameter controlling the flexibility
+        of the automatic changepoint selection.
+
     offset_prior_scale : float, optional, default=0.1
         Scale parameter for the prior distribution of the offset.
+        The offset is the constant term in the piecewise trend equation.
+
     capacity_prior_scale : float, optional, default=0.2
-        Scale parameter for the capacity prior.
+        Scale parameter for the prior distribution of the capacity.
+
     capacity_prior_loc : float, optional, default=1.1
-        Location parameter for the capacity prior.
-    trend : str, optional, default='linear'
-        Type of trend. Either "linear" or "logistic".
+        Location parameter for the prior distribution of the capacity.
+
     feature_transformer : BaseTransformer or None, optional, default=None
         A transformer to preprocess the exogenous features.
+
     exogenous_effects : list of AbstractEffect, optional, default=None
         A list defining the exogenous effects to be used in the model.
+
     default_effect : AbstractEffect, optional, default=None
         The default effect to be used when no effect is specified for a variable.
+
     shared_features : list, optional, default=[]
         List of shared features across series.
+
     mcmc_samples : int, optional, default=2000
         Number of MCMC samples to draw.
+
     mcmc_warmup : int, optional, default=200
         Number of warmup steps for MCMC.
+
     mcmc_chains : int, optional, default=4
         Number of MCMC chains.
+
     inference_method : str, optional, default='map'
         Inference method to use. Either "map" or "mcmc".
+
     optimizer_name : str, optional, default='Adam'
         Name of the optimizer to use.
+
     optimizer_kwargs : dict, optional, default={'step_size': 1e-4}
         Additional keyword arguments for the optimizer.
+
     optimizer_steps : int, optional, default=100_000
         Number of optimization steps.
+
     noise_scale : float, optional, default=0.05
         Scale parameter for the noise.
+
     correlation_matrix_concentration : float, optional, default=1.0
         Concentration parameter for the correlation matrix.
+
     rng_key : jax.random.PRNGKey, optional, default=None
         Random number generator key.
     """
@@ -105,13 +126,13 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
 
     def __init__(
         self,
-        changepoint_interval=25,
-        changepoint_range=0.8,
-        changepoint_prior_scale=0.1,
-        offset_prior_scale=0.1,
+        trend: Union[BaseEffect, str] = "linear",
+        changepoint_interval: int = 25,
+        changepoint_range: Union[float, int] = 0.8,
+        changepoint_prior_scale: float = 0.001,
+        offset_prior_scale: float = 0.1,
         capacity_prior_scale=0.2,
         capacity_prior_loc=1.1,
-        trend="linear",
         feature_transformer: BaseTransformer = None,
         exogenous_effects=None,
         default_effect=None,
@@ -128,19 +149,24 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
         rng_key=None,
     ):
 
-        self.changepoint_interval = changepoint_interval
-        self.changepoint_range = changepoint_range
-        self.changepoint_prior_scale = changepoint_prior_scale
-        self.offset_prior_scale = offset_prior_scale
         self.noise_scale = noise_scale
-        self.capacity_prior_scale = capacity_prior_scale
-        self.capacity_prior_loc = capacity_prior_loc
-        self.trend = trend
         self.shared_features = shared_features
         self.feature_transformer = feature_transformer
         self.correlation_matrix_concentration = correlation_matrix_concentration
 
         super().__init__(
+            # Trend
+            trend=trend,
+            changepoint_interval=changepoint_interval,
+            changepoint_range=changepoint_range,
+            changepoint_prior_scale=changepoint_prior_scale,
+            offset_prior_scale=offset_prior_scale,
+            capacity_prior_scale=capacity_prior_scale,
+            capacity_prior_loc=capacity_prior_loc,
+            # Exog effects
+            default_effect=default_effect,
+            exogenous_effects=exogenous_effects,
+            # Base Bayesian forecaster
             rng_key=rng_key,
             inference_method=inference_method,
             optimizer_name=optimizer_name,
@@ -149,8 +175,6 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
             mcmc_chains=mcmc_chains,
-            default_effect=default_effect,
-            exogenous_effects=exogenous_effects,
         )
 
         self.model = multivariate_model  # type: ignore[method-assign]
@@ -309,72 +333,6 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             trend_data=trend_data,
             **self.fit_and_predict_data_,
         )
-
-    def _get_trend_model(self):
-        """
-        Return the trend model based on the specified trend parameter.
-
-        Returns
-        -------
-        BaseEffect
-            The trend model based on the specified trend parameter.
-
-        Raises
-        ------
-        ValueError
-            If the trend parameter is not one of 'linear', 'logistic', 'flat'
-            or a BaseEffect instance.
-        """
-        # Changepoints and trend
-        if self.trend == "linear":
-            return PiecewiseLinearTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-            )
-
-        elif self.trend == "logistic":
-            return PiecewiseLogisticTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-                capacity_prior=dist.TransformedDistribution(
-                    dist.HalfNormal(self.capacity_prior_scale),
-                    dist.transforms.AffineTransform(
-                        loc=self.capacity_prior_loc, scale=1
-                    ),
-                ),
-            )
-        elif self.trend == "flat":
-            return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
-
-        elif isinstance(self.trend, BaseEffect):
-            return self.trend
-
-        raise ValueError(
-            "trend must be either 'linear', 'logistic' or a BaseEffect instance."
-        )
-
-    def _get_exogenous_matrix_from_X(self, X: pd.DataFrame) -> jnp.ndarray:
-        """
-        Convert the exogenous variables to a NumPyro matrix.
-
-        Parameters
-        ----------
-        X: pd.DataFrame
-            The exogenous variables.
-
-        Return
-        ------
-        jnp.ndarray
-            The NumPyro matrix of the exogenous variables.
-        """
-        X_bottom = loc_bottom_series(X)
-        X_arrays = series_to_tensor(X_bottom)
-
-        return X_arrays
 
     def predict_samples(
         self, fh: ForecastingHorizon, X: Optional[pd.DataFrame] = None

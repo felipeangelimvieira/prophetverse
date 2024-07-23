@@ -289,17 +289,19 @@ class HierarchicalProphet(BaseEffectsBayesianForecaster):
             X = pd.DataFrame(index=idx)
             X = self.aggregator_.transform(X)
 
+        X_bottom = loc_bottom_series(X)
+
         if self._has_exogenous_variables:
 
             assert fh_as_index.isin(
-                X.index.get_level_values(-1)
+                X_bottom.index.get_level_values(-1)
             ).all(), "Missing exogenous variables for some series or dates."
             if self.feature_transformer is not None:
-                X = self.feature_transformer.transform(X)
-            X = self.expand_columns_transformer_.transform(X)
+                X_bottom = self.feature_transformer.transform(X_bottom)
+            X_bottom = self.expand_columns_transformer_.transform(X_bottom)
 
-        trend_data = self.trend_model_.transform(X=loc_bottom_series(X), fh=fh_as_index)
-        exogenous_data = self._transform_effects(X=loc_bottom_series(X), fh=fh_as_index)
+        trend_data = self.trend_model_.transform(X=X_bottom, fh=fh_as_index)
+        exogenous_data = self._transform_effects(X=X_bottom, fh=fh_as_index)
 
         return dict(
             y=None,

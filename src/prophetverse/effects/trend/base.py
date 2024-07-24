@@ -24,10 +24,9 @@ class TrendEffectMixin:
     _tags = {"skip_predict_if_no_match": False, "supports_multivariate": True}
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1) -> None:
-        """Customize the initialization of the effect.
+        """Initialize the effect.
 
-        This method is called by the `fit()` method and can be overridden by
-        subclasses to provide additional initialization logic.
+        Set the time scale, starting time, and number of series attributes.
 
         Parameters
         ----------

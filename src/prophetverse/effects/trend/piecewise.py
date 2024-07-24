@@ -76,21 +76,23 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         super().__init__()
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
-        """
-        Initialize the piecewise trend model.
+        """Initialize the effect.
+
+        Set the prior location for the trend.
 
         Parameters
         ----------
-        X: pd.DataFrame
-            The exogenous variables dataframe
-        y: pd.DataFrame
-            The input data.
+        y : pd.DataFrame
+            The timeseries dataframe
 
-        Returns
-        -------
-            None
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
         """
-        super()._fit(X, y, scale)
+        super()._fit(X=X, y=y, scale=scale)
 
         t_scaled = self._index_to_scaled_timearray(
             y.index.get_level_values(-1).unique()

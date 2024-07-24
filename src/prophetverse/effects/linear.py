@@ -45,19 +45,22 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         data: Any,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
     ) -> jnp.ndarray:
-        """Compute the Linear effect.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component of the hierarchical prophet model.
-        data : jnp.ndarray
-            The data used to compute the effect.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The computed effect based on the given trend and data.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
         n_features = data.shape[-1]
 

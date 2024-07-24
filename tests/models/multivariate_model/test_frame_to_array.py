@@ -56,6 +56,12 @@ def test_loc_bottom_series(hierarchical_levels):
     pd.testing.assert_frame_equal(result.sort_index(), hierarchical_data.sort_index())
 
 
+def test_get_bottom_series_idx_raises_error():
+    y = pd.DataFrame(data=[1, 2, 3], index=[1, 2, 3], columns=["A"])
+    with pytest.raises(ValueError):
+        get_bottom_series_idx(y)
+
+
 # Test for iterating all series
 def test_iterate_all_series(sample_hierarchical_data):
     for _, series in iterate_all_series(sample_hierarchical_data):

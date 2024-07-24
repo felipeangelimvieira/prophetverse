@@ -48,35 +48,55 @@ class LiftExperimentLikelihood(BaseEffect):
 
         super().__init__()
 
-    def fit(self, X: pd.DataFrame, y=None, scale: float = 1):
-        """Initialize this effect and its wrapped effect.
+    def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+        """Initialize the effect.
+
+        This method is called during `fit()` of the forecasting model.
+        It receives the Exogenous variables DataFrame and should be used to initialize
+        any necessary parameters or data structures, such as detecting the columns that
+        match the regex pattern.
+
+        This method MUST set _input_feature_columns_names to a list of column names
 
         Parameters
         ----------
-        X : DataFrame
-            Dataframe of exogenous data.
-        scale : float
-            The scale of the timeseries. This is used to normalize the lift effect.
+        y : pd.DataFrame
+            The timeseries dataframe
+
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
+
+        Returns
+        -------
+        None
         """
-        self.effect.fit(X, y=y, scale=scale)
+        self.effect.fit(X=X, y=y, scale=scale)
         self.timeseries_scale = scale
-        super().fit(X, y=y, scale=scale)
+        super().fit(X=X, y=y, scale=scale)
 
     def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, Any]:
-        """Prepare the input data for the effect, and the custom likelihood.
+        """Prepare input data to be passed to numpyro model.
+
+        Returns a dictionary with the data for the lift and for the inner effect.
 
         Parameters
         ----------
         X : pd.DataFrame
-            The input data with exogenous variables.
-        stage : Stage, optional
-            which stage is being executed, by default Stage.TRAIN.
-            Used to determine if the likelihood should be applied.
+            The input DataFrame containing the exogenous variables for the training
+            time indexes, if passed during fit, or for the forecasting time indexes, if
+            passed during predict.
+
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
         Dict[str, Any]
-            The dictionary of data passed to _predict and the likelihood.
+            Dictionary with data for the lift and for the inner effect
         """
         data_dict = {}
         data_dict["inner_effect_data"] = self.effect._transform(X, fh=fh)
@@ -91,19 +111,20 @@ class LiftExperimentLikelihood(BaseEffect):
     def _predict(
         self, data: Dict, predicted_effects: Dict[str, jnp.ndarray]
     ) -> jnp.ndarray:
-        """Apply the effect and the custom likelihood.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component.
-        observed_lift : jnp.ndarray
-            The observed lift to apply the likelihood to.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The effect applied to the input data.
+            An array with shape (T,1) for univariate timeseries.
         """
         observed_lift = data["observed_lift"]
         obs_mask = data["obs_mask"]

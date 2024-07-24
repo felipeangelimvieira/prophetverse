@@ -225,23 +225,10 @@ class Prophetverse(BaseProphetForecaster):
 
     def _validate_hyperparams(self):
         """Validate the hyperparameters."""
-        if self.changepoint_interval <= 0:
-            raise ValueError("changepoint_interval must be greater than 0.")
+        super()._validate_hyperparams()
 
-        if self.changepoint_prior_scale <= 0:
-            raise ValueError("changepoint_prior_scale must be greater than 0.")
         if self.noise_scale <= 0:
             raise ValueError("noise_scale must be greater than 0.")
-        if self.capacity_prior_scale <= 0:
-            raise ValueError("capacity_prior_scale must be greater than 0.")
-        if self.capacity_prior_loc <= 0:
-            raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.offset_prior_scale <= 0:
-            raise ValueError("offset_prior_scale must be greater than 0.")
-        if self.trend not in ["linear", "logistic", "flat"] and not isinstance(
-            self.trend, BaseEffect
-        ):
-            raise ValueError('trend must be either "linear" or "logistic".')
 
         if self.likelihood not in _LIKELIHOOD_MODEL_MAP:
             raise ValueError(

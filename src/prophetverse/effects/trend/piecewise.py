@@ -75,7 +75,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         )
         super().__init__()
 
-    def _fit(self, X: pd.DataFrame, y: pd.DataFrame, scale: float = 1):
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
         """
         Initialize the piecewise trend model.
 

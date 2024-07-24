@@ -25,18 +25,18 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
         self.changepoint_prior_scale = changepoint_prior_scale
         super().__init__()
 
-    def _fit(self, X: pd.DataFrame, y: pd.DataFrame, scale: float = 1):
-        """
-        Initialize the piecewise trend model.
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+        """Initialize the effect.
+
+        Set the prior location for the trend.
 
         Parameters
         ----------
-        y: pd.DataFrame
-            The input data.
+        y : pd.DataFrame
+            The timeseries dataframe
 
-        Returns
-        -------
-            None
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
         """
         self.changepoint_prior_loc = y.mean().values
 

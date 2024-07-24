@@ -900,14 +900,16 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         for effect_name, effect, regex in exogenous_effects:
 
             if X is not None:
-                columns = self.match_columns(X.columns, regex)
+                columns = self._match_columns(X.columns, regex)
                 X_columns = X[columns]
             else:
                 X_columns = None
 
             effect = effect.clone()
 
-            effect.fit(X_columns, y, scale=self._scale)  # type: ignore[attr-defined]
+            effect.fit(  # type: ignore[attr-defined]
+                X=X_columns, y=y, scale=self._scale
+            )
 
             if columns_with_effects.intersection(columns):
                 msg = "Columns {} are already set".format(
@@ -942,8 +944,8 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
                 default_effect = default_effect.clone()
                 default_effect.fit(
-                    X[features_without_effects],
-                    y,
+                    X=X[features_without_effects],
+                    y=y,
                     scale=self._scale,  # type: ignore[attr-defined]
                 )
                 fitted_effects_list_.append(
@@ -1046,7 +1048,24 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             "trend must be either 'linear', 'logistic' or a BaseEffect instance."
         )
 
-    def match_columns(
+    def _validate_hyperparams(self):
+        """Validate the hyperparameters."""
+        if self.changepoint_interval <= 0:
+            raise ValueError("changepoint_interval must be greater than 0.")
+        if self.changepoint_prior_scale <= 0:
+            raise ValueError("changepoint_prior_scale must be greater than 0.")
+        if self.capacity_prior_scale <= 0:
+            raise ValueError("capacity_prior_scale must be greater than 0.")
+        if self.capacity_prior_loc <= 0:
+            raise ValueError("capacity_prior_loc must be greater than 0.")
+        if self.offset_prior_scale <= 0:
+            raise ValueError("offset_prior_scale must be greater than 0.")
+        if self.trend not in ["linear", "logistic", "flat"] and not isinstance(
+            self.trend, BaseEffect
+        ):
+            raise ValueError('trend must be either "linear" or "logistic".')
+
+    def _match_columns(
         self, columns: Union[pd.Index, List[str]], regex: Union[str, None]
     ) -> pd.Index:
         """Match the columns of the DataFrame with the regex pattern.

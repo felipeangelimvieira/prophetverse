@@ -1,6 +1,6 @@
 """Fourier effects for time series forecasting with seasonality."""
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -57,17 +57,19 @@ class LinearFourierSeasonality(BaseEffect):
         self.effect_mode = effect_mode
         self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
 
-    def _fit(
-        self, X: pd.DataFrame, y: Optional[pd.DataFrame] = None, scale: float = 1.0
-    ):
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
 
         Fit the fourier feature transformer and the linear effect.
 
         Parameters
         ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
         X : pd.DataFrame
             The DataFrame to initialize the effect.
+
         scale: float, optional
             The scale of the timeseries, by default 1.0.
         """
@@ -91,10 +93,11 @@ class LinearFourierSeasonality(BaseEffect):
 
         self.linear_effect_.fit(X=X, y=y, scale=scale)
 
-    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, jnp.ndarray]:
-        """Prepare the input data in a dict of jax arrays.
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+        """Prepare input data to be passed to numpyro model.
 
-        Creates the fourier terms and the linear effect.
+        This method return a jnp.ndarray of sines and cosines of the given
+        frequencies.
 
         Parameters
         ----------
@@ -103,11 +106,14 @@ class LinearFourierSeasonality(BaseEffect):
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
 
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the data needed for the effect.
+        jnp.ndarray
+            Any object containing the data needed for the effect. The object will be
+            passed to `predict` method as `data` argument.
         """
         X = self.fourier_features_.transform(X)
 
@@ -123,22 +129,22 @@ class LinearFourierSeasonality(BaseEffect):
         data: Dict,
         predicted_effects: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
-        """Apply the effect.
-
-        Apply linear seasonality.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            An array containing the trend values.
+        data : Any
+            Data obtained from the transformed method.
 
-        kwargs: dict
-            Additional keyword arguments that may be needed to compute the effect.
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The effect values.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
         return self.linear_effect_.predict(
             data=data, predicted_effects=predicted_effects

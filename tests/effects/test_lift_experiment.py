@@ -49,7 +49,7 @@ def test_liftexperimentlikelihood_initialization(
 
 def test_liftexperimentlikelihood_fit(X, lift_experiment_effect_instance):
 
-    lift_experiment_effect_instance.fit(X, scale=1)
+    lift_experiment_effect_instance.fit(y=y, X=X, scale=1)
     assert lift_experiment_effect_instance.timeseries_scale == 1
     assert lift_experiment_effect_instance.effect._is_fitted
 
@@ -58,7 +58,7 @@ def test_liftexperimentlikelihood_transform_train(
     X, y, lift_experiment_effect_instance
 ):
     fh = y.index.get_level_values(-1).unique()
-    lift_experiment_effect_instance.fit(X, y=y)
+    lift_experiment_effect_instance.fit(X=X, y=y)
     transformed = lift_experiment_effect_instance.transform(
         X,
         fh=fh,
@@ -71,8 +71,8 @@ def test_liftexperimentlikelihood_predict(X, y, lift_experiment_effect_instance)
     fh = X.index.get_level_values(-1).unique()
 
     trend = jnp.array([1, 2, 3, 4, 5, 6])
-    lift_experiment_effect_instance.fit(X)
-    data = lift_experiment_effect_instance.transform(X, fh=fh)
+    lift_experiment_effect_instance.fit(X=X, y=y)
+    data = lift_experiment_effect_instance.transform(X=X, fh=fh)
     predicted = lift_experiment_effect_instance.predict(
         data=data, predicted_effects={"trend": trend}
     )

@@ -23,17 +23,19 @@ class TrendEffectMixin:
 
     _tags = {"skip_predict_if_no_match": False, "supports_multivariate": True}
 
-    def _fit(self, X: pd.DataFrame, y: pd.DataFrame, scale: float = 1) -> None:
-        """Initialize trend model with the timeseries data.
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1) -> None:
+        """Customize the initialization of the effect.
 
-        This method is close to what "fit" is in sktime/sklearn estimators.
-        Child classes should implement this method to initialize the model and
-        may call super().initialize() to perform common initialization steps.
+        This method is called by the `fit()` method and can be overridden by
+        subclasses to provide additional initialization logic.
 
         Parameters
         ----------
-        y: pd.DataFrame
-            time series dataframe, may be multiindex
+        y : pd.DataFrame
+            The timeseries dataframe
+
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
         """
         # Set time scale
         t_days = convert_index_to_days_since_epoch(

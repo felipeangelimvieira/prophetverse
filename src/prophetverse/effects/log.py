@@ -43,19 +43,22 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
         data: jnp.ndarray,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
     ) -> jnp.ndarray:
-        """Compute the effect using the log transformation.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component.
-        data : jnp.ndarray
-            The input data.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The computed effect based on the given trend and data.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
         scale = numpyro.sample("log_scale", self.scale_prior)
         rate = numpyro.sample("log_rate", self.rate_prior)

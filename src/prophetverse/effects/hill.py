@@ -47,21 +47,22 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
     def _predict(
         self,
         data: Dict[str, jnp.ndarray],
-        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+        predicted_effects: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
-        """Compute the effect using the log transformation.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component of the hierarchical prophet model.
-        data : jnp.ndarray
-            The data used to compute the effect.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray]
+            A dictionary containing the predicted effects
 
         Returns
         -------
         jnp.ndarray
-            The computed effect based on the given trend and data.
+            An array with shape (T,1) for univariate timeseries.
         """
         half_max = numpyro.sample("half_max", self.half_max_prior)
         slope = numpyro.sample("slope", self.slope_prior)

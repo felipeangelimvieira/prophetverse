@@ -8,12 +8,11 @@ from numpyro import distributions as dist
 
 from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects.base import BaseEffect
-from prophetverse.trend.base import TrendModel
 
 
 def multivariate_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -31,7 +30,7 @@ def multivariate_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -39,24 +38,11 @@ def multivariate_model(
         correlation_matrix_concentration (float): Concentration parameter for the LKJ
         distribution.
     """
-    trend = trend_model(**trend_data)
-
-    numpyro.deterministic("trend", trend)
-
-    mean = trend
-    # Exogenous effects
-    if exogenous_effects is not None:
-
-        for exog_effect_name, exog_effect in exogenous_effects.items():
-
-            exog_data = data[exog_effect_name]  # type: ignore[index]
-            with numpyro.handlers.scope(prefix=exog_effect_name):
-                effect = exog_effect(trend=trend, **exog_data)
-            effect = numpyro.deterministic(exog_effect_name, effect)
-            mean += effect
-
-    std_observation = numpyro.sample(
-        "std_observation", dist.HalfNormal(jnp.array([noise_scale] * mean.shape[0]))
+    mean = _compute_mean_univariate(
+        trend_model=trend_model,
+        trend_data=trend_data,
+        data=data,
+        exogenous_effects=exogenous_effects,
     )
 
     if y is not None:
@@ -64,12 +50,20 @@ def multivariate_model(
 
     if is_single_series:
 
+        mean = mean.reshape((-1, 1))
+        std_observation = numpyro.sample(
+            "std_observation", dist.HalfNormal(jnp.array(noise_scale))
+        )
+
         with numpyro.plate("time", mean.shape[-1], dim=-2):
-            numpyro.sample(
-                "obs", dist.Normal(mean.squeeze(-1).T, std_observation), obs=y
-            )
+            numpyro.sample("obs", dist.Normal(mean, std_observation), obs=y)
 
     else:
+
+        std_observation = numpyro.sample(
+            "std_observation", dist.HalfNormal(jnp.array([noise_scale] * mean.shape[0]))
+        )
+
         correlation_matrix = numpyro.sample(
             "corr_matrix",
             dist.LKJCholesky(
@@ -94,7 +88,7 @@ def multivariate_model(
 
 def univariate_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -107,7 +101,7 @@ def univariate_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -132,7 +126,7 @@ def univariate_model(
 
 def univariate_gamma_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -145,7 +139,7 @@ def univariate_gamma_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -172,7 +166,7 @@ def univariate_gamma_model(
 
 def univariate_negbinomial_model(
     y,
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
@@ -186,7 +180,7 @@ def univariate_negbinomial_model(
     Parameters
     ----------
         y (jnp.ndarray): Array of time series data.
-        trend_model (TrendModel): Trend model.
+        trend_model (BaseEffect): Trend model.
         trend_data (dict): Dictionary containing the data needed for the trend model.
         data (dict): Dictionary containing the exogenous data.
         exogenous_effects (dict): Dictionary containing the exogenous effects.
@@ -245,12 +239,16 @@ def _to_positive(
 
 
 def _compute_mean_univariate(
-    trend_model: TrendModel,
+    trend_model: BaseEffect,
     trend_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
 ):
-    trend = trend_model(**trend_data)
+
+    predicted_effects: Dict[str, jnp.ndarray] = {}
+
+    trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
+    predicted_effects["trend"] = trend
 
     numpyro.deterministic("trend", trend)
 
@@ -259,9 +257,10 @@ def _compute_mean_univariate(
     if exogenous_effects is not None:
 
         for exog_effect_name, exog_effect in exogenous_effects.items():
-            exog_data = data[exog_effect_name]  # type: ignore[index]
+            transformed_data = data[exog_effect_name]  # type: ignore[index]
             with numpyro.handlers.scope(prefix=exog_effect_name):
-                effect = exog_effect(trend=trend, **exog_data)
+                effect = exog_effect(transformed_data, predicted_effects)
             effect = numpyro.deterministic(exog_effect_name, effect)
             mean += effect
+            predicted_effects[exog_effect_name] = effect
     return mean

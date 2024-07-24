@@ -7,19 +7,19 @@ from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect, BaseEf
 
 @pytest.mark.smoke
 def test__predict(effect_with_regex):
-    trend = jnp.array([1.0, 2.0, 3.0])
-    data = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    result = effect_with_regex._predict(trend, data)
-    expected_result = jnp.mean(data, axis=0)
+    trend = jnp.array([1.0, 2.0, 3.0]).reshape((-1, 1))
+    data = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]).reshape((-1, 2))
+    result = effect_with_regex.predict(data, predicted_effects={"trend": trend})
+    expected_result = jnp.mean(data, axis=1).reshape((-1, 1))
     assert jnp.allclose(result, expected_result)
 
 
 @pytest.mark.smoke
 def test_call(effect_with_regex):
-    trend = jnp.array([1.0, 2.0, 3.0])
-    data = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    result = effect_with_regex(trend, data=data)
-    expected_result = jnp.mean(data, axis=0)
+    trend = jnp.array([1.0, 2.0, 3.0]).reshape((-1, 1))
+    data = jnp.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]).reshape((-1, 2))
+    result = effect_with_regex(data=data, predicted_effects={"trend": trend})
+    expected_result = jnp.mean(data, axis=1).reshape((-1, 1))
     assert jnp.allclose(result, expected_result)
 
 
@@ -30,4 +30,4 @@ def test_bad_effect_mode():
 
 def test_not_fitted():
     with pytest.raises(ValueError):
-        BaseEffect().transform(pd.DataFrame())
+        BaseEffect().transform(pd.DataFrame(), fh=pd.Index([]))

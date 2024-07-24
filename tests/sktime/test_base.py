@@ -2,12 +2,12 @@ import numpyro.distributions as dist
 import pytest
 
 from prophetverse.effects import LinearEffect
-from prophetverse.sktime.base import BaseEffectsBayesianForecaster
+from prophetverse.sktime.base import BaseProphetForecaster
 
 
 @pytest.fixture
 def base_effects_bayesian_forecaster():
-    return BaseEffectsBayesianForecaster(
+    return BaseProphetForecaster(
         exogenous_effects=[
             ("effect1", LinearEffect(prior=dist.Normal(10, 2)), r"(x1).*"),
         ]

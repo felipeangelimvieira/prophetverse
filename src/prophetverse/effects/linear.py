@@ -1,6 +1,6 @@
 """Definition of Linear Effect class."""
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import jax.numpy as jnp
 import numpyro
@@ -40,23 +40,28 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
         super().__init__(effect_mode=effect_mode)
 
-    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        """Compute the Linear effect.
+    def _predict(
+        self,
+        data: Any,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component of the hierarchical prophet model.
-        data : jnp.ndarray
-            The data used to compute the effect.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The computed effect based on the given trend and data.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
-        data = kwargs.pop("data")
-
         n_features = data.shape[-1]
 
         with numpyro.plate("features_plate", n_features, dim=-1):

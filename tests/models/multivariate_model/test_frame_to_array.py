@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from jax import numpy as jnp
+from sktime.transformations.hierarchical.aggregate import Aggregator
+from sktime.utils._testing.hierarchical import _make_hierarchical
 
 from prophetverse.utils import (
     convert_dataframe_to_tensors,
@@ -44,11 +46,20 @@ def test_get_multiindex_loc(sample_hierarchical_data):
 
 
 # Test for fetching bottom series
-def test_loc_bottom_series(sample_hierarchical_data):
-    result = loc_bottom_series(sample_hierarchical_data)
-    assert isinstance(
-        result, pd.DataFrame
-    ), "Should return a DataFrame of the bottom series"
+@pytest.mark.parametrize("hierarchical_levels", [(2, 4, 4), (2,)])
+def test_loc_bottom_series(hierarchical_levels):
+    hierarchical_data = _make_hierarchical(hierarchical_levels)
+    aggregated = Aggregator(flatten_single_levels=False).fit_transform(
+        hierarchical_data
+    )
+    result = loc_bottom_series(aggregated)
+    pd.testing.assert_frame_equal(result.sort_index(), hierarchical_data.sort_index())
+
+
+def test_get_bottom_series_idx_raises_error():
+    y = pd.DataFrame(data=[1, 2, 3], index=[1, 2, 3], columns=["A"])
+    with pytest.raises(ValueError):
+        get_bottom_series_idx(y)
 
 
 # Test for iterating all series

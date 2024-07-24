@@ -35,9 +35,9 @@ class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
 
     _tags = {"skip_predict_if_no_match": False}
 
-    def _predict(self, trend: jnp.ndarray, data: jnp.ndarray) -> jnp.ndarray:
+    def _predict(self, data: jnp.ndarray, predicted_effects=None) -> jnp.ndarray:
         """Calculate simple effect."""
-        return jnp.mean(data, axis=0)
+        return jnp.mean(data, axis=1)
 
 
 @pytest.fixture(name="effect_with_regex")

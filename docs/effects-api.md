@@ -2,7 +2,7 @@
 
 The exogenous effect API allows you to create custom exogenous components for the Prophetverse model. This is useful when we want to model specific patterns or relationships between the exogenous variables and the target variable. For example, enforcing a positive effect of a variable on the mean, or modeling a non-linear relationship.
 
-If you have read the previous section, by effect we mean each function $f_i$. You can implement those custom
+If you have read the [theory section](https://prophetverse.com/the-theory/), by effect we mean each function $f_i$. You can implement those custom
 functions by subclassing the `BaseEffect` class, and then use them in the `Prophetverse` model. Some effects are already implemented in the library, and you can find them in the `prophetverse.effects` module.
 
 When creating a model instance, effects can be specified through `exogenous_effects` parameter of the `Prophetverse` model. This parameter is a list of tuples of three values: the name, the effect object, and a regex to filter

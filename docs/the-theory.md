@@ -1,81 +1,94 @@
 # Prophetverse
 
 
+<p align="center">
+
+<p align="center">
+<img src="/static/prophetverse-universe.png">
+</p>
+
+<p align="center" style="font-size: smaller;">
+Figure 1: Generalized Additive Models are versatile. Prophet is one of the many models that can be built on top of it.
+The idea of Prophetverse is giving access to that universe.
+</p>
+
+</p>
+
+
 __Prophetverse__ leverages the __Generalized Additive Model (GAM)__ idea in the original
-Prophet model and extends it to be more flexible and customizable. 
-Roughly, GAMs are a type of 
-statistical model used for regression analysis that models the expected value of 
+Prophet model and extends it to be more flexible and customizable. The core principle of GAMs is to model the expected value $y_{mean}$ of 
 the endogenous variable $Y$ as the sum of many functions $\{f_i\}_{i=1}^n$ of exogenous
 variables $\{x_i\}_{i=1}^n$. 
 
 $$
-\mathbb{E}[Y] = f_1(x_1) + f_2(x_2) + \ldots + f_n(t)\text{, }\quad n \in \mathbb{N}
+y_{mean} = f_1(x_1) + f_2(x_2) + \ldots + f_n(t)\text{, }\quad n \in \mathbb{N}
 $$
 
 
-The key idea of Prophet is using bayesian GAMs to model timeseries, and, 
-instead of trying to approximate the timeseries through some kind of auto-regressive
-model, treat it as a curve fitting exercise. This leads to fast, interpretable and 
-accurate forecasting.
-
-Before digging into Prophetverse, let's review the original Prophet model and its
-components.
-
-## Meta's Prophet
-
-The bayesian model of Prophet uses a normal likelihood to model observations, putting
-a HalfCauchy hyperprior into the standard deviation:
+The innovation in Prophet is the use of Bayesian GAMs to model time series data. Instead of approximating the time series through auto-regressive models, Prophet treats it as a curve-fitting exercise. This approach results in fast, interpretable, and accurate forecasts. The Prophet formulation is:
 
 $$
-y \sim \mathcal{N}(\hat{y}_{mean}, \sigma^2)\quad \text{where} \quad
-\sigma \sim HalfCauchy(0.5)
+y_{\text{mean}} = \begin{cases} y_{\text{mean}}(t) = \tau(t) + s(t) + h(t) + v(t) & \text{if additive} \\ y_{\text{mean}}(t) = \tau(t) + \tau(t) \cdot s(t) + \tau(t) \cdot h(t) + \tau(t) \cdot v(t) & \text{if multiplicative} \end{cases}
 $$
 
-The mean term $\hat{y}_{mean}$ is composed of several components: trend, seasonality,
-holidays, and other regressors. The components can be additive and multiplicative. 
-The additive can be written as:
+where $\tau(t)$ is the trend component, $s(t)$ is the seasonality component,
+$h(t)$ is the holiday component, and $v(t)$ is other regressors components. Those
+components are hard-coded as linear in the original formulation of Prophet, but in Prophetverse they are versatile and can be defined by the user. __This is the first main difference
+between Prophet and Prophetverse__. The $f_i$ functions are defined by the `Effects` 
+API, where the user can create their own components and priors, by using the already
+available ones or by creating new `BaseEffect` subclasses.
 
+
+\begin{align}
+y_{mean} &= \sum\limits_{i=1}^n f_i(x_i(t), \{f_j(x_j)\}_{j<i}) \\
+         &= f_1(x_1(t)) + f_2(x_2(t), f_1(x_1(t))) + \ldots + f_n(t, \{f_j(x_j)\}_{j<n})
+\end{align}
+
+where $f_1$, the first component, accounts for the trend. This definition superseeds the
+Prophet formulation. Effects are ordered, so that the output of previous effects can be
+used as input for the next ones. This allows for complex interactions between exogenous
+variables.
+
+## Likelihood
+
+In the original Prophet, the likelihood is a Normal distribution, but in Prophetverse
+it can be Normal, Gamma, or Negative Binomial. 
 
 
 $$
-\hat{y}_{mean}(t) = \hat{\tau}(t) + \hat{s}(t) + \hat{h}(t) + \hat{r}(t)
+y \sim \mathcal{likelihood}(\phi(\hat{y}_{mean}), \sigma^2)\quad \text{where} \quad
+\sigma \sim HalfNormal(\sigma_{hyper})
 $$
 
-where $\hat{\tau}(t)$ is the trend component, $\hat{s}(t)$ is the seasonality component,
-$\hat{h}(t)$ is the holiday component, and $\hat{v}(t)$ is other regressors components.
-
-The multiplicative version scales each component by the trend at time $t$:
+where $\sigma_{hyper}$ is a hyperparameter and $\phi$ is a function that maps the mean to the support of the likelihood. For normal
+likelihood, $\phi$ is the identity function, but for Gamma and Negative Binomial, it is
 
 $$
-\hat{y}_{mean}(t) = \hat{\tau}(t)  + \hat{\tau}(t)\cdot\hat{s}(t) +
- \hat{\tau}(t)\cdot\hat{h}(t) + \hat{\tau}(t)\cdot\hat{v}(t)
+\phi(k) = \begin{cases}
+k & \text{if } k > 10^5 \\
+z\exp(k-z) & \text{if } k \leq z
+\end{cases}
 $$
 
-Although we separate seasonality, holidays and exogenous variables in these decompositions,
-they are essentially estimated in the same way: as a linear combination of exogenous
-features. In the case of seasonality, the exogenous features are fourier terms; for
-holidays, dummy variables; and regressors are defined by the user.
+for some small threshold $z$. We set $z = 10^{-5}$ in our implementation. The reason for this
+is to avoid zero or negative values in the support of the likelihood, which can lead to
+error.
 
-!!! note
-    One way to interpret the differences between the additive and multiplicative versions is
-    thinking about the unit of each component. For example, if we are forecasting the amount
-    of money (USD) a company makes in a day, the additive component (e.g., seasonality $s(t)$)
-    will be forecasted in USD, while the multiplicative component will be forecasted as a
-    percentage. 
 
-### Trend
+## Trend
 
 There are mainly two types of trends supported: linear and logistic. We will first
 take a look at the original mathematical formulation of Prophet's paper, and then
-simplify it to obtain a simpler and more interpretable version. In that sense, don't
-dedicate too much time to understand the original formulation, as it is expected that
-the simplified version will help you the most.
+simplify it to obtain a simpler and more interpretable version. 
 
-#### Linear trend
+### Linear trend
+
+#### Original formulation
 
 The linear trend is modeled as a piecewise linear functions with changepoints. Let $M$ be
 the number of changepoints, $\delta \in \mathbb{R}^M$ be the rate adjustment at each changepoint, $\{\kappa_i\}_{i=1}^M$
-be the changepoint times, and be $a(t) \in \{0,1\}^M$ be a vector which assumes 1 if the
+be the changepoint times, and be $a(t) \in \{0,1\}^M$ be a vector which assumes, at each
+index, 1 if the
 corresponding changepoint is greater than $t$ and 0 otherwise. In addition, let $k$ represent
 the global rate and $m$ the global offset. Then, the linear trend
 is defined as:
@@ -85,20 +98,25 @@ $$
 $$
 
 The first part accounts for the rate adjustment at each changepoint, and the second part
-corrects the offset at each changepoint, so that the trend is continuous. This can be
+corrects the offset at each changepoint, so that the trend is continuous. 
+
+#### Prophetverse's equivalent formulation
+
+This can be
 simplified as a first-order spline regression with $M$ knots (changepoints). Let 
 $b(t) \in \mathbb{R}^M$ be a vector so that $b(t)_i = (t - \kappa_i)_+$ (the positive part of
-$t - \kappa_i$). Then, the linear trend can be written as:
+$t - \kappa_i$). Then, the piecewise linear trend value for time $t$ can be written as:
 
 $$
-\tau(t) = (b(t)^T \delta) \, t + kt + m
+\tau(t) = b(t)^T \delta + kt + m
 $$
 
-We can also write the trend for all timestamps as a matrix multiplication. Let
+We can also write the trend for all $t \in \{t_1,\dots, t_T\}$ as a matrix multiplication. Let
 $\mathbf{B} \in \mathbb{R}^{T \times M+2}$ be the matrix whose rows are $b'(t) = \left[ b(t), t, 1 \right]$ 
 for each time $t$. In other words, it is the spline basis matrix. The $t$ and $1$ at the end of the vector are included to account for the
 global rate and offset. Furthermore, consider the vector $\delta' = \left[ \delta, k, m \right]$.
 Then, the trend vector $G \in \mathbb{R}^T$, $G_i = \tau(\mathbf{t}_i)$, can be written as:
+
 
 \begin{align}
 G &= \mathbf{B}\delta' \\
@@ -137,7 +155,7 @@ m \\
     $$
 
 
-#### Logistic trend
+### Logistic trend
 
 The logistic trend of the original model uses the piecewise logistic linear trend to 
 change the rate at which
@@ -148,17 +166,24 @@ $$
 G = \frac{C}{1 + \exp(-\mathbf{B}\delta')}
 $$
 
-where $C$ is the logistic capacity, which should be passed as input to the model (in the 
-original Prophet, not in Prophetverse).
+where $C$ is the __logistic capacity__, which should be passed as input to Prophet, but
+__is a random variable in Prophetverse__.
 
-#### Changepoint priors
+### Changepoint priors
 
-The original model puts a Laplace prior on the rate adjustment $\delta_i \sim Laplace(0, \sigma_{\delta})$
+A Laplace prior is put on the rate adjustment $\delta_i \sim Laplace(0, \sigma_{\delta})$
 where $\sigma_{\delta}$ is a hyperparameter. The changepoint times $\kappa_i$ can be 
-predefined by the user, or can be uniformly distributed in the training data.
+predefined by the user, or can be uniformly distributed in the training data. The offset
+and rate prior location are set in a "smart" way, by checking analytically what would
+be the values that fit the maximum and minimum points of the time series. 
+
+!!! note
+    Although those trend are the ones that come with the library, the user can
+    define any trend, including a trend that depends on some exogenous variable. 
+    Flexibility is the key here.
 
 
-### Seasonality
+## Seasonality
 
 To model seasonality, Prophet uses a Fourier series to approximate periodic functions, allowing the model to fit complex seasonal patterns flexibly. This approach involves determining the number of Fourier terms (`K`), which corresponds to the complexity of the seasonality. The formula for a seasonal component `s(t)` in terms of a Fourier series is given as:
 
@@ -170,13 +195,10 @@ Here, `P` is the period (e.g., 365.25 for yearly seasonality), and $a_k$ and $b_
 A Normal prior is placed on the coefficients, $a_k, b_k \sim \mathcal{N}(0, \sigma_s)$, where $\sigma_s$ is a hyperparameter.
 
 
-#### Matrix Formulation of Fourier Series
+### Matrix Formulation of Fourier Series
 
 To efficiently compute the seasonality for multiple time points, we can represent the Fourier series in a matrix form. This method is especially useful for handling large datasets and simplifies the implementation of the model in computational software.
-
-**Design Matrix Construction**:
-
-Let `T` be the number of time points, and create a design matrix `X` of size `T x 2K`. Each row of `X` corresponds to a time point and contains all Fourier basis functions evaluated at that time:
+Let $T$ be the number of time points, and create a design matrix $X$ of size $T \times 2K$. Each row of $X$ corresponds to a time point and contains all Fourier basis functions evaluated at that time:
 
 $$
 \mathbf{X} = \begin{bmatrix}
@@ -209,68 +231,12 @@ $$
 
 Each element of vector $s$, denoted as $s_i$, represents the seasonality at time $t_i$.
 
-This matrix approach not only makes the computation faster and more scalable but also simplifies integration with other components of the forecasting model.
+This matrix approach not only makes the computation faster and more scalable but also simplifies integration with other components of the forecasting model. One drawback is
+that it assumes a constant seasonality, but an user can also define a seasonality that
+changes with time in Prophetverse, by creating a custom `Effect` class.
 
 
-
-
-### Holidays and others
-
-All holidays and other regressors are modeled in the same way: as a linear combination
-of exogenous features. The holiday dates are converted to a binary matrix, where each
-column represents a holiday and each row a date. The value of the matrix is 1 if the
-corresponding date is a holiday and 0 otherwise. The matrix is then multiplied by a
-vector of coefficients, which are estimated by the model. The same is done for other
-regressors, which are defined by the user.
-
-
-## Prophetverse
-
-<p align="center">
-<img src="/static/prophetverse-universe.png">
-
-</p>
-
-### Univariate
-
-Prophetverse extends this idea in flexible API that allows users to define their own
-components and priors. In addition to the Normal Likelihood, we have two other likelihood functions for observations
-that can be extremely useful: Gamma and Negative Binomial. 
-
-$$
-y \sim \mathcal{Likelihood}(\phi(y_{mean}), \sigma^2)\quad \text{where} \quad
-\sigma \sim HalfNormal(\sigma_{hyper})
-$$
-
-$$
-y_{mean}(t) = \tau(t)  + \sum_{i=1}^n f_i(\tau(t), x_i(t))
-$$
-
-Where $\phi$ is a function that maps the mean to the support of the likelihood. For normal
-likelihood, $\phi$ is the identity function, but for Gamma and Negative Binomial, it is
-
-$$
-\phi(k) = \begin{cases}
-k & \text{if } k > 10^5 \\
-z\exp(k-z) & \text{if } k \leq z
-\end{cases}
-$$
-
-for some small threshold $z$. We set $z = 10^{-5}$ in our implementation. The reason for this
-is to avoid zero or negative values in the support of the likelihood, which can lead to
-error.
-
-The functions $f_i$ can be defined in code through [Effects API](reference/effects),
-and can be any function that maps trend and an exogenous variable $x_i(t)$ to a
-real number. The trend is ignored if a particular component is additive. 
-The trend can also be customized, but the `linear` and `logistic` are readly
-available. 
-
-One main difference between Prophet and Prophetverse logistic trend is that in the
-latter, the capacity is modeled as a random variable and is assumed to be constant. In the original model, it was a an input variable and this necessary to pass the capacity as a hyperparameter, but we often don't know it.
-
-
-### Multivariate
+## Multivariate model
 
 Prophetverse also supports multivariate forecasting. In this case, the model is
 essentially the same, but for now only Normal Likelihood is supported. Depending on

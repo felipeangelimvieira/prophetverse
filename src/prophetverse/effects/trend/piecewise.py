@@ -138,19 +138,21 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         )
         return pd.MultiIndex.from_tuples(new_idx_tuples, names=self._index_names)
 
-    def _transform(self, X, fh) -> dict:
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> dict:
         """
         Prepare the input data for the piecewise trend model.
 
         Parameters
         ----------
-        idx: pd.PeriodIndex
-            The index of the data.
+        X: pd.DataFrame
+            The exogenous variables DataFrame.
+        fh: pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
-        dict
-            A dictionary containing the prepared input data.
+        jnp.ndarray
+            An array containing the prepared input data.
         """
         idx = self._fh_to_index(fh)
         return self.get_changepoint_matrix(idx)

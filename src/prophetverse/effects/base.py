@@ -30,19 +30,21 @@ class BaseEffect(BaseObject):
 
     Children classes should implement the following methods:
 
-    * _fit (optional): This method is called during `fit()` of the forecasting.
-        It receives the exogenous variables dataframe, and should be used to initialize
-        any necessary parameters or data structures.
 
-    * _transform (optional): This method receives the exogenous variables
-        dataframe, and should return a dictionary containing the data needed for the
-        effect. Those data will be passed to the `prdict` method as named arguments.
-        By default the columns of the dataframe that match the regex pattern are
-        selected, and the result is converted to a jnp.ndarray with key "data"
+    * `_fit` (optional): This method is called during fit() of the forecasting  and
+    should be used to initialize any necessary parameters or data structures.
+    It receives the exogenous variables dataframe X, the series `y`, and the scale
+    factor `scale` that was used to scale the timeseries.
 
-    * _predict: This method receives the trend values as a jnp.ndarray, and the data
-        needed for the effect as named arguments. It should return the effect values as
-        a jnp.ndarray.
+    * `_transform` (optional): This method receives the exogenous variables
+    dataframe, and should return an object containing the data needed for the
+    effect. This object will be passed to the predict method as `data`. By default
+    the columns of the dataframe that match the regex pattern are selected, and the
+    result is converted to a `jnp.ndarray`.
+
+    * `_predict` (mandatory): This method receives the output of `_transform` and
+    all previously computed effects. It should return the effect values as a
+    `jnp.ndarray`
 
 
     Parameters

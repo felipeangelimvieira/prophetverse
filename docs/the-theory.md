@@ -33,10 +33,10 @@ $$
 
 where $\tau(t)$ is the trend component, $s(t)$ is the seasonality component,
 $h(t)$ is the holiday component, and $v(t)$ is other regressors components. Those
-components are hard-coded as linear in the original formulation of Prophet, but in Prophetverse they are versatile and can be defined by the user. __This is the first main difference
-between Prophet and Prophetverse__. The $f_i$ functions are defined by the `Effects` 
-API, where the user can create their own components and priors, by using the already
-available ones or by creating new `BaseEffect` subclasses.
+components are hard-coded as linear in the original formulation of Faacebook Prophet, but in Prophetverse they are versatile and can be defined by the user. __This is the first main difference
+between Prophet and Prophetverse__. The $f_i$ functions are defined by the [`Effects API`](https://prophetverse.com/effects-api/) 
+, where the user can create their own components and priors, by using the already
+available ones or by creating new [`BaseEffect`](https://prophetverse.com/reference/effects/) subclasses.
 
 
 \begin{align}
@@ -44,10 +44,15 @@ y_{mean} &= \sum\limits_{i=1}^n f_i(x_i(t), \{f_j(x_j)\}_{j<i}) \\
          &= f_1(x_1(t)) + f_2(x_2(t), f_1(x_1(t))) + \ldots + f_n(t, \{f_j(x_j)\}_{j<n})
 \end{align}
 
-where $f_1$, the first component, accounts for the trend. This definition superseeds the
-Prophet formulation. Effects are ordered, so that the output of previous effects can be
-used as input for the next ones. This allows for complex interactions between exogenous
-variables.
+where \
+- the first component $f_1$ accounts for the trend
+- the second component $f_2$ is other regression component that could interact with the trend $f_1$
+- the third component $f_3$ is another regression component that could interact with $f_1$, and $f_2$ 
+- And the next components can always interact with the previously defined components.
+
+
+This definition superseeds the
+Prophet formulation because effects are ordered, so that the output of previous effects can be used as input for the next ones. This allows for complex interactions between exogenous variables.
 
 ## Likelihood
 
@@ -185,7 +190,7 @@ be the values that fit the maximum and minimum points of the time series.
 
 ## Seasonality
 
-To model seasonality, Prophet uses a Fourier series to approximate periodic functions, allowing the model to fit complex seasonal patterns flexibly. This approach involves determining the number of Fourier terms (`K`), which corresponds to the complexity of the seasonality. The formula for a seasonal component `s(t)` in terms of a Fourier series is given as:
+To model seasonality, Prophetverse uses a Fourier series to approximate periodic functions, allowing the model to fit complex seasonal patterns flexibly. This approach involves determining the number of Fourier terms (`K`), which corresponds to the complexity of the seasonality. The formula for a seasonal component `s(t)` in terms of a Fourier series is given as:
 
 $$
 s(t) = \sum_{k=1}^K \left( a_k \cos\left(\frac{2\pi kt}{P}\right) + b_k \sin\left(\frac{2\pi kt}{P}\right) \right)

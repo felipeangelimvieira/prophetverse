@@ -28,7 +28,7 @@ If you have made it to the Making a [pull request](https://docs.github.com/en/pu
 
 2. Step 1: [install poetry](https://python-poetry.org/docs/)
 3. Step 2: install dev dependencies
-    <br> ``` poetry install --with dev ``` </br>
+    <br> ``` poetry install --extras dev ``` </br>
 
 
 ## Contributing to the documentation

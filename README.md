@@ -16,10 +16,11 @@ Prophetverse leverages the theory behind the Prophet model for time series forec
 
 ## Table of Contents
 - [🚀 Installation](#-installation)
-- [📊 Forecasting with Default Values](#-forecasting-with-default-values)
+- [📊 Forecasting with default hyperparameters](#-forecasting-with-default-hyperparameters)
 - [🌟 Features & Comparison with Meta's Prophet](#-features--comparison-with-metas-prophet)
 - [🤝 Contributing to Prophetverse](#-contributing-to-prophetverse)
 - [📚 Documentation](#-documentation)
+- [🗺 Roadmap](https://github.com/felipeangelimvieira/prophetverse/discussions/99)
 
 ## 🚀 Installation
 
@@ -35,7 +36,7 @@ Or with poetry:
 poetry add prophetverse
 ```
 
-## 📊 Forecasting with Default Values
+## 📊 Forecasting with default hyperparameters
 
 Prophetverse model provides an interface compatible with sktime. Here's how to use it:
 
@@ -49,7 +50,7 @@ model = Prophetverse()
 model.fit(y=y, X=X)
 
 # Forecast in sample
-y_pred = model.predict(X=X, fh=y.index)
+y_pred = model.predict(X=X, fh=[1,2,3,4])
 ```
 
 ## 🌟 Features & Comparison with Meta's Prophet

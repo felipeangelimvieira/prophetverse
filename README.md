@@ -9,34 +9,19 @@
 [![codecov](https://codecov.io/gh/felipeangelimvieira/prophetverse/graph/badge.svg?token=O37PGJI3ZX)](https://codecov.io/gh/felipeangelimvieira/prophetverse)
 
 
-This library was created to provide new versions of the Prophet model for timeseries forecasting. Implemented with numpyro, it allows to provide custom priors for specific groups of exogenous variables, and also offers a multivariate implementation for hierarchical forecasting, with potentially shared coefficients between timeseries. All implementations are based on sktime interface.
 
-### Table of contentes
-- [Features](#features)
-- [Installation](#installation)
-- [Differences between this Prophet and the original one](#differences-between-this-prophet-and-the-original-one)
-- [Contributing to Prophetverse](#contributing-to-prophetverse)
-
-### Features
-
-✅ Univariate and multivariate forecasting
-
-✅ Gamma-likelihood and Negative Binomial likelihood for count data
-
-✅ Custom prior distributions for exogenous variables
-
-✅ Non-linear effects for exogenous variables (one may create custom effects inheriting AbstractEffect class)
-
-✅ Shared coefficients between timeseries (multi-variate model)
-
-✅ Sktime interface
-
-✅ Capacity parameter of logistic trend as a random variable
-
-✅ MCMC and MAP inference
+Prophetverse leverages the theory behind the Prophet model for time series forecasting and expands it into __a more general framework__, enabling custom priors, non-linear effects for exogenous variables and other likelihoods. Built on top of [sktime](https://www.sktime.net/en/stable/) and [numpyro](https://num.pyro.ai/en/stable/), Prophetverse aims to provide a flexible and easy-to-use library for time series forecasting with a focus on interpretability and customizability. It is particularly useful for Marketing Mix Modeling, where understanding the effect of different marketing channels on sales is crucial.
 
 
-## Installation
+
+## Table of Contents
+- [🚀 Installation](#-installation)
+- [📊 Forecasting with Default Values](#-forecasting-with-default-values)
+- [🌟 Features & Comparison with Meta's Prophet](#-features--comparison-with-metas-prophet)
+- [🤝 Contributing to Prophetverse](#-contributing-to-prophetverse)
+- [📚 Documentation](#-documentation)
+
+## 🚀 Installation
 
 To install with pip:
 
@@ -50,44 +35,47 @@ Or with poetry:
 poetry add prophetverse
 ```
 
-## Differences between this Prophet and the original one
+## 📊 Forecasting with Default Values
 
-The main differences with the original Prophet model are:
+Prophetverse model provides an interface compatible with sktime. Here's how to use it:
 
-### Logistic trend
+```python
+from prophetverse.sktime import Prophetverse
 
-In this implementation, the capacity is modeled as a random variable and is assumed to be constant. In the original model, it was necessary to pass the capacity as a hyperparameter, but we often don't know the maximum value. One example is forecasting the number of new users of a product. We may not know surely what the maximum number of new users is, and may be particularly interested in it.
+# Create the model
+model = Prophetverse()
 
-### Gamma and Negative Binomial likelihoods
+# Fit the model
+model.fit(y=y, X=X)
 
-The original model only supports Gaussian likelihood. This implementation supports Gamma and Negative Binomial likelihoods, which are useful for count data.
+# Forecast in sample
+y_pred = model.predict(X=X, fh=y.index)
+```
 
-### Custom priors
+## 🌟 Features & Comparison with Meta's Prophet
 
-Users can set different prior distributions for the model parameters and define custom relationships between the exogenous variables and their effects on the mean. For example, one may want to force a positive effect of a variable on the mean, and use a HalfNormal prior for the coefficient and a `prophetverse.effects.LinearEffect` for the effect (see examples for more details).
+Prophetverse is similar to the original Prophet model in many aspects, but it has some differences and new features. The following table summarizes the main features of Prophetverse and compares them with the original Prophet model:
 
-I believe this is one of the most important features of this library. It opens the door to a lot of applications, such as Marketing Mix Modeling, which has the objective of understanding the effect of different marketing channels on sales. A saturating effect, such as a Hill Function, can be used to model the diminishing returns of a given channel.
 
-### Changepoints
 
-The changepoint interval is used instead of the changepoint number. Motivation: as the time series evolve, a given changepoint number may have different meanings. For example, a changepoint number of 10 may be too much for a series with 100 observations but too little for a series with 1000 observations. The changepoint interval may avoid this problem and avoid the need of tuning this hyperparameter frequently.
+| Feature                         | Prophetverse                                                                                                               | Original Prophet                         | Motivation |
+|---------------------------------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------| ----------------------------------------- |
+| **Logistic trend**              | Capacity as a random variable                           | Capacity as a hyperparameter, user input required             | The capacity is usually unknown by the users. Having it as a variable is useful for Total Addressable Market inference |
+| **Custom trend**               | Customizable trend functions                                                                                                | Not available                            | Users can create custom trends and leverage their knowledge about the timeseries to enhance long-term accuracy |
+| **Likelihoods**                 | Gaussian, Gamma and Negative Binomial                                                                                                | Gaussian only                            | Gaussian likelihood fails to provide good forecasts to positive-only and count data (sales, for example) |
+| **Custom priors**               | Supports custom priors for model parameters and exogenous variables                                                        | Not supported                            | Forcing positive coefficients, using prior knowledge to model the timeseries|
+| **Custom exogenous effects**              | Non-linear and customizable effects for exogenous variables, shared coefficients between time series                       | Not available                            | Users can create any kind of relationship between exogenous variables and the timeseries, which can be useful for Marketing Mix Modeling and other applications. |
+| **Changepoints**                | Uses changepoint interval                                                                                                  | Uses changepoint number                  | The changepoint number is not stable in the sense that, when the size of timeseries increases, its impact on forecast changes. Think about setting a changepoint number when timeseries has 6 months, and forecasting in future with 2 years of data (4x time original size). Re-tuning would be required. Prophetverse is expected to be more stable |
+| **Scaling**                     | Time series scaled internally, exogenous variables scaled by the user                                                      | Time series scaled internally            | Scaling `y` is needed to enhance user experience with hyperparameters. On the other hand, not scaling the exogenous variables provide more control to the user and they can leverage sktime's transformers to handle that. |
+| **Seasonality**                 | Fourier terms for seasonality passed as exogenous variables                                                                | Built-in seasonality handling            | Setting up seasonality requires almost zero effort by using `LinearFourierSeasonality` in Prophetverse. The idea is to allow the user to create custom seasonalities easily, without hardcoding it in the code. |
+| **Multivariate model**          | Hierarchical model with multivariate normal likelihood and LKJ prior, bottom-up forecast                                    | Not available                            | Having shared coefficients, using global information to enhance individual forecast.|| **Inference methods**           | MCMC and MAP                                                                                                               | MCMC and MAP                            | |
+| **Implementation** | Numpyro | Stan
 
-### Scaling
 
-The time series is scaled internally as it is in the original model to provide more stable hyperparameters. However, exogenous variables must be scaled by the user. For that, you can use sktime's transformers and pass them to the `feature_transformer` argument of the model.
+## 🤝 Contributing to Prophetverse
 
-### Seasonality
+We welcome contributions! Check out our [contributing guidelines](https://prophetverse.com/development/development-guide//) to get started.
 
-The Fourier terms for seasonality must be passed as exogenous variables in the `feature_transformer` argument, see [FourierFeatures](https://www.sktime.net/en/stable/api_reference/auto_generated/sktime.transformations.series.fourier.FourierFeatures.html) for a ready-to-use transformer. Also, check the examples in this documentation.
+## 📚 Documentation
 
-### Multivariate model
-
-For the hierarchical model, the forecast is done in a bottom-up fashion. All series parameters are inferred simultaneously, and a multivariate normal likelihood is used (with LKJ prior for the correlation matrix). In the future, forecasts with OLS reconciliation may be implemented.
-
-This model is also useful if you want to share coefficients of exogenous variables between time series. For example, if you have a dataset with multiple time series of sales of different products, you may want to share the effect of a given marketing channel between them. This is also possible with this implementation.
-
-## Contributing to Prophetverse
-
-All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas are welcome.
-
-A detailed overview on how to contribute can be found in the **[contributing guide](https://felipeangelimvieira.github.io/prophetverse/development/development-guide)**.
+Detailed documentation is available [here](https://prophetverse.com)

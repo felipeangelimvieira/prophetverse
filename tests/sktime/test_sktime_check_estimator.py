@@ -11,7 +11,6 @@ PROPHET_MODELS = [
 ]
 
 
-@pytest.mark.skip(reason="Temporarily disabled")
 @pytest.mark.parametrize("model", PROPHET_MODELS)
 def test_check_estimator(model):
     """Test the sktime contract for Prophet and HierarchicalProphet."""

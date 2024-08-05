@@ -1,20 +1,20 @@
 """Configure tests and declare global fixtures."""
 
-import warnings
+import warnings  # noqa: F401
 
 import jax.numpy as jnp
-import numpyro
+import numpyro  # noqa: F401
 import pandas as pd
 import pytest
 
 from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
 
 def pytest_sessionstart(session):
     """Avoid NaNs in tests."""
-    numpyro.enable_x64()
+    # numpyro.enable_x64()
 
 
 @pytest.fixture(name="effects_sample_data")

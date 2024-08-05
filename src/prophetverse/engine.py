@@ -3,6 +3,7 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
+import gc
 from typing import Callable
 
 import jax
@@ -129,9 +130,13 @@ class MAPInferenceEngine(InferenceEngine):
         """
         self.guide_ = AutoDelta(self.model, init_loc_fn=init_to_mean())
         svi_ = SVI(self.model, self.guide_, self.optimizer_factory(), loss=Trace_ELBO())
+
         self.run_results_: SVIRunResult = svi_.run(
             rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
         )
+
+        del svi_
+        gc.collect()
 
         self.raise_error_if_nan_loss(self.run_results_)
 

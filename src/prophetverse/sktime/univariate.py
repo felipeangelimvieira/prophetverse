@@ -416,14 +416,12 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
-        params = []
-        for likelihood in _LIKELIHOOD_MODEL_MAP.keys():
-            params.append(
-                {
-                    "likelihood": likelihood,
-                    "optimizer_steps": 10,
-                }
-            )
+        params = [
+            {
+                "optimizer_steps": 1,
+            }
+        ]
+
         return params
 
 

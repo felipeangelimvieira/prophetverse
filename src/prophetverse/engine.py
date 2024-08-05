@@ -129,14 +129,22 @@ class MAPInferenceEngine(InferenceEngine):
             The updated MAPInferenceEngine object.
         """
         self.guide_ = AutoDelta(self.model, init_loc_fn=init_to_mean())
-        svi_ = SVI(self.model, self.guide_, self.optimizer_factory(), loss=Trace_ELBO())
 
-        self.run_results_: SVIRunResult = svi_.run(
-            rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
+        def get_result(rng_key, model, guide, optimizer, num_steps, **kwargs):
+            svi_ = SVI(model, guide, optimizer, loss=Trace_ELBO())
+            return svi_.run(rng_key=rng_key, num_steps=num_steps, **kwargs)
+
+        self.run_results_: SVIRunResult = get_result(
+            self.rng_key,
+            self.model,
+            self.guide_,
+            self.optimizer_factory(),
+            self.num_steps,
+            **kwargs
         )
 
-        del svi_
         gc.collect()
+        jax.clear_caches()
 
         self.raise_error_if_nan_loss(self.run_results_)
 

@@ -419,7 +419,14 @@ class Prophetverse(BaseEffectsBayesianForecaster):
         params = [
             {
                 "optimizer_steps": 1,
-            }
+                "inference_method": "map",
+            },
+            {
+                "inference_method": "mcmc",
+                "mcmc_samples": 1,
+                "mcmc_warmup": 1,
+                "mcmc_chains": 1,
+            },
         ]
 
         return params

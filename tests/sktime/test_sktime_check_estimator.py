@@ -5,19 +5,9 @@ import gc  # noqa: F401
 import pytest  # noqa: F401
 from sktime.utils.estimator_checks import check_estimator, parametrize_with_checks
 
-from prophetverse.sktime import (
-    HierarchicalProphet,
-    Prophet,
-    ProphetGamma,
-    ProphetNegBinomial,
-)
+from prophetverse.sktime import HierarchicalProphet, Prophetverse
 
-PROPHET_MODELS = [
-    Prophet,
-    ProphetGamma,
-    ProphetNegBinomial,
-    HierarchicalProphet,
-]
+PROPHET_MODELS = [Prophetverse, HierarchicalProphet]
 
 
 @parametrize_with_checks(PROPHET_MODELS)

@@ -26,7 +26,12 @@ def get_bottom_series_idx(y):
     pd.Index
         The index of the bottom series.
     """
-    return _get_s_matrix(y).columns
+    if y.index.nlevels == 1:
+        raise ValueError("y must be a multi-index DataFrame")
+    if y.index.nlevels == 2:
+        return pd.Index([x for x in y.index.droplevel(-1).unique() if x != "__total"])
+    series = pd.Index([x for x in y.index.droplevel(-1).unique() if x[-1] != "__total"])
+    return series
 
 
 def loc_bottom_series(y):

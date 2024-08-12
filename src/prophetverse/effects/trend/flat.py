@@ -5,10 +5,12 @@ import numpyro
 import numpyro.distributions as dist
 import pandas as pd
 
-from .base import TrendModel
+from prophetverse.effects.base import BaseEffect
+
+from .base import TrendEffectMixin
 
 
-class FlatTrend(TrendModel):
+class FlatTrend(TrendEffectMixin, BaseEffect):
     """Flat trend model.
 
     The mean of the target variable is used as the prior location for the trend.
@@ -23,17 +25,22 @@ class FlatTrend(TrendModel):
         self.changepoint_prior_scale = changepoint_prior_scale
         super().__init__()
 
-    def initialize(self, y: pd.DataFrame):
-        """Set the prior location for the trend.
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+        """Initialize the effect.
+
+        Set the prior location for the trend.
 
         Parameters
         ----------
         y : pd.DataFrame
-            The target variable.
+            The timeseries dataframe
+
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
         """
         self.changepoint_prior_loc = y.mean().values
 
-    def fit(self, idx: pd.PeriodIndex) -> dict:
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> dict:
         """Prepare input data (a constant factor in this case).
 
         Parameters
@@ -46,12 +53,11 @@ class FlatTrend(TrendModel):
         dict
             dictionary containing the input data for the trend model
         """
-        return {
-            "constant_vector": jnp.ones((len(idx), 1)),
-        }
+        idx = X.index
+        return jnp.ones((len(idx), 1))
 
-    def compute_trend(  # type: ignore[override]
-        self, constant_vector: jnp.ndarray, **kwargs
+    def _predict(  # type: ignore[override]
+        self, data: jnp.ndarray, predicted_effects=None
     ) -> jnp.ndarray:
         """Apply the trend.
 
@@ -65,6 +71,9 @@ class FlatTrend(TrendModel):
         jnp.ndarray
             The forecasted trend
         """
+        # Alias for clarity
+        constant_vector = data
+
         mean = self.changepoint_prior_loc
         var = self.changepoint_prior_scale**2
 

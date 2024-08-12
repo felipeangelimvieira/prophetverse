@@ -37,11 +37,13 @@ def test_initialization_defaults():
 
 
 def test__predict_multiplicative(hill_effect_multiplicative):
-    trend = jnp.array([1.0, 2.0, 3.0])
-    data = jnp.array([0.5, 1.0, 1.5])
+    trend = jnp.array([1.0, 2.0, 3.0]).reshape((-1, 1))
+    data = jnp.array([0.5, 1.0, 1.5]).reshape((-1, 1))
 
     with seed(numpyro.handlers.seed, 0):
-        result = hill_effect_multiplicative.predict(trend, data=data)
+        result = hill_effect_multiplicative.predict(
+            data=data, predicted_effects={"trend": trend}
+        )
 
     half_max, slope, max_effect = 0.5, 1.0, 1.5
     x = _exponent_safe(data / half_max, -slope)
@@ -52,11 +54,13 @@ def test__predict_multiplicative(hill_effect_multiplicative):
 
 
 def test__predict_additive(hill_effect_additive):
-    trend = jnp.array([1.0, 2.0, 3.0])
-    data = jnp.array([0.5, 1.0, 1.5])
+    trend = jnp.array([1.0, 2.0, 3.0]).reshape((-1, 1))
+    data = jnp.array([0.5, 1.0, 1.5]).reshape((-1, 1))
 
     with seed(numpyro.handlers.seed, 0):
-        result = hill_effect_additive.predict(trend, data=data)
+        result = hill_effect_additive.predict(
+            data=data, predicted_effects={"trend": trend}
+        )
 
     half_max, slope, max_effect = 0.5, 1.0, 1.5
     x = _exponent_safe(data / half_max, -slope)

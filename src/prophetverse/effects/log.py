@@ -1,6 +1,6 @@
 """Definition of Log Effect class."""
 
-from typing import Optional
+from typing import Dict, Optional
 
 import jax.numpy as jnp
 import numpyro
@@ -39,24 +39,27 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
         super().__init__(effect_mode=effect_mode)
 
     def _predict(  # type: ignore[override]
-        self, trend: jnp.ndarray, **kwargs
+        self,
+        data: jnp.ndarray,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
     ) -> jnp.ndarray:
-        """Compute the effect using the log transformation.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component.
-        data : jnp.ndarray
-            The input data.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The computed effect based on the given trend and data.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
-        data: jnp.ndarray = kwargs.pop("data")
-
         scale = numpyro.sample("log_scale", self.scale_prior)
         rate = numpyro.sample("log_rate", self.rate_prior)
         effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))

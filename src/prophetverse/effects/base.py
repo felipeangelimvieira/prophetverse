@@ -1,7 +1,6 @@
 """Module that stores abstract class of effects."""
 
-from enum import Enum
-from typing import Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 import jax.numpy as jnp
 import pandas as pd
@@ -13,18 +12,6 @@ __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
 
 EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
-
-
-class Stage(str, Enum):
-    """
-    Enum class for stages of the forecasting model.
-
-    Used to indicate the stage of the model, either "train" or "predict", for the
-    effect preparation steps.
-    """
-
-    TRAIN: str = "train"
-    PREDICT: str = "predict"
 
 
 class BaseEffect(BaseObject):
@@ -43,19 +30,21 @@ class BaseEffect(BaseObject):
 
     Children classes should implement the following methods:
 
-    * _fit (optional): This method is called during `fit()` of the forecasting.
-        It receives the exogenous variables dataframe, and should be used to initialize
-        any necessary parameters or data structures.
 
-    * _transform (optional): This method receives the exogenous variables
-        dataframe, and should return a dictionary containing the data needed for the
-        effect. Those data will be passed to the `prdict` method as named arguments.
-        By default the columns of the dataframe that match the regex pattern are
-        selected, and the result is converted to a jnp.ndarray with key "data"
+    * `_fit` (optional): This method is called during fit() of the forecasting  and
+    should be used to initialize any necessary parameters or data structures.
+    It receives the exogenous variables dataframe X, the series `y`, and the scale
+    factor `scale` that was used to scale the timeseries.
 
-    * _predict: This method receives the trend values as a jnp.ndarray, and the data
-        needed for the effect as named arguments. It should return the effect values as
-        a jnp.ndarray.
+    * `_transform` (optional): This method receives the exogenous variables
+    dataframe, and should return an object containing the data needed for the
+    effect. This object will be passed to the predict method as `data`. By default
+    the columns of the dataframe that match the regex pattern are selected, and the
+    result is converted to a `jnp.ndarray`.
+
+    * `_predict` (mandatory): This method receives the output of `_transform` and
+    all previously computed effects. It should return the effect values as a
+    `jnp.ndarray`
 
 
     Parameters
@@ -88,11 +77,14 @@ class BaseEffect(BaseObject):
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,
+        # Should only the indexes related to the forecasting horizon be passed to
+        # _transform?
+        "filter_indexes_with_forecating_horizon_at_transform": True,
     }
 
     def __init__(self):
         self._input_feature_column_names: List[str] = []
-        self._is_fitted = False
+        self._is_fitted: bool = False
 
     @property
     def input_feature_column_names(self) -> List[str]:
@@ -114,7 +106,7 @@ class BaseEffect(BaseObject):
             return True
         return False
 
-    def fit(self, X: pd.DataFrame, scale: float = 1.0):
+    def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
 
         This method is called during `fit()` of the forecasting model.
@@ -126,6 +118,9 @@ class BaseEffect(BaseObject):
 
         Parameters
         ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
         X : pd.DataFrame
             The DataFrame to initialize the effect.
 
@@ -144,9 +139,9 @@ class BaseEffect(BaseObject):
             than one level of index.
         """
         if not self.get_tag("supports_multivariate", False):
-            if X.index.nlevels > 1:
+            if X is not None and X.index.nlevels > 1:
                 raise ValueError(
-                    f"The effect of if {self.id} does not "
+                    f"The effect {self.__class__.__name__} does not "
                     + "support multivariate data"
                 )
 
@@ -155,10 +150,10 @@ class BaseEffect(BaseObject):
         else:
             self._input_feature_column_names = X.columns.tolist()
 
-        self._fit(X, scale=scale)
+        self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
 
-    def _fit(self, X: pd.DataFrame, scale: float = 1.0):
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
 
         This method is called by the `fit()` method and can be overridden by
@@ -166,20 +161,28 @@ class BaseEffect(BaseObject):
 
         Parameters
         ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
         X : pd.DataFrame
             The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
         """
         pass
 
     def transform(
-        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
-    ) -> Dict[str, jnp.ndarray]:
+        self,
+        X: pd.DataFrame,
+        fh: pd.Index,
+    ) -> Any:
         """Prepare input data to be passed to numpyro model.
 
-        This method is called during `fit()` and `predict()` of the forecasting model.
-        It receives the Exogenous variables DataFrame and should return a dictionary
-        containing the data needed for the effect. Those data will be passed to the
-        `predict` method as named arguments.
+        This method receives the Exogenous variables DataFrame and should return a
+        the data needed for the effect. Those data will be passed to the `predict`
+        method as `data` argument.
 
         Parameters
         ----------
@@ -188,14 +191,14 @@ class BaseEffect(BaseObject):
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
 
-
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the data needed for the effect. The keys of the
-            dictionary should be the names of the arguments of the `predict` method, and
-            the values should be the corresponding data as jnp.ndarray.
+        Any
+            Any object containing the data needed for the effect. The object will be
+            passed to `predict` method as `data` argument.
 
         Raises
         ------
@@ -209,16 +212,24 @@ class BaseEffect(BaseObject):
         if self.should_skip_predict:
             return {}
 
+        if self.get_tag("filter_indexes_with_forecating_horizon_at_transform", True):
+            # Filter when index level -1 is in fh
+            if X is not None:
+                X = X.loc[X.index.get_level_values(-1).isin(fh)]
+
         X = X[self.input_feature_column_names]
-        return self._transform(X, stage=stage)
+        return self._transform(X, fh)
 
     def _transform(
-        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
-    ) -> Dict[str, jnp.ndarray]:
-        """Prepare the input data in a dict of jax arrays.
+        self,
+        X: pd.DataFrame,
+        fh: pd.Index,
+    ) -> Any:
+        """Prepare input data to be passed to numpyro model.
 
-        This method is called by the `fit()` method and can be overridden
-        by subclasses to provide additional data preparation logic.
+        This method receives the Exogenous variables DataFrame and should return a
+        the data needed for the effect. Those data will be passed to the `predict`
+        method as `data` argument.
 
         Parameters
         ----------
@@ -227,57 +238,76 @@ class BaseEffect(BaseObject):
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
 
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
+
         Returns
         -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the data needed for the effect. The keys of the
-            dictionary should be the names of the arguments of the `predict` method, and
-            the values should be the corresponding data as jnp.ndarray.
+        Any
+            Any object containing the data needed for the effect. The object will be
+            passed to `predict` method as `data` argument.
         """
         array = series_to_tensor_or_array(X)
-        return {"data": array}
+        return array
 
-    def predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def predict(
+        self,
+        data: Dict,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+    ) -> jnp.ndarray:
         """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            An array containing the trend values.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The effect values.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
-        x = self._predict(trend, **kwargs)
+        if predicted_effects is None:
+            predicted_effects = {}
+
+        x = self._predict(data, predicted_effects)
 
         return x
 
-    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        """Apply the effect.
-
-        This method is called by the `predict()` method and must be overridden by
-        subclasses to provide the actual effect computation logic.
+    def _predict(
+        self,
+        data: Dict,
+        predicted_effects: Dict[str, jnp.ndarray],
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            An array containing the trend values.
+        data : Any
+            Data obtained from the transformed method.
 
-        kwargs: dict
-            Additional keyword arguments that may be needed to compute the effect.
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The effect values.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
         raise NotImplementedError("Subclasses must implement _predict()")
 
-    def __call__(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
+    def __call__(
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray]
+    ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
-        return self.predict(trend, **kwargs)
+        return self.predict(data=data, predicted_effects=predicted_effects)
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
@@ -314,20 +344,42 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
 
         super().__init__()
 
-    def predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        """Apply the effect.
+    def predict(
+        self,
+        data: Any,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend of the model.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The computed effect.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
-        x = super().predict(trend, **kwargs)
+        if predicted_effects is None:
+            raise ValueError(
+                "BaseAdditiveOrMultiplicativeEffect requires trend in"
+                + " predicted_effects"
+            )
+
+        trend = predicted_effects["trend"]
+        if trend.ndim == 1:
+            trend = trend.reshape((-1, 1))
+
+        x = super().predict(data=data, predicted_effects=predicted_effects)
+        x = x.reshape(trend.shape)
+
         if self.effect_mode == "additive":
             return x
+
         return trend * x

@@ -7,7 +7,7 @@ import numpyro.distributions as dist
 import pandas as pd
 from sktime.transformations.series.fourier import FourierFeatures
 
-from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect, Stage
+from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime._expand_column_per_level import ExpandColumnPerLevel
 
@@ -57,15 +57,19 @@ class LinearFourierSeasonality(BaseEffect):
         self.effect_mode = effect_mode
         self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
 
-    def _fit(self, X: pd.DataFrame, scale: float = 1.0):
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
 
         Fit the fourier feature transformer and the linear effect.
 
         Parameters
         ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
         X : pd.DataFrame
             The DataFrame to initialize the effect.
+
         scale: float, optional
             The scale of the timeseries, by default 1.0.
         """
@@ -73,7 +77,7 @@ class LinearFourierSeasonality(BaseEffect):
             sp_list=self.sp_list,
             fourier_terms_list=self.fourier_terms_list,
             freq=self.freq,
-            keep_original_columns=True,
+            keep_original_columns=False,
         )
 
         self.fourier_features_.fit(X=X)
@@ -87,14 +91,13 @@ class LinearFourierSeasonality(BaseEffect):
             prior=dist.Normal(0, self.prior_scale), effect_mode=self.effect_mode
         )
 
-        self.linear_effect_.fit(X=X, scale=scale)
+        self.linear_effect_.fit(X=X, y=y, scale=scale)
 
-    def _transform(
-        self, X: pd.DataFrame, stage: Stage = Stage.TRAIN
-    ) -> Dict[str, jnp.ndarray]:
-        """Prepare the input data in a dict of jax arrays.
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+        """Prepare input data to be passed to numpyro model.
 
-        Creates the fourier terms and the linear effect.
+        This method return a jnp.ndarray of sines and cosines of the given
+        frequencies.
 
         Parameters
         ----------
@@ -103,41 +106,46 @@ class LinearFourierSeasonality(BaseEffect):
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
 
-        stage : Stage, optional
-            The stage of the effect, by default Stage.TRAIN. This can be used to
-            differentiate between training and prediction stages and apply different
-            transformations accordingly.
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the data needed for the effect.
+        jnp.ndarray
+            Any object containing the data needed for the effect. The object will be
+            passed to `predict` method as `data` argument.
         """
         X = self.fourier_features_.transform(X)
 
         if self.expand_column_per_level_ is not None:
             X = self.expand_column_per_level_.transform(X)
 
-        array = self.linear_effect_.transform(X, stage)
+        array = self.linear_effect_.transform(X, fh)
 
         return array
 
-    def _predict(self, trend: jnp.ndarray, **kwargs) -> jnp.ndarray:
-        """Apply the effect.
-
-        Apply linear seasonality.
+    def _predict(
+        self,
+        data: Dict,
+        predicted_effects: Dict[str, jnp.ndarray],
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            An array containing the trend values.
+        data : Any
+            Data obtained from the transformed method.
 
-        kwargs: dict
-            Additional keyword arguments that may be needed to compute the effect.
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The effect values.
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
         """
-        return self.linear_effect_.predict(trend, **kwargs)
+        return self.linear_effect_.predict(
+            data=data, predicted_effects=predicted_effects
+        )

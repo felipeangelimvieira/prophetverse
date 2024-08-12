@@ -4,7 +4,8 @@ Piecewise trend models.
 This module contains the implementation of piecewise trend models (logistic and linear).
 """
 
-from typing import Tuple, Union
+import itertools
+from typing import Dict, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -13,14 +14,15 @@ import numpyro.distributions as dist
 import pandas as pd
 from sktime.transformations.series.detrend import Detrender
 
+from prophetverse.effects.base import BaseEffect
 from prophetverse.utils.frame_to_array import series_to_tensor
 
-from .base import TrendModel
+from .base import TrendEffectMixin
 
 __all__ = ["PiecewiseLinearTrend", "PiecewiseLogisticTrend"]
 
 
-class PiecewiseLinearTrend(TrendModel):
+class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
     """Piecewise Linear Trend model.
 
     This model assumes that the trend is piecewise linear, with changepoints
@@ -71,43 +73,134 @@ class PiecewiseLinearTrend(TrendModel):
         self.remove_seasonality_before_suggesting_initial_vals = (
             remove_seasonality_before_suggesting_initial_vals
         )
-        super().__init__(**kwargs)
+        super().__init__()
 
-    def initialize(self, y: pd.DataFrame):
-        """
-        Initialize the piecewise trend model.
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+        """Initialize the effect.
+
+        Set the prior location for the trend.
 
         Parameters
         ----------
-        y: pd.DataFrame
-            The input data.
+        y : pd.DataFrame
+            The timeseries dataframe
 
-        Returns
-        -------
-            None
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
         """
-        super().initialize(y)
+        super()._fit(X=X, y=y, scale=scale)
+
         t_scaled = self._index_to_scaled_timearray(
             y.index.get_level_values(-1).unique()
         )
         self._setup_changepoints(t_scaled)
         self._setup_changepoint_prior_vectors(y)
+        self._index_names = y.index.names
+        self._series_idx = None
+        if y.index.nlevels > 1:
+            self._series_idx = y.index.droplevel(-1).unique()
 
-    def fit(self, idx: pd.PeriodIndex) -> dict:
+    def _fh_to_index(self, fh: pd.Index) -> Union[pd.Index, pd.MultiIndex]:
+        """Convert an index representing the fcst horizon to multiindex if needed.
+
+        If there's a single timeseries, just returns the fh.
+
+        Parameters
+        ----------
+        fh : pd.Index
+            The timeindex representing the forecasting horizon.
+
+        Returns
+        -------
+        Union[pd.Index, pd.MultiIndex]
+            The fh for all time series passed during fit
+        """
+        if self._series_idx is None:
+            return fh
+
+        idx_list = self._series_idx.to_list()
+        idx_list = [x if isinstance(x, tuple) else (x,) for x in idx_list]
+        # Create a new multi-index combining the existing levels with the new time index
+        new_idx_tuples = list(
+            map(
+                lambda x: (
+                    *x[0],
+                    x[1],
+                ),
+                # Create a cross product of current indexes
+                # and dates in fh
+                itertools.product(idx_list, fh.to_list()),
+            )
+        )
+        return pd.MultiIndex.from_tuples(new_idx_tuples, names=self._index_names)
+
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> dict:
         """
         Prepare the input data for the piecewise trend model.
 
         Parameters
         ----------
-        idx: pd.PeriodIndex
-            The index of the data.
+        X: pd.DataFrame
+            The exogenous variables DataFrame.
+        fh: pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
-        dict
-            A dictionary containing the prepared input data.
+        jnp.ndarray
+            An array containing the prepared input data.
         """
-        return {"changepoint_matrix": self.get_changepoint_matrix(idx)}
+        idx = self._fh_to_index(fh)
+        return self.get_changepoint_matrix(idx)
+
+    def _predict(
+        self, data: jnp.ndarray, predicted_effects: Dict[str, jnp.ndarray]
+    ) -> jnp.ndarray:
+        """
+        Compute the trend based on the given changepoint matrix.
+
+        Parameters
+        ----------
+        data: jnp.ndarray
+            The changepoint matrix.
+        predicted_effects: Dict[str, jnp.ndarray]
+            Dictionary of previously computed effects. For the trend, it is an empty
+            dict.
+
+        Returns
+        -------
+        jnp.ndarray
+            The computed trend.
+        """
+        # alias for clarity
+        changepoint_matrix = data
+        offset = numpyro.sample(
+            "offset",
+            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
+        )
+
+        changepoint_coefficients = numpyro.sample(
+            "changepoint_coefficients",
+            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
+        )
+
+        # If multivariate
+        if changepoint_matrix.ndim == 3:
+            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
+            offset = offset.reshape((-1, 1, 1))
+
+        trend = (changepoint_matrix) @ changepoint_coefficients + offset
+
+        if trend.ndim == 1 or (
+            trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series
+        ):
+            trend = trend.reshape((-1, 1))
+
+        return trend
 
     def get_changepoint_matrix(self, idx: pd.PeriodIndex) -> jnp.ndarray:
         """
@@ -338,46 +431,6 @@ class PiecewiseLinearTrend(TrendModel):
 
         return global_rate, offset_loc
 
-    def compute_trend(  # type: ignore[override]
-        self, changepoint_matrix: jnp.ndarray
-    ) -> jnp.ndarray:
-        """
-        Compute the trend based on the given changepoint matrix.
-
-        Parameters
-        ----------
-        changepoint_matrix: jnp.ndarray
-            The changepoint matrix.
-
-        Returns
-        -------
-        jnp.ndarray
-            The computed trend.
-        """
-        offset = numpyro.sample(
-            "offset",
-            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
-        )
-
-        changepoint_coefficients = numpyro.sample(
-            "changepoint_coefficients",
-            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
-        )
-
-        # If multivariate
-        if changepoint_matrix.ndim == 3:
-            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
-            offset = offset.reshape((-1, 1, 1))
-
-        trend = (changepoint_matrix) @ changepoint_coefficients + offset
-
-        if trend.ndim == 1 or (
-            trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series
-        ):
-            trend = trend.reshape((-1, 1))
-
-        return trend
-
 
 class PiecewiseLogisticTrend(PiecewiseLinearTrend):
     """
@@ -480,8 +533,8 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
         return global_rates, offset
 
-    def compute_trend(  # type: ignore[override]
-        self, changepoint_matrix: jnp.ndarray, **kwargs
+    def _predict(  # type: ignore[override]
+        self, data: jnp.ndarray, predicted_effects=None
     ) -> jnp.ndarray:
         """
         Compute the trend for the given changepoint matrix.
@@ -499,7 +552,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         with numpyro.plate("series", self.n_series, dim=-3):
             capacity = numpyro.sample("capacity", self.capacity_prior)
 
-        trend = super().compute_trend(changepoint_matrix)
+        trend = super()._predict(data=data, predicted_effects=predicted_effects)
         if self.n_series == 1:
             capacity = capacity.squeeze()
 

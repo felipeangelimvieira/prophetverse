@@ -2,6 +2,7 @@ import pytest
 from numpyro import distributions as dist
 
 from prophetverse.effects.linear import LinearEffect
+from prophetverse.effects.trend.flat import FlatTrend
 from prophetverse.sktime.seasonality import seasonal_transformer
 from prophetverse.sktime.univariate import (
     _DISCRETE_LIKELIHOODS,
@@ -11,7 +12,6 @@ from prophetverse.sktime.univariate import (
     ProphetNegBinomial,
     Prophetverse,
 )
-from prophetverse.trend.flat import FlatTrend
 
 from ._utils import (
     execute_extra_predict_methods_tests,
@@ -162,4 +162,4 @@ def test_prophetverse_likelihood_behaviour(likelihood):
     assert model.model == _LIKELIHOOD_MODEL_MAP[likelihood]
 
     if likelihood in _DISCRETE_LIKELIHOODS:
-        assert model.should_skip_scaling
+        assert model._likelihood_is_discrete

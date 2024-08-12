@@ -9,7 +9,7 @@ import pandas as pd
 
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
 
-from .base import BaseEffect, Stage
+from .base import BaseEffect
 
 __all__ = ["LiftExperimentLikelihood"]
 
@@ -48,44 +48,60 @@ class LiftExperimentLikelihood(BaseEffect):
 
         super().__init__()
 
-    def fit(self, X: pd.DataFrame, scale: float = 1):
-        """Initialize this effect and its wrapped effect.
+    def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+        """Initialize the effect.
+
+        This method is called during `fit()` of the forecasting model.
+        It receives the Exogenous variables DataFrame and should be used to initialize
+        any necessary parameters or data structures, such as detecting the columns that
+        match the regex pattern.
+
+        This method MUST set _input_feature_columns_names to a list of column names
 
         Parameters
         ----------
-        X : DataFrame
-            Dataframe of exogenous data.
-        scale : float
-            The scale of the timeseries. This is used to normalize the lift effect.
-        """
-        self.effect.fit(X)
-        self.timeseries_scale = scale
-        super().fit(X)
+        y : pd.DataFrame
+            The timeseries dataframe
 
-    def _transform(self, X: pd.DataFrame, stage: Stage = Stage.TRAIN) -> Dict[str, Any]:
-        """Prepare the input data for the effect, and the custom likelihood.
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
+
+        Returns
+        -------
+        None
+        """
+        self.effect.fit(X=X, y=y, scale=scale)
+        self.timeseries_scale = scale
+        super().fit(X=X, y=y, scale=scale)
+
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, Any]:
+        """Prepare input data to be passed to numpyro model.
+
+        Returns a dictionary with the data for the lift and for the inner effect.
 
         Parameters
         ----------
         X : pd.DataFrame
-            The input data with exogenous variables.
-        stage : Stage, optional
-            which stage is being executed, by default Stage.TRAIN.
-            Used to determine if the likelihood should be applied.
+            The input DataFrame containing the exogenous variables for the training
+            time indexes, if passed during fit, or for the forecasting time indexes, if
+            passed during predict.
+
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
 
         Returns
         -------
         Dict[str, Any]
-            The dictionary of data passed to _predict and the likelihood.
+            Dictionary with data for the lift and for the inner effect
         """
-        data_dict = self.effect._transform(X, stage)
+        data_dict = {}
+        data_dict["inner_effect_data"] = self.effect._transform(X, fh=fh)
 
-        if stage == Stage.PREDICT:
-            data_dict["observed_lift"] = None
-            data_dict["obs_mask"] = None
-            return data_dict
-
-        X_lift = self.lift_test_results.loc[X.index]
+        X_lift = self.lift_test_results.reindex(fh, fill_value=jnp.nan)
         lift_array = series_to_tensor_or_array(X_lift)
         data_dict["observed_lift"] = lift_array / self.timeseries_scale
         data_dict["obs_mask"] = ~jnp.isnan(data_dict["observed_lift"])
@@ -93,28 +109,29 @@ class LiftExperimentLikelihood(BaseEffect):
         return data_dict
 
     def _predict(
-        self,
-        trend: jnp.ndarray,
-        **kwargs,
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray]
     ) -> jnp.ndarray:
-        """Apply the effect and the custom likelihood.
+        """Apply and return the effect values.
 
         Parameters
         ----------
-        trend : jnp.ndarray
-            The trend component.
-        observed_lift : jnp.ndarray
-            The observed lift to apply the likelihood to.
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
 
         Returns
         -------
         jnp.ndarray
-            The effect applied to the input data.
+            An array with shape (T,1) for univariate timeseries.
         """
-        observed_lift = kwargs.pop("observed_lift")
-        obs_mask = kwargs.pop("obs_mask")
+        observed_lift = data["observed_lift"]
+        obs_mask = data["obs_mask"]
 
-        x = self.effect.predict(trend, **kwargs)
+        x = self.effect.predict(
+            data=data["inner_effect_data"], predicted_effects=predicted_effects
+        )
 
         numpyro.sample(
             "lift_experiment",

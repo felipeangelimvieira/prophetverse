@@ -1,5 +1,6 @@
 """Contains the implementation of the HierarchicalProphet forecaster."""
-from typing import Any, List, Optional, Tuple
+
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd

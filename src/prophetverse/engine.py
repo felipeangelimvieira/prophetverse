@@ -128,9 +128,20 @@ class MAPInferenceEngine(InferenceEngine):
             The updated MAPInferenceEngine object.
         """
         self.guide_ = AutoDelta(self.model, init_loc_fn=init_to_mean())
-        svi_ = SVI(self.model, self.guide_, self.optimizer_factory(), loss=Trace_ELBO())
-        self.run_results_: SVIRunResult = svi_.run(
-            rng_key=self.rng_key, num_steps=self.num_steps, **kwargs
+
+        def get_result(
+            rng_key, model, guide, optimizer, num_steps, **kwargs
+        ) -> SVIRunResult:
+            svi_ = SVI(model, guide, optimizer, loss=Trace_ELBO())
+            return svi_.run(rng_key=rng_key, num_steps=num_steps, **kwargs)
+
+        self.run_results_: SVIRunResult = get_result(
+            self.rng_key,
+            self.model,
+            self.guide_,
+            self.optimizer_factory(),
+            self.num_steps,
+            **kwargs
         )
 
         self.raise_error_if_nan_loss(self.run_results_)
@@ -255,13 +266,36 @@ class MCMCInferenceEngine(InferenceEngine):
         self
             The MCMCInferenceEngine object.
         """
-        self.mcmc_ = MCMC(
-            NUTS(self.model, dense_mass=self.dense_mass, init_strategy=init_to_mean()),
+
+        def get_posterior_samples(
+            rng_key,
+            model,
+            dense_mass,
+            init_strategy,
+            num_samples,
+            num_warmup,
+            num_chains,
+            **kwargs
+        ) -> MCMC:
+            mcmc_ = MCMC(
+                NUTS(model, dense_mass=dense_mass, init_strategy=init_strategy),
+                num_samples=num_samples,
+                num_warmup=num_warmup,
+                num_chains=num_chains,
+            )
+            mcmc_.run(rng_key, **kwargs)
+            return mcmc_.get_samples()
+
+        self.posterior_samples_ = get_posterior_samples(
+            self.rng_key,
+            self.model,
+            self.dense_mass,
+            init_strategy=init_to_mean,
             num_samples=self.num_samples,
             num_warmup=self.num_warmup,
+            num_chains=self.num_chains,
+            **kwargs
         )
-        self.mcmc_.run(self.rng_key, **kwargs)
-        self.posterior_samples_ = self.mcmc_.get_samples()
         return self
 
     def predict(self, **kwargs):
@@ -282,9 +316,8 @@ class MCMCInferenceEngine(InferenceEngine):
             self.model, self.posterior_samples_, num_samples=self.num_samples
         )
 
-        numpyro.samples_predictive_ = predictive(self.rng_key, **kwargs)
-        numpyro.samples_ = self.mcmc_.get_samples()
-        return numpyro.samples_predictive_
+        self.samples_predictive_ = predictive(self.rng_key, **kwargs)
+        return self.samples_predictive_
 
 
 class MAPInferenceEngineError(Exception):

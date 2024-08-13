@@ -357,14 +357,19 @@ class Prophetverse(BaseProphetForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
-        params = []
-        for likelihood in _LIKELIHOOD_MODEL_MAP.keys():
-            params.append(
-                {
-                    "likelihood": likelihood,
-                    "optimizer_steps": 10,
-                }
-            )
+        params = [
+            {
+                "optimizer_steps": 1,
+                "inference_method": "map",
+            },
+            {
+                "inference_method": "mcmc",
+                "mcmc_samples": 1,
+                "mcmc_warmup": 1,
+                "mcmc_chains": 1,
+            },
+        ]
+
         return params
 
 

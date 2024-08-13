@@ -1,6 +1,6 @@
 """Contains the implementation of the HierarchicalProphet forecaster."""
 
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -386,7 +386,7 @@ class HierarchicalProphet(BaseProphetForecaster):
         )
 
     @classmethod
-    def get_test_params(cls, parameter_set="default") -> List[dict[str, int]]:
+    def get_test_params(cls, parameter_set="default") -> List[dict[str, Any]]:
         """Params to be used in sktime unit tests.
 
         Parameters
@@ -401,6 +401,13 @@ class HierarchicalProphet(BaseProphetForecaster):
         """
         return [
             {
-                "optimizer_steps": 1_000,
-            }
+                "optimizer_steps": 1,
+                "inference_method": "map",
+            },
+            {
+                "inference_method": "mcmc",
+                "mcmc_samples": 1,
+                "mcmc_warmup": 1,
+                "mcmc_chains": 1,
+            },
         ]

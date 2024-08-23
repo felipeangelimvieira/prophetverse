@@ -189,9 +189,6 @@ class HierarchicalProphet(BaseProphetForecaster):
         if self.correlation_matrix_concentration <= 0:
             raise ValueError("correlation_matrix_concentration must be greater than 0.")
 
-        if self.trend not in ["linear", "logistic"]:
-            raise ValueError('trend must be either "linear" or "logistic".')
-
     def _get_fit_data(self, y, X, fh):
         """
         Prepare the data for the NumPyro model.

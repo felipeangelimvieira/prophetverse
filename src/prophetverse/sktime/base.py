@@ -474,6 +474,13 @@ class BaseBayesianForecaster(BaseForecaster):
                 lambda x: np.abs(x).max()
             )
 
+        if isinstance(self._scale, (float, int)):
+            if self._scale == 0:
+                self._scale = 1
+        elif isinstance(self._scale, (pd.Series, pd.DataFrame)):
+            # Map any values that are 0 to 1
+            self._scale = self._scale.replace(0, 1)
+
     def _scale_y(self, y: pd.DataFrame) -> pd.DataFrame:
         """
         Scales the input DataFrame y (divide it by the scaling factor).

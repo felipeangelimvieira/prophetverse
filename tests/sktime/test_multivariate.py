@@ -117,3 +117,16 @@ def test_extra_predict_methods(make_X):
     )
 
     execute_extra_predict_methods_tests(forecaster=forecaster, X=X, y=y)
+
+
+def test_hierarchical_with_series_with_zeros():
+    y = make_y((2, 2, 1))
+    # Set all values to 0
+    y.iloc[:, :] = 0
+
+    forecaster = HierarchicalProphet(
+        optimizer_steps=5, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+    )
+
+    forecaster.fit(y)
+    forecaster.predict(fh=[1, 2, 3])

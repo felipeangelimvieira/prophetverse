@@ -762,8 +762,9 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
     Parameters
     ----------
-    trend : Union[str, BaseEffect], optional, one of "linear" (default) or "logistic"
-        Type of trend to use. Can also be a custom effect object.
+    trend : Union[str, BaseEffect], optional
+        One of "linear" (default), "linear1" or "logistic". Type of trend to use.
+        Can also be a custom effect object.
 
     changepoint_interval : int, optional, default=25
         Number of potential changepoints to sample in the history.
@@ -1025,6 +1026,15 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
                 offset_prior_scale=self.offset_prior_scale,
             )
 
+        elif self.trend == "linear_raw":
+            return PiecewiseLinearTrend(
+                changepoint_interval=self.changepoint_interval,
+                changepoint_range=self.changepoint_range,
+                changepoint_prior_scale=self.changepoint_prior_scale,
+                offset_prior_scale=self.offset_prior_scale,
+                remove_seasonality_before_suggesting_initial_vals=False,
+            )
+
         elif self.trend == "logistic":
             return PiecewiseLogisticTrend(
                 changepoint_interval=self.changepoint_interval,
@@ -1060,9 +1070,12 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             raise ValueError("capacity_prior_loc must be greater than 0.")
         if self.offset_prior_scale <= 0:
             raise ValueError("offset_prior_scale must be greater than 0.")
-        if self.trend not in ["linear", "logistic", "flat"] and not isinstance(
-            self.trend, BaseEffect
-        ):
+        if self.trend not in [
+            "linear",
+            "linear_raw",
+            "logistic",
+            "flat",
+        ] and not isinstance(self.trend, BaseEffect):
             raise ValueError('trend must be either "linear" or "logistic".')
 
     def _match_columns(

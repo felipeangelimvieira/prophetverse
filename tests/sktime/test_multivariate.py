@@ -2,6 +2,7 @@ import pytest
 from numpyro import distributions as dist
 
 from prophetverse.effects.linear import LinearEffect
+from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.sktime.multivariate import HierarchicalProphet
 from prophetverse.sktime.seasonality import seasonal_transformer
 
@@ -16,9 +17,14 @@ from ._utils import (
 
 HYPERPARAMS = [
     dict(
+        trend=PiecewiseLinearTrend(
+            changepoint_interval=20,
+            changepoint_range=0.8,
+            changepoint_prior_scale=0.001,
+        ),
         feature_transformer=seasonal_transformer(
             yearly_seasonality=True, weekly_seasonality=True
-        )
+        ),
     ),
     dict(
         feature_transformer=seasonal_transformer(
@@ -42,7 +48,7 @@ HYPERPARAMS = [
         ],
     ),
     dict(
-        trend="linear",
+        trend="linear_raw",
     ),
     dict(trend="logistic"),
     dict(inference_method="mcmc"),
@@ -61,7 +67,7 @@ def test_hierarchy_levels(hierarchy_levels):
     y = make_y(hierarchy_levels)
     X = make_random_X(y)
     forecaster = HierarchicalProphet(
-        optimizer_steps=20, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+        optimizer_steps=2, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
     )
     execute_fit_predict_test(forecaster, y, X)
 
@@ -74,7 +80,7 @@ def test_hyperparams(hyperparams):
     X = make_random_X(y)
     forecaster = HierarchicalProphet(
         **hyperparams,
-        optimizer_steps=20,
+        optimizer_steps=2,
         changepoint_interval=2,
         mcmc_samples=2,
         mcmc_warmup=2

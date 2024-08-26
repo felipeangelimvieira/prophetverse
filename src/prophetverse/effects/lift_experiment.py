@@ -133,12 +133,12 @@ class LiftExperimentLikelihood(BaseEffect):
             data=data["inner_effect_data"], predicted_effects=predicted_effects
         )
 
-        numpyro.sample(
-            "lift_experiment",
-            dist.Normal(x, self.prior_scale),
-            obs=observed_lift,
-            obs_mask=obs_mask,
-        )
+        with numpyro.handlers.mask(mask=obs_mask):
+            numpyro.sample(
+                "lift_experiment",
+                dist.Normal(x, self.prior_scale),
+                obs=observed_lift,
+            )
 
         return x
 

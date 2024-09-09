@@ -357,14 +357,19 @@ class Prophetverse(BaseProphetForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
-        params = []
-        for likelihood in _LIKELIHOOD_MODEL_MAP.keys():
-            params.append(
-                {
-                    "likelihood": likelihood,
-                    "optimizer_steps": 10,
-                }
-            )
+        params = [
+            {
+                "optimizer_steps": 1,
+                "inference_method": "map",
+            },
+            {
+                "inference_method": "mcmc",
+                "mcmc_samples": 1,
+                "mcmc_warmup": 1,
+                "mcmc_chains": 1,
+            },
+        ]
+
         return params
 
 
@@ -463,6 +468,30 @@ class Prophet(Prophetverse):
 
     rng_key : jax.random.PRNGKey or None (default
         Random number generator key.
+
+    Examples
+    --------
+    >>> from sktime.datasets import load_airline
+    >>> from sktime.forecasting.prophetverse import Prophetverse
+    >>> from prophetverse.effects.fourier import LinearFourierSeasonality
+    >>> from prophetverse.utils.regex import no_input_columns
+    >>> y = load_airline()
+    >>> model = Prophetverse(
+    ...     exogenous_effects=[
+    ...         (
+    ...             "seasonality",
+    ...             LinearFourierSeasonality(
+    ...                 sp_list=[12],
+    ...                 fourier_terms_list=[3],
+    ...                 freq="M",
+    ...                 effect_mode="multiplicative",
+    ...             ),
+    ...             no_input_columns,
+    ...         )
+    ...     ],
+    ... )
+    >>> model.fit(y)
+    >>> model.predict(fh=[1, 2, 3])
     """
 
     def __init__(

@@ -27,7 +27,9 @@ In Pverse some of these functions can represent  trend, and seasonality similar 
 
 The linear trend in Pverse is modeled using piecewise linear functions with changepoints. Each change point represents a discontinuity from the past trend due to changes in the real world that the model could not predict.
 
-For example, 
+For example, in 2014 brazil passed throught an economic crisis and the pattern of unemployment trend changed. So it would make sense create a changepoint in the date this pattern changed drastically due to unpredictable factors. 
+
+![My Plot Image](src/prophetverse/examples/figs/fig_unemployment.png) #TODO correct broken image
 
 It can be simplified as a first-order spline regression with \( M \) knots (changepoints):
 

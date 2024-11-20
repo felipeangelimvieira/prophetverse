@@ -3,7 +3,7 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
-from typing import Callable
+from typing import Callable, Optional
 
 import jax
 from skbase.base import BaseObject
@@ -37,7 +37,7 @@ class BaseInferenceEngine(BaseObject):
         "object_type": "inference_engine",
     }
 
-    def __init__(self, model: Callable, rng_key=None):
+    def __init__(self, model: Optional[Callable] = None, rng_key=None):
         self.model = model
         self.rng_key = rng_key
 
@@ -82,6 +82,6 @@ class BaseInferenceEngine(BaseObject):
 class InferenceEngine(BaseInferenceEngine):
     """Temporary class to handle deprecation of InferenceEngine."""
 
-    def __init__(self, model: Callable, rng_key=None):
+    def __init__(self, model: Optional[Callable] = None, rng_key=None):
         deprecation_warning("InferenceEngine", "0.4.1")
         super().__init__(model, rng_key)

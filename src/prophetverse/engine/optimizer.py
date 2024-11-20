@@ -27,6 +27,8 @@ class BaseOptimizer(BaseObject):
     This abstract base class defines the interface that all optimizers must implement.
     """
 
+    _tags = {"object_type": "optimizer"}
+
     def __init__(self):
         """
         Initialize the BaseOptimizer.
@@ -164,6 +166,12 @@ class _LegacyNumpyroOptimizer(BaseOptimizer):
         self.optimizer_kwargs = optimizer_kwargs
         super().__init__()
 
+        self._optimizer_kwargs = optimizer_kwargs
+        if self.optimizer_name == "Adam" and optimizer_kwargs is None:
+            self._optimizer_kwargs = {"step_size": 0.001}
+        elif self.optimizer_name != "Adam" and optimizer_kwargs is None:
+            self._optimizer_kwargs = {}
+
     def create_optimizer(self) -> _NumPyroOptim:
         """
         Create and return a NumPyro optimizer instance.
@@ -178,13 +186,14 @@ class _LegacyNumpyroOptimizer(BaseOptimizer):
         AttributeError
             If the specified optimizer_name is not found in numpyro.optim.
         """
-        optimizer_kwargs = self.optimizer_kwargs or {}
-        return getattr(numpyro.optim, self.optimizer_name)(**optimizer_kwargs)
+        return getattr(numpyro.optim, self.optimizer_name)(**self._optimizer_kwargs)
 
 
 class _OptimizerFromCallable(BaseOptimizer):
+    """Temporary class to support legacy optimizer factories."""
 
     def __init__(self, func):
+
         self.func = func
         super().__init__()
 

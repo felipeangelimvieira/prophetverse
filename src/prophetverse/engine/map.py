@@ -48,7 +48,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
 
     def __init__(
         self,
-        model: Callable,
+        model: Optional[Callable] = None,
         optimizer_factory: numpyro.optim._NumPyroOptim = None,
         optimizer: Optional[BaseOptimizer] = None,
         num_steps=10000,
@@ -69,7 +69,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         )
 
         if optimizer_factory is None:
-            optimizer_factory = AdamOptimizer(step_size=0.001)
+            optimizer = AdamOptimizer(step_size=0.001)
 
         if self.optimizer is None and optimizer_factory is not None:
             optimizer = _OptimizerFromCallable(optimizer_factory)

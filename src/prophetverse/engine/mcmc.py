@@ -3,7 +3,7 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
-from typing import Callable
+from typing import Callable, Optional
 
 from numpyro.infer import MCMC, NUTS, Predictive
 from numpyro.infer.initialization import init_to_mean
@@ -56,7 +56,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
     def __init__(
         self,
-        model: Callable,
+        model: Optional[Callable] = None,
         num_samples=1000,
         num_warmup=200,
         num_chains=1,

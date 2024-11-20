@@ -3,8 +3,6 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
-from typing import Callable, Optional
-
 from numpyro.infer import MCMC, NUTS, Predictive
 from numpyro.infer.initialization import init_to_mean
 
@@ -56,7 +54,6 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
     def __init__(
         self,
-        model: Optional[Callable] = None,
         num_samples=1000,
         num_warmup=200,
         num_chains=1,
@@ -67,9 +64,9 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         self.num_warmup = num_warmup
         self.num_chains = num_chains
         self.dense_mass = dense_mass
-        super().__init__(model, rng_key)
+        super().__init__(rng_key)
 
-    def infer(self, **kwargs):
+    def _infer(self, **kwargs):
         """
         Run MCMC inference.
 
@@ -105,7 +102,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         self.posterior_samples_ = get_posterior_samples(
             self._rng_key,
-            self.model,
+            self.model_,
             self.dense_mass,
             init_strategy=init_to_mean,
             num_samples=self.num_samples,
@@ -115,7 +112,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         )
         return self
 
-    def predict(self, **kwargs):
+    def _predict(self, **kwargs):
         """
         Generate predictive samples.
 
@@ -130,7 +127,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             The predictive samples.
         """
         predictive = Predictive(
-            self.model, self.posterior_samples_, num_samples=self.num_samples
+            self.model_, self.posterior_samples_, num_samples=self.num_samples
         )
 
         self.samples_predictive_ = predictive(self._rng_key, **kwargs)

@@ -244,7 +244,6 @@ class BaseBayesianForecaster(BaseForecaster):
 
         if self.inference_method == "mcmc":
             self.inference_engine_ = MCMCInferenceEngine(
-                self.model,
                 num_samples=self.mcmc_samples,
                 num_warmup=self.mcmc_warmup,
                 num_chains=self.mcmc_chains,
@@ -252,7 +251,6 @@ class BaseBayesianForecaster(BaseForecaster):
             )
         elif self.inference_method == "map":
             self.inference_engine_ = MAPInferenceEngine(
-                self.model,
                 rng_key=rng_key,
                 optimizer=self._optimizer(),
                 num_steps=self.optimizer_steps,
@@ -260,7 +258,7 @@ class BaseBayesianForecaster(BaseForecaster):
         else:
             raise ValueError(f"Unknown method {self.inference_method}")
 
-        self.inference_engine_.infer(**data)
+        self.inference_engine_.infer(self.model, **data)
         self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
         return self

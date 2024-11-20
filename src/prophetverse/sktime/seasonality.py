@@ -3,6 +3,8 @@
 import pandas as pd
 from sktime.transformations.series.fourier import FourierFeatures
 
+from prophetverse.utils.deprecation import deprecation_warning
+
 
 def seasonal_transformer(
     freq="D", yearly_seasonality=False, weekly_seasonality=False
@@ -33,6 +35,11 @@ def seasonal_transformer(
     ValueError
         If yearly_seasonality or weekly_seasonality is not a boolean or an integer.
     """
+    deprecation_warning(
+        "seasonal_transformer",
+        "0.4.2",
+        "Please use prophetverse.effects.LinearFourierSeasonality instead",
+    )
     sp_list = []
     fourier_term_list = []
 

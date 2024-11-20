@@ -174,7 +174,6 @@ class Prophetverse(BaseProphetForecaster):
         """Initialize the Prophet model."""
         self.noise_scale = noise_scale
         self.feature_transformer = feature_transformer
-
         self.likelihood = likelihood
 
         super().__init__(

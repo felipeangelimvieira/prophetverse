@@ -22,6 +22,10 @@ from prophetverse.effects.trend import (
     PiecewiseLogisticTrend,
 )
 from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
+from prophetverse.engine.optimizer import (
+    CosineScheduleAdamOptimizer,
+    _LegacyNumpyroOptimizer,
+)
 from prophetverse.utils import get_multiindex_loc
 
 
@@ -107,7 +111,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         return False
 
-    def optimizer(self) -> numpyro.optim._NumPyroOptim:
+    def _optimizer(self) -> numpyro.optim._NumPyroOptim:
         """Return the optimizer.
 
         Returns
@@ -129,21 +133,11 @@ class BaseBayesianForecaster(BaseForecaster):
 
         if optimizer_name.startswith("optax"):
 
-            import optax
-            from numpyro.optim import optax_to_numpyro
+            return CosineScheduleAdamOptimizer(**optimizer_kwargs)
 
-            scheduler = optax.cosine_decay_schedule(**optimizer_kwargs)
-
-            opt = optax_to_numpyro(
-                optax.chain(
-                    optax.scale_by_adam(),
-                    optax.scale_by_schedule(scheduler),
-                    optax.scale(-1.0),
-                )
-            )
-            return opt
-
-        return getattr(numpyro.optim, optimizer_name)(**optimizer_kwargs)
+        return _LegacyNumpyroOptimizer(
+            optimizer_name=optimizer_name, optimizer_kwargs=optimizer_kwargs
+        )
 
     # pragma: no cover
     def _get_fit_data(
@@ -260,7 +254,7 @@ class BaseBayesianForecaster(BaseForecaster):
             self.inference_engine_ = MAPInferenceEngine(
                 self.model,
                 rng_key=rng_key,
-                optimizer_factory=self.optimizer,
+                optimizer=self._optimizer(),
                 num_steps=self.optimizer_steps,
             )
         else:

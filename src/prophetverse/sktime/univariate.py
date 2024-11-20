@@ -122,7 +122,7 @@ class Prophetverse(BaseProphetForecaster):
     likelihood : str, optional, default="normal"
         Likelihood to use for the model. Can be "normal", "gamma" or "negbinomial".
 
-    default_effect : AbstractEffectm optional, defalut=None
+    default_effect : AbstractEffect optional, defalut=None
         The default effect to be used when no effect is specified for a variable.
 
     default_exogenous_prior : tuple, default=None

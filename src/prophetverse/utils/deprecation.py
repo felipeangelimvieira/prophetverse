@@ -19,9 +19,9 @@ def deprecation_warning(obj_name, current_version, extra_message=""):
     try:
         # Parse the current version into components
         major, minor, patch = map(int, current_version.split("."))
-        # Calculate the deprecation version (2 minor releases ahead)
-        new_minor = minor + 2
-        deprecation_version = f"{major}.{new_minor}.{patch}"
+        # Calculate the deprecation version (1 minor releases ahead)
+        new_minor = minor + 1
+        deprecation_version = f"{major}.{new_minor}.0"
         # Return the deprecation warning
         warnings.warn(
             f"Warning: '{obj_name}' is deprecated and will be removed in version"

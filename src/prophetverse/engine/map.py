@@ -63,7 +63,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
 
         deprecation_warning(
             "optimizer_factory",
-            "0.4.2",
+            "0.5.0",
             "Please use the `optimizer` parameter instead.",
         )
 

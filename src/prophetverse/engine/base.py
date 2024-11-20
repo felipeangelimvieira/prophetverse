@@ -111,5 +111,5 @@ class InferenceEngine(BaseInferenceEngine):
     """Temporary class to handle deprecation of InferenceEngine."""
 
     def __init__(self, rng_key=None):
-        deprecation_warning("InferenceEngine", "0.4.1")
+        deprecation_warning("InferenceEngine", "0.5.0")
         super().__init__(rng_key)

@@ -6,6 +6,7 @@ from sktime.transformations.series.fourier import FourierFeatures
 from prophetverse.utils.deprecation import deprecation_warning
 
 
+# TODO(felipeangelimvieira): Remove this function in version 0.6.0
 def seasonal_transformer(
     freq="D", yearly_seasonality=False, weekly_seasonality=False
 ) -> pd.DataFrame:
@@ -37,7 +38,7 @@ def seasonal_transformer(
     """
     deprecation_warning(
         "seasonal_transformer",
-        "0.4.2",
+        "0.5.0",
         "Please use prophetverse.effects.LinearFourierSeasonality instead",
     )
     sp_list = []

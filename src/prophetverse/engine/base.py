@@ -58,7 +58,7 @@ class BaseInferenceEngine(BaseObject):
         self._infer(**kwargs)
 
     # pragma: no cover
-    def _infer(self, **kwargs):
+    def _infer(self, **kwargs):  # pragma: no cover
         """
         Perform inference using the specified model.
 
@@ -90,7 +90,7 @@ class BaseInferenceEngine(BaseObject):
         return self._predict(**kwargs)
 
     # pragma: no cover
-    def _predict(self, **kwargs):
+    def _predict(self, **kwargs):  # pragma: no cover
         """
         Generate predictions using the specified model.
 
@@ -107,7 +107,7 @@ class BaseInferenceEngine(BaseObject):
 
 
 # TODO: remove this class in 0.6 release
-class InferenceEngine(BaseInferenceEngine):
+class InferenceEngine(BaseInferenceEngine):  # pragma: no cover
     """Temporary class to handle deprecation of InferenceEngine."""
 
     def __init__(self, rng_key=None):

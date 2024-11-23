@@ -21,12 +21,17 @@ from prophetverse.effects.trend import (
     PiecewiseLinearTrend,
     PiecewiseLogisticTrend,
 )
-from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
+from prophetverse.engine import (
+    BaseInferenceEngine,
+    MAPInferenceEngine,
+    MCMCInferenceEngine,
+)
 from prophetverse.engine.optimizer import (
     CosineScheduleAdamOptimizer,
     _LegacyNumpyroOptimizer,
 )
 from prophetverse.utils import get_multiindex_loc
+from prophetverse.utils.deprecation import deprecation_warning
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -82,6 +87,7 @@ class BaseBayesianForecaster(BaseForecaster):
         optimizer_name: str = "Adam",
         optimizer_kwargs: Optional[dict] = None,
         scale=None,
+        inference_engine: Optional[BaseInferenceEngine] = None,
         *args,
         **kwargs,
     ):
@@ -95,7 +101,46 @@ class BaseBayesianForecaster(BaseForecaster):
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
         self.scale = scale
+        self.inference_engine = inference_engine
         super().__init__()
+
+        if self.inference_engine is not None:
+            self._inference_engine = self.inference_engine
+        else:
+            self._inference_engine = self._get_inference_engine()
+
+    def _get_inference_engine(self):
+        """Temporarily return the inference engine.
+
+        Returns
+        -------
+        BaseInferenceEngine
+            The inference engine.
+        """
+        deprecation_warning(
+            "inference_method",
+            "0.5.0",
+            "Use the `inference_engine` parameter instead.",
+        )
+
+        if self.inference_method == "map":
+            optimizer = self._optimizer()
+
+            return MAPInferenceEngine(
+                optimizer=optimizer,
+                num_steps=self.optimizer_steps,
+                rng_key=self.rng_key,
+            )
+        elif self.inference_method == "mcmc":
+            return MCMCInferenceEngine(
+                num_samples=self.mcmc_samples,
+                num_warmup=self.mcmc_warmup,
+                num_chains=self.mcmc_chains,
+                rng_key=self.rng_key,
+                dense_mass=False,
+            )
+        else:
+            raise ValueError(f"Unknown method {self.inference_method}")
 
     @property
     def _likelihood_is_discrete(self):
@@ -242,22 +287,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if rng_key is None:
             rng_key = jax.random.PRNGKey(24)
 
-        if self.inference_method == "mcmc":
-            self.inference_engine_ = MCMCInferenceEngine(
-                num_samples=self.mcmc_samples,
-                num_warmup=self.mcmc_warmup,
-                num_chains=self.mcmc_chains,
-                rng_key=rng_key,
-            )
-        elif self.inference_method == "map":
-            self.inference_engine_ = MAPInferenceEngine(
-                rng_key=rng_key,
-                optimizer=self._optimizer(),
-                num_steps=self.optimizer_steps,
-            )
-        else:
-            raise ValueError(f"Unknown method {self.inference_method}")
-
+        self.inference_engine_ = self._inference_engine.clone()
         self.inference_engine_.infer(self.model, **data)
         self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
@@ -826,6 +856,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         optimizer_steps: int = 100_000,
         optimizer_name: str = "Adam",
         optimizer_kwargs: Optional[dict] = None,
+        inference_engine: Optional[BaseInferenceEngine] = None,
         scale=None,
     ):
 
@@ -851,7 +882,15 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
             scale=scale,
+            inference_engine=inference_engine,
         )
+
+    @property
+    def _trend(self):
+        """Return trend.
+
+        This property is for compatibility with _HeterogenousMetaEstimator.
+        """
 
     @property
     def _exogenous_effects(self):
@@ -1016,6 +1055,12 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             If the trend parameter is not one of 'linear', 'logistic', 'flat'
             or a BaseEffect instance.
         """
+        if isinstance(self.trend, str):
+            deprecation_warning(
+                "trend (str)",
+                "0.5.0",
+                "Pass a BaseEffect instance instead.",
+            )
         # Changepoints and trend
         if self.trend == "linear":
             return PiecewiseLinearTrend(

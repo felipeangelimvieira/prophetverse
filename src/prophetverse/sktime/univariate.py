@@ -170,6 +170,7 @@ class Prophetverse(BaseProphetForecaster):
         likelihood="normal",
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         """Initialize the Prophet model."""
         self.noise_scale = noise_scale

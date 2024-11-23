@@ -135,7 +135,7 @@ def test_single_series_get_multivariate_changepoint_matrix(piecewise_linear_tren
     t = np.arange(7)
     changepoint_ts = np.array([[2, 5]])
     expected = (
-        np.array([[0, 0, 1, 2, 3, 4, 5], [0, 0, 0, 0, 0, 1, 2]])
+        np.array([[0, 0, 0, 1, 2, 3, 4], [0, 0, 0, 0, 0, 0, 1]])
         .reshape((1, 2, 7))
         .transpose((0, 2, 1))
     )
@@ -156,7 +156,7 @@ def test_multiple_series_get_multivariate_changepoint_matrix(piecewise_linear_tr
         [
             np.concatenate(
                 [
-                    np.array([0, 0, 0, 0, 0, 1, 2, 3, 4, 5]).reshape((1, 10, 1)),
+                    np.array([0, 0, 0, 0, 0, 0, 1, 2, 3, 4]).reshape((1, 10, 1)),
                     np.zeros((1, 10, 1)),
                 ],
                 axis=-1,
@@ -164,7 +164,7 @@ def test_multiple_series_get_multivariate_changepoint_matrix(piecewise_linear_tr
             np.concatenate(
                 [
                     np.zeros((1, 10, 1)),
-                    np.array([0, 0, 0, 1, 2, 3, 4, 5, 6, 7]).reshape((1, 10, 1)),
+                    np.array([0, 0, 0, 0, 1, 2, 3, 4, 5, 6]).reshape((1, 10, 1)),
                 ],
                 axis=-1,
             ),
@@ -184,7 +184,7 @@ def test_multiple_series_get_multivariate_changepoint_matrix(piecewise_linear_tr
 def test_get_changepoint_matrix():
     t = np.arange(10)
     changepoint_ts = np.array([[5]])
-    expected = np.array([0, 0, 0, 0, 0, 1, 2, 3, 4, 5]).reshape((10, 1))
+    expected = np.array([0, 0, 0, 0, 0, 0, 1, 2, 3, 4]).reshape((10, 1))
     result = _get_changepoint_matrix(t, changepoint_ts)
     np.testing.assert_array_equal(
         result,

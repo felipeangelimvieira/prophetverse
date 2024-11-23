@@ -680,7 +680,7 @@ def _get_changepoint_matrix(t: jnp.ndarray, changepoint_t: jnp.array) -> jnp.nda
     expanded_ts = jnp.tile(t.reshape((-1, 1)), (1, len(changepoint_t)))
     A = (expanded_ts >= changepoint_t.reshape((1, -1))).astype(int) * expanded_ts
     cutoff_ts = changepoint_t.reshape((1, -1))
-    A = jnp.clip(A - cutoff_ts + 1, 0, None)
+    A = jnp.clip(A - cutoff_ts, 0, None)
     return A
 
 

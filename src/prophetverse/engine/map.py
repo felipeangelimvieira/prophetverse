@@ -21,6 +21,7 @@ from prophetverse.engine.optimizer import (
 from prophetverse.utils.deprecation import deprecation_warning
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
+DEFAULT_PROGRESS_BAR = True
 
 
 class MAPInferenceEngine(BaseInferenceEngine):
@@ -53,12 +54,14 @@ class MAPInferenceEngine(BaseInferenceEngine):
         num_steps=10000,
         num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
         rng_key=None,
+        progress_bar: bool = DEFAULT_PROGRESS_BAR,
     ):
 
         self.optimizer_factory = optimizer_factory
         self.optimizer = optimizer
         self.num_steps = num_steps
         self.num_samples = num_samples
+        self.progress_bar = progress_bar
         super().__init__(rng_key)
 
         deprecation_warning(
@@ -92,9 +95,11 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.guide_ = AutoDelta(self.model_, init_loc_fn=init_to_mean())
 
         def get_result(
-            rng_key, model, guide, optimizer, num_steps, **kwargs
+            rng_key, model, guide, optimizer, num_steps, progress_bar, **kwargs
         ) -> SVIRunResult:
-            svi_ = SVI(model, guide, optimizer, loss=Trace_ELBO())
+            svi_ = SVI(
+                model, guide, optimizer, loss=Trace_ELBO(), progress_bar=progress_bar
+            )
             return svi_.run(rng_key=rng_key, num_steps=num_steps, **kwargs)
 
         self.run_results_: SVIRunResult = get_result(
@@ -103,6 +108,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
             self.guide_,
             self._optimizer.create_optimizer(),
             self.num_steps,
+            progress_bar=self.progress_bar,
             **kwargs
         )
 

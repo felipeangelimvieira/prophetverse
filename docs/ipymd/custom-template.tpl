@@ -2,7 +2,13 @@
 
 {%- block outputs -%}
 
-<p class="cell-output-title">Output</p>
+<p class="cell-output-title jp-RenderedText jp-OutputArea-output">
+{%- if cell.execution_count is defined -%}
+    Output: <span class="cell-output-count">[{{ cell.execution_count|replace(None, "&nbsp;") }}]</span>
+{%- else -%}
+    Output: <span class="cell-output-count">[&nbsp;]</span>
+{%- endif -%}
+</p>
 {{ super() }}
 
 

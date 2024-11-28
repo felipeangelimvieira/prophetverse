@@ -191,6 +191,7 @@ class Prophetverse(BaseProphetForecaster):
             default_effect=default_effect,
             exogenous_effects=exogenous_effects,
             # BaseBayesianForecaster
+            inference_engine=inference_engine,
             inference_method=inference_method,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,

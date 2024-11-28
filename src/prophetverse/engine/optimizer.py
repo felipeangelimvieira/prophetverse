@@ -142,6 +142,29 @@ class CosineScheduleAdamOptimizer(BaseOptimizer):
         return opt
 
 
+class BFGSOptimizer(BaseOptimizer):
+
+    def __init__(self, learning_rate=1e-3, memory_size=10, scale_init_precond=True):
+
+        self.learning_rate = learning_rate
+        self.memory_size = memory_size
+        self.scale_init_precond = scale_init_precond
+        super().__init__()
+
+    def create_optimizer(self):
+
+        # Linesearch
+        linesearch = optax.scale_by_lbfgs(
+            memory_size=self.memory_size,
+            scale_init_precond=self.scale_init_precond,
+        )
+
+        # Optimizer
+        opt = optax.chain(linesearch, optax.scale(-1.0))
+
+        return numpyro.optim.optax_to_numpyro(opt)
+
+
 class _LegacyNumpyroOptimizer(BaseOptimizer):
     """
     Legacy optimizer.

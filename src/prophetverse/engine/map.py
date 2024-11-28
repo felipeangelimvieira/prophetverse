@@ -51,7 +51,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self,
         optimizer_factory: numpyro.optim._NumPyroOptim = None,
         optimizer: Optional[BaseOptimizer] = None,
-        num_steps=10000,
+        num_steps=10_000,
         num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
         rng_key=None,
         progress_bar: bool = DEFAULT_PROGRESS_BAR,
@@ -70,8 +70,8 @@ class MAPInferenceEngine(BaseInferenceEngine):
             "Please use the `optimizer` parameter instead.",
         )
 
-        if optimizer_factory is None:
-            optimizer = AdamOptimizer(step_size=0.001)
+        if optimizer_factory is None and optimizer is None:
+            optimizer = AdamOptimizer(1e-3)
 
         if self.optimizer is None and optimizer_factory is not None:
             optimizer = _OptimizerFromCallable(optimizer_factory)
@@ -109,7 +109,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
             self._optimizer.create_optimizer(),
             self.num_steps,
             progress_bar=self.progress_bar,
-            **kwargs
+            **kwargs,
         )
 
         self.raise_error_if_nan_loss(self.run_results_)

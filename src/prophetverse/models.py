@@ -78,6 +78,7 @@ def multivariate_model(
 
         cov_mat = jnp.tile(jnp.expand_dims(cov_mat, axis=0), (mean.shape[1], 1, 1))
 
+        mean = numpyro.deterministic("mean", mean)
         with numpyro.plate("time", mean.shape[-1], dim=-2):
             numpyro.sample(
                 "obs",
@@ -113,7 +114,7 @@ def univariate_model(
         data=data,
         exogenous_effects=exogenous_effects,
     )
-
+    mean = numpyro.deterministic("mean", mean)
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2):
@@ -153,7 +154,7 @@ def univariate_gamma_model(
     )
 
     mean = _to_positive(mean, 1e-5)
-
+    mean = numpyro.deterministic("mean", mean)
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2):
@@ -196,7 +197,7 @@ def univariate_negbinomial_model(
     mean = _to_positive(mean, 1e-5)
 
     mean = mean * scale
-
+    mean = numpyro.deterministic("mean", mean)
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2):

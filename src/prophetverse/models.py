@@ -48,6 +48,7 @@ def multivariate_model(
     if y is not None:
         y = y.squeeze(-1).T
 
+    mean = numpyro.deterministic("mean", mean)
     if is_single_series:
 
         mean = mean.reshape((-1, 1))
@@ -78,7 +79,6 @@ def multivariate_model(
 
         cov_mat = jnp.tile(jnp.expand_dims(cov_mat, axis=0), (mean.shape[1], 1, 1))
 
-        mean = numpyro.deterministic("mean", mean)
         with numpyro.plate("time", mean.shape[-1], dim=-2):
             numpyro.sample(
                 "obs",

@@ -110,7 +110,7 @@ def load_pedestrian_count():
             _df = pd.DataFrame(
                 data={
                     "pedestrian_count": row["series_value"],
-                    "date": pd.period_range(
+                    "timestamp": pd.period_range(
                         row["start_timestamp"],
                         periods=len(row["series_value"]),
                         freq="H",
@@ -120,7 +120,7 @@ def load_pedestrian_count():
             _df["series_name"] = row["series_name"]
             dfs.append(_df)
 
-        return pd.concat(dfs).set_index(["series_name", "date"])
+        return pd.concat(dfs).set_index(["series_name", "timestamp"])
 
     df, _ = load_forecastingdata("pedestrian_counts_dataset")
     return _parse_data(df)

@@ -1,13 +1,21 @@
 # %% [markdown]
-
-# Use-case: forecasting product adoption
+# # Custom trend
+# This page shows how to customize the trend in Prophetverse. 
+# Sometimes, the piecewise linear or logistic behaviour will not fit
+# your needs, and you may need to define a custom trend
+# The trends are based on `Effects`, which are defined here as components of
+# the Generalized Additive Model (GAM) that defines Prophet.
+# Trend is a special case since it is the **first** effect to be computed, so
+# every subsequent effect can depend on it.
+#
+# ## Use-case: forecasting product adoption
 
 # **Diffusion of innovations** is a theory that seeks to explain how, why, and at what rate new ideas and technology spread through cultures. This theory was formulated by E.M. Rogers in 1962 and is often used to understand the adoption or spread of new products and technologies among different groups of people.
 
 # An innovation is something new or significantly improved. This can include products, ideas, or practices that are perceived as new by an individual or other unit of adoption. Diffusion refers to the process by which an innovation is communicated over time among the participants in a social system.
-
+#
 # The diffusion of innovations theory applies to a variety of new ideas. Here are a few examples:
-
+#
 # ## Examples of Processes Following Diffusion of Innovations
 
 # 1. **Number of new unique users**: The number of new unique users of a product or service can be modeled using the diffusion of innovations theory. This can help businesses forecast their growth and plan for future expansion.
@@ -73,30 +81,30 @@ fig.show()
 # %% [markdown]
 
 
-#  ## Modeling the Diffusion of Innovations
+# ## Modeling the Diffusion of Innovations
 #
-#  To model this behaviour with Prophetverse, we will use the custom trend feature.
+# To model this behaviour with Prophetverse, we will use the custom trend feature.
 #
-#  We will define a trend model class that implements the generalized logistic curve, which accepts assymetric curves. We will also add another premise: a varying capacity, which will allow us to model a linear growth of the total addressable market (TAM) over time.  Let $G(t)$ be the logistic curve defining the acumulated number of stars at time $t$:
+# We will define a trend model class that implements the generalized logistic curve,
+# which accepts assymetric curves. We will also add another premise: a varying capacity, which will allow us to model a linear growth of the total addressable market (TAM) over time.  Let $G(t)$ be the logistic curve defining the acumulated number of stars at time $t$:
 #
 # $$
-#  \begin{align*}
-#  G(t) &= \frac{C_1(t-t_0) + C_2}{\left(1 + \exp(-\alpha v (t - t_0))\right)^{\frac{1}{v}}} \\
-#  \text{where} & \\
-#
-#  C_2 \in \mathbb{R}_+ &= \text{is the constant capacity term}\\
-#  C_1 \in \mathbb{R}_+ &= \text{is the linear increasing rate of the capacity}\\
-#  t_0 \in \mathbb{R} &= \text{is the time offset term}\\
-#  v \in \mathbb{R}_+ &= \text{determines the shape of the curve} \\
-#  \alpha \in \mathbb{R} &= \text{is the rate}
-#  \end{align*}
+# \begin{align*}
+# G(t) &= \frac{C_1(t-t_0) + C_2}{\left(1 + \exp(-\alpha v (t - t_0))\right)^{\frac{1}{v}}} \\
+# \text{where} & \\
+# C_2 \in \mathbb{R}_+ &= \text{is the constant capacity term}\\
+# C_1 \in \mathbb{R}_+ &= \text{is the linear increasing rate of the capacity}\\
+# t_0 \in \mathbb{R} &= \text{is the time offset term}\\
+# v \in \mathbb{R}_+ &= \text{determines the shape of the curve} \\
+# \alpha \in \mathbb{R} &= \text{is the rate}
+# \end{align*}
 # $$
 #
 #  It's derivative is:
 #
 # $$
 #  \begin{align*}
-#  g(t) &= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C_1}{C_1(t-t_0) + C_2}G(T) \\
+#  g(t) &= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C_1}{C_1(t-t_0) + C_2}G(T)
 #  \end{align*}
 # $$
 #
@@ -104,9 +112,10 @@ fig.show()
 #  Below, we plot it for a combination of parameters
 
 
+import matplotlib.pyplot as plt
 # %%
 import numpy as np
-import matplotlib.pyplot as plt
+
 
 def g(t, C1, C2, t0, v, alpha):
     return (C1 * (t - t0) + C2) / ((1 + np.exp(-alpha * v * (t - t0))) ** (1 / v))
@@ -165,14 +174,14 @@ axs[1].set_ylabel("g(t)")
 fig.show()
 
 # %% [markdown]
- That curve has the bell-shape and the flexiblity to not be symmetric depending on the parameters. Furthermore, it tends to a constant value ($C1$) as time goes to infinity, which represent our knowledge that the size of the "market" of tensorflow/neural networks users starts at a value and grows with time.
-
- ## Splitting the dataset
-
- We leave 7 years to forecast, and 1.5 year to train. Note that, without the prior information on the nature of the curve, a model could simply forecast a linear growth of the number of stars, which would be a very poor forecast.
+# That curve has the bell-shape and the flexiblity to not be symmetric depending on the parameters. Furthermore, it tends to a constant value ($C1$) as time goes to infinity, which represent our knowledge that the size of the "market" of tensorflow/neural networks users starts at a value and grows with time.
+#
+# ## Splitting the dataset
+#
+# We leave 7 years to forecast, and 1.5 year to train. Note that, without the prior information on the nature of the curve, a model could simply forecast a linear growth of the number of stars, which would be a very poor forecast.
 
 # %%
-split_at = -int(365 * 7)
+split_at = -int(365 * 5)
 y = y.iloc[20:]
 y_train, y_test = y.iloc[:split_at], y.iloc[split_at:]
 
@@ -208,14 +217,14 @@ ax.set_xlim(y.index.min(), y.index.max())
 fig.suptitle("Tensorflow Stars")
 
 # %% [markdown]
- ## Creating the custom trend
-
- To create a custom trend model for use in the Prophetverse library, users can extend the TrendModel abstract base class and implement the required abstract methods. Here’s a step-by-step guide to create a custom trend model, using the GenLogisticTrend class as an example.
-
-
- ### Step 1: Define helper functions
-
- The GenLogisticTrend class will use the following helper functions:
+# ## Creating the custom trend
+#
+# To create a custom trend model for use in the Prophetverse library, users can extend the TrendModel abstract base class and implement the required abstract methods. Here’s a step-by-step guide to create a custom trend model, using the GenLogisticTrend class as an example.
+#
+#
+# ### Step 1: Define helper functions
+#
+# The GenLogisticTrend class will use the following helper functions:
 
 
 # %%
@@ -248,15 +257,16 @@ def dgeneralized_logistic(x, K1, K2, A, v, M):
 
 
 # %% [markdown]
- ### Step 2: Define the Custom Trend Model Class
-
- Create a new class that extends the TrendModel abstract base class. Implement the abstract methods initialize, prepare_input_data, and compute_trend.
+# ### Step 2: Define the Custom Trend Model Class
+#
+# Create a new class that extends the TrendModel abstract base class. Implement the abstract methods initialize, prepare_input_data, and compute_trend.
 
 
 # %%
 import numpyro
 from numpyro import distributions as dist
 
+from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects import BaseEffect
 from prophetverse.effects.trend import TrendEffectMixin
 from prophetverse.utils.frame_to_array import convert_index_to_days_since_epoch
@@ -267,6 +277,20 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
     Custom trend model based on the Generalized Logistic function.
     """
 
+    def __init__(self,
+                 logistic_capacity_dist=dist.HalfNormal(10),
+                 logistic_capacity2_dist=dist.HalfNormal(50_000),
+                 shape_dist=dist.Gamma(1, 1),
+                 logistic_rate_dist=GammaReparametrized(0.01, 0.01)
+                 ):
+        
+        self.logistic_capacity_dist=logistic_capacity_dist
+        self.logistic_capacity2_dist=logistic_capacity2_dist
+        self.shape_dist=shape_dist
+        self.logistic_rate_dist=logistic_rate_dist
+        
+        super().__init__()
+        
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
         """Initialize the effect.
 
@@ -362,19 +386,19 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
             - shape (float): The shape parameter for the logistic distribution.
             - offset (float): The offset parameter for the normal distribution.
         """
-        logistic_rate = numpyro.sample("logistic_rate", dist.Normal(0.01, 0.01))
+        logistic_rate = numpyro.sample("logistic_rate", self.logistic_rate_dist)
 
         logistic_capacity1 = numpyro.sample(
             "logistic_capacity",
-            dist.Gamma(15, 1),
+            self.logistic_capacity_dist,
         )
 
         logistic_capacity2 = numpyro.sample(
             "logistic_capacity2",
-            dist.HalfNormal(80_000),
+            self.logistic_capacity2_dist,
         )
 
-        shape = numpyro.sample("logistic_shape", dist.Gamma(1, 1))
+        shape = numpyro.sample("logistic_shape", self.shape_dist)
 
         offset = numpyro.sample(
             "offset",
@@ -385,40 +409,45 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
 
 
 # %% [markdown]
- ## Fit the model and make predictions
+# ## Fit the model and make predictions
 
 # %%
 
 import numpyro
 from sktime.transformations.series.fourier import FourierFeatures
 
+from prophetverse.effects import LinearFourierSeasonality
 from prophetverse.effects.linear import LinearEffect
+from prophetverse.engine import MCMCInferenceEngine
 from prophetverse.sktime import Prophetverse
-from prophetverse.utils.regex import starts_with
+from prophetverse.utils.regex import no_input_columns, starts_with
 
 numpyro.enable_x64()
 
 model = Prophetverse(
+    likelihood="negbinomial",
     trend=GenLogisticTrend(),
-    inference_method="mcmc",
-    feature_transformer=FourierFeatures(
-        sp_list=[7, 365.25],
-        fourier_terms_list=[3, 8],
-        freq="D",
-        keep_original_columns=True,
-    ),
     exogenous_effects=[
         (
             "seasonality",
-            LinearEffect(prior=dist.Normal(0, 0.1), effect_mode="multiplicative"),
-            starts_with(["sin", "cos"]),
-        )
+            LinearFourierSeasonality(
+                sp_list=[7, 365.25],
+                fourier_terms_list=[3,8],
+                freq="D",
+                prior_scale=.1,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns
+        ),
     ],
-    likelihood="negbinomial",
-    mcmc_samples=500,
-    mcmc_warmup=1000,
+    inference_engine=MCMCInferenceEngine(
+        num_samples=500,
+        num_warmup=1000,
+    ),
+    # Avoid normalization of the timeseries by setting
+    # scale=1
     scale=1,
-    noise_scale=20,
+    noise_scale=10
 )
 
 model.fit(y_train)
@@ -478,7 +507,7 @@ fig.show()
 # Forecast samples
 yhat_samples = model.predict_samples(fh=fh)
 # Samples of all sites (capacity, for example, that we had set as deterministic with numpyro.deterministic)
-site_samples = model.predict_all_sites_samples(fh=fh)
+site_samples = model.predict_component_samples(fh=fh)
 
 # %%
 # Set number of columns to display to 4 temporarily
@@ -578,3 +607,5 @@ ax.set_xlim(fh.to_timestamp().min(), fh.to_timestamp().max())
 fig.legend()
 ax.set_title("Total number of stars (forecast)")
 fig.show()
+
+# %%

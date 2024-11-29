@@ -1,4 +1,13 @@
-Use-case: forecasting product adoption
+# Custom trend
+This page shows how to customize the trend in Prophetverse. 
+Sometimes, the piecewise linear or logistic behaviour will not fit
+your needs, and you may need to define a custom trend
+The trends are based on `Effects`, which are defined here as components of
+the Generalized Additive Model (GAM) that defines Prophet.
+Trend is a special case since it is the **first** effect to be computed, so
+every subsequent effect can depend on it.
+
+## Use-case: forecasting product adoption
 
 **Diffusion of innovations** is a theory that seeks to explain how, why, and at what rate new ideas and technology spread through cultures. This theory was formulated by E.M. Rogers in 1962 and is often used to understand the adoption or spread of new products and technologies among different groups of people.
 
@@ -47,8 +56,6 @@ This repository had an initial explosion of stars during the first ~10 days, whi
 
 
 
-import jax
-
 
 
 ```python
@@ -91,37 +98,36 @@ fig.show()
 
 
 
- ## Modeling the Diffusion of Innovations
+## Modeling the Diffusion of Innovations
 
- To model this behaviour with Prophetverse, we will use the custom trend feature.
+To model this behaviour with Prophetverse, we will use the custom trend feature.
 
- We will define a trend model class that implements the generalized logistic curve, which accepts assymetric curves. We will also add another premise: a varying capacity, which will allow us to model a linear growth of the total addressable market (TAM) over time.  Let $G(t)$ be the logistic curve defining the acumulated number of stars at time $t$:
+We will define a trend model class that implements the generalized logistic curve,
+which accepts assymetric curves. We will also add another premise: a varying capacity, which will allow us to model a linear growth of the total addressable market (TAM) over time.  Let $G(t)$ be the logistic curve defining the acumulated number of stars at time $t$:
 
- $$
- \begin{align*}
- G(t) &= \frac{C_1(t-t_0) + C_2}{\left(1 + \exp(-\alpha v (t - t_0))\right)^{\frac{1}{v}}} \\
- \text{where} & \\
-
- C_2 \in \mathbb{R}_+ &= \text{is the constant capacity term}\\
- C_1 \in \mathbb{R}_+ &= \text{is the linear increasing rate of the capacity}\\
- t_0 \in \mathbb{R} &= \text{is the time offset term}\\
- v \in \mathbb{R}_+ &= \text{determines the shape of the curve} \\
- \alpha \in \mathbb{R} &= \text{is the rate}
- \end{align*}
- $$
+$$
+\begin{align*}
+G(t) &= \frac{C_1(t-t_0) + C_2}{\left(1 + \exp(-\alpha v (t - t_0))\right)^{\frac{1}{v}}} \\
+\text{where} & \\
+C_2 \in \mathbb{R}_+ &= \text{is the constant capacity term}\\
+C_1 \in \mathbb{R}_+ &= \text{is the linear increasing rate of the capacity}\\
+t_0 \in \mathbb{R} &= \text{is the time offset term}\\
+v \in \mathbb{R}_+ &= \text{determines the shape of the curve} \\
+\alpha \in \mathbb{R} &= \text{is the rate}
+\end{align*}
+$$
 
  It's derivative is:
 
- $$
+$$
  \begin{align*}
- g(t) &= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C_1}{C_1(t-t_0) + C_2}G(T) \\
+ g(t) &= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C_1}{C_1(t-t_0) + C_2}G(T)
  \end{align*}
- $$
+$$
 
  That curve can be used as trend to model a diffusion process.
  Below, we plot it for a combination of parameters
 
-import os
 
 import matplotlib.pyplot as plt
 
@@ -174,8 +180,6 @@ axs[0].set_title("Visualization of g(t)")
 axs[0].set_xlabel("t")
 axs[0].set_ylabel("g(t)")
 
-# axs[0].grid(True)
-
 Gt = generalized_logistic(t, C1=C1, C2=C2, t0=t0, v=v, alpha=alpha)
 axs[1].plot(
     t,
@@ -199,17 +203,17 @@ fig.show()
     
 
 
- That curve has the bell-shape and the flexiblity to not be symmetric depending on the parameters. Furthermore, it tends to a constant value ($C1$) as time goes to infinity, which represent our knowledge that the size of the "market" of tensorflow/neural networks users starts at a value and grows with time.
+That curve has the bell-shape and the flexiblity to not be symmetric depending on the parameters. Furthermore, it tends to a constant value ($C1$) as time goes to infinity, which represent our knowledge that the size of the "market" of tensorflow/neural networks users starts at a value and grows with time.
 
- ## Splitting the dataset
+## Splitting the dataset
 
- We leave 7 years to forecast, and 1.5 year to train. Note that, without the prior information on the nature of the curve, a model could simply forecast a linear growth of the number of stars, which would be a very poor forecast.
+We leave 7 years to forecast, and 1.5 year to train. Note that, without the prior information on the nature of the curve, a model could simply forecast a linear growth of the number of stars, which would be a very poor forecast.
 
 
 
 
 ```python
-split_at = -int(365 * 7)
+split_at = -int(365 * 5)
 y = y.iloc[20:]
 y_train, y_test = y.iloc[:split_at], y.iloc[split_at:]
 
@@ -265,14 +269,14 @@ fig.suptitle("Tensorflow Stars")
     
 
 
- ## Creating the custom trend
+## Creating the custom trend
 
- To create a custom trend model for use in the Prophetverse library, users can extend the TrendModel abstract base class and implement the required abstract methods. Here’s a step-by-step guide to create a custom trend model, using the GenLogisticTrend class as an example.
+To create a custom trend model for use in the Prophetverse library, users can extend the TrendModel abstract base class and implement the required abstract methods. Here’s a step-by-step guide to create a custom trend model, using the GenLogisticTrend class as an example.
 
 
- ### Step 1: Define helper functions
+### Step 1: Define helper functions
 
- The GenLogisticTrend class will use the following helper functions:
+The GenLogisticTrend class will use the following helper functions:
 
 
 
@@ -310,9 +314,9 @@ def dgeneralized_logistic(x, K1, K2, A, v, M):
 
 ```
 
- ### Step 2: Define the Custom Trend Model Class
+### Step 2: Define the Custom Trend Model Class
 
- Create a new class that extends the TrendModel abstract base class. Implement the abstract methods initialize, prepare_input_data, and compute_trend.
+Create a new class that extends the TrendModel abstract base class. Implement the abstract methods initialize, prepare_input_data, and compute_trend.
 
 
 
@@ -322,6 +326,7 @@ def dgeneralized_logistic(x, K1, K2, A, v, M):
 import numpyro
 from numpyro import distributions as dist
 
+from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects import BaseEffect
 from prophetverse.effects.trend import TrendEffectMixin
 from prophetverse.utils.frame_to_array import convert_index_to_days_since_epoch
@@ -332,6 +337,20 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
     Custom trend model based on the Generalized Logistic function.
     """
 
+    def __init__(self,
+                 logistic_capacity_dist=dist.HalfNormal(10),
+                 logistic_capacity2_dist=dist.HalfNormal(50_000),
+                 shape_dist=dist.Gamma(1, 1),
+                 logistic_rate_dist=GammaReparametrized(0.01, 0.01)
+                 ):
+        
+        self.logistic_capacity_dist=logistic_capacity_dist
+        self.logistic_capacity2_dist=logistic_capacity2_dist
+        self.shape_dist=shape_dist
+        self.logistic_rate_dist=logistic_rate_dist
+        
+        super().__init__()
+        
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
         """Initialize the effect.
 
@@ -427,19 +446,19 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
             - shape (float): The shape parameter for the logistic distribution.
             - offset (float): The offset parameter for the normal distribution.
         """
-        logistic_rate = numpyro.sample("logistic_rate", dist.Normal(0.01, 0.01))
+        logistic_rate = numpyro.sample("logistic_rate", self.logistic_rate_dist)
 
         logistic_capacity1 = numpyro.sample(
             "logistic_capacity",
-            dist.Gamma(15, 1),
+            self.logistic_capacity_dist,
         )
 
         logistic_capacity2 = numpyro.sample(
             "logistic_capacity2",
-            dist.HalfNormal(80_000),
+            self.logistic_capacity2_dist,
         )
 
-        shape = numpyro.sample("logistic_shape", dist.Gamma(1, 1))
+        shape = numpyro.sample("logistic_shape", self.shape_dist)
 
         offset = numpyro.sample(
             "offset",
@@ -453,7 +472,7 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
 ```
 <p class="cell-output-title jp-RenderedText jp-OutputArea-output">Output: <span class="cell-output-count">[6]</span></p>
 
- ## Fit the model and make predictions
+## Fit the model and make predictions
 
 
 
@@ -463,33 +482,38 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
 import numpyro
 from sktime.transformations.series.fourier import FourierFeatures
 
+from prophetverse.effects import LinearFourierSeasonality
 from prophetverse.effects.linear import LinearEffect
+from prophetverse.engine import MCMCInferenceEngine
 from prophetverse.sktime import Prophetverse
-from prophetverse.utils.regex import starts_with
+from prophetverse.utils.regex import no_input_columns, starts_with
 
 numpyro.enable_x64()
 
 model = Prophetverse(
+    likelihood="negbinomial",
     trend=GenLogisticTrend(),
-    inference_method="mcmc",
-    feature_transformer=FourierFeatures(
-        sp_list=[7, 365.25],
-        fourier_terms_list=[3, 8],
-        freq="D",
-        keep_original_columns=True,
-    ),
     exogenous_effects=[
         (
             "seasonality",
-            LinearEffect(prior=dist.Normal(0, 0.1), effect_mode="multiplicative"),
-            starts_with(["sin", "cos"]),
-        )
+            LinearFourierSeasonality(
+                sp_list=[7, 365.25],
+                fourier_terms_list=[3,8],
+                freq="D",
+                prior_scale=.1,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns
+        ),
     ],
-    likelihood="negbinomial",
-    mcmc_samples=500,
-    mcmc_warmup=1000,
+    inference_engine=MCMCInferenceEngine(
+        num_samples=500,
+        num_warmup=1000,
+    ),
+    # Avoid normalization of the timeseries by setting
+    # scale=1
     scale=1,
-    noise_scale=20,
+    noise_scale=10
 )
 
 model.fit(y_train)
@@ -501,7 +525,7 @@ model.fit(y_train)
 
 
 
-<style>#sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee {
+<style>#sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -526,15 +550,15 @@ model.fit(y_train)
     }
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d {
     color: var(--sklearn-color-text);
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee pre {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d pre {
     padding: 0;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee input.sk-hidden--visually {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -546,7 +570,7 @@ model.fit(y_train)
     width: 1px;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-dashed-wrapped {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -554,7 +578,7 @@ model.fit(y_train)
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-container {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -564,7 +588,7 @@ model.fit(y_train)
     position: relative;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-text-repr-fallback {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -580,14 +604,14 @@ model.fit(y_train)
 
   /* Parallel-specific style estimator block */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-parallel-item::after {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-parallel {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -595,28 +619,28 @@ model.fit(y_train)
     position: relative;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-parallel-item {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-parallel-item:first-child::after {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-parallel-item:last-child::after {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-parallel-item:only-child::after {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-serial {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -634,14 +658,14 @@ model.fit(y_train)
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-toggleable {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee label.sk-toggleable__label {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -651,7 +675,7 @@ model.fit(y_train)
     text-align: center;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee label.sk-toggleable__label-arrow:before {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -659,13 +683,13 @@ model.fit(y_train)
     color: var(--sklearn-color-icon);
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee label.sk-toggleable__label-arrow:hover:before {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-toggleable__content {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -673,27 +697,27 @@ model.fit(y_train)
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-toggleable__content pre {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -701,38 +725,38 @@ model.fit(y_train)
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-label label.sk-toggleable__label,
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-label label {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-label label.sk-toggleable__label,
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-label:hover label.sk-toggleable__label {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-label label {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-label-container {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-estimator {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -742,7 +766,7 @@ model.fit(y_train)
   }
 
   /* on hover */
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee div.sk-estimator:hover {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -799,7 +823,7 @@ model.fit(y_train)
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee a.estimator_doc_link {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -814,32 +838,34 @@ model.fit(y_train)
   }
 
   /* On hover */
-  #sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee a.estimator_doc_link:hover {
+  #sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id='sk-73f5626e-8d0a-4320-a8bf-d6271c3854ee' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
-                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x160f21050&gt;),
-                                 &#x27;^(?:sin|cos)&#x27;)],
-             feature_transformer=FourierFeatures(fourier_terms_list=[3, 8],
-                                                 freq=&#x27;D&#x27;,
-                                                 keep_original_columns=True,
-                                                 sp_list=[7, 365.25]),
-             inference_method=&#x27;mcmc&#x27;, likelihood=&#x27;negbinomial&#x27;,
-             mcmc_samples=500, mcmc_warmup=1000, noise_scale=20, scale=1,
-             trend=GenLogisticTrend())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('7e189d71-588e-4416-857c-6312abc7fc77') type="checkbox" ><label for=UUID('7e189d71-588e-4416-857c-6312abc7fc77') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
-                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x160f21050&gt;),
-                                 &#x27;^(?:sin|cos)&#x27;)],
-             feature_transformer=FourierFeatures(fourier_terms_list=[3, 8],
-                                                 freq=&#x27;D&#x27;,
-                                                 keep_original_columns=True,
-                                                 sp_list=[7, 365.25]),
-             inference_method=&#x27;mcmc&#x27;, likelihood=&#x27;negbinomial&#x27;,
-             mcmc_samples=500, mcmc_warmup=1000, noise_scale=20, scale=1,
-             trend=GenLogisticTrend())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('edada453-d6e2-4b60-a352-80c7e6c374ef') type="checkbox" ><label for=UUID('edada453-d6e2-4b60-a352-80c7e6c374ef') class='sk-toggleable__label sk-toggleable__label-arrow'>feature_transformer: FourierFeatures</label><div class="sk-toggleable__content"><pre>FourierFeatures(fourier_terms_list=[3, 8], freq=&#x27;D&#x27;, keep_original_columns=True,
-                sp_list=[7, 365.25])</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('c188123f-ca02-4de0-b30b-646bae56e7b1') type="checkbox" ><label for=UUID('c188123f-ca02-4de0-b30b-646bae56e7b1') class='sk-toggleable__label sk-toggleable__label-arrow'>FourierFeatures<a class="sk-estimator-doc-link" rel="noreferrer" target="_blank" href="https://www.sktime.net/en/v0.34.0/api_reference/auto_generated/sktime.transformations.series.fourier.FourierFeatures.html">?<span>Documentation for FourierFeatures</span></a></label><div class="sk-toggleable__content"><pre>FourierFeatures(fourier_terms_list=[3, 8], freq=&#x27;D&#x27;, keep_original_columns=True,
-                sp_list=[7, 365.25])</pre></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('34703cab-8eba-4d09-95f3-b610eaee0371') type="checkbox" ><label for=UUID('34703cab-8eba-4d09-95f3-b610eaee0371') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('df0ae8e8-4fc9-4b1c-a26c-795e518a78ba') type="checkbox" ><label for=UUID('df0ae8e8-4fc9-4b1c-a26c-795e518a78ba') class='sk-toggleable__label sk-toggleable__label-arrow'>GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div></div></div></div></div></div></div></div>
+</style><div id='sk-6df55a83-31a4-417b-adf7-2dc3f5a83e4d' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
+                                 LinearFourierSeasonality(effect_mode=&#x27;multiplicative&#x27;,
+                                                          fourier_terms_list=[3,
+                                                                              8],
+                                                          freq=&#x27;D&#x27;,
+                                                          prior_scale=0.1,
+                                                          sp_list=[7, 365.25]),
+                                 &#x27;^$&#x27;)],
+             inference_engine=MCMCInferenceEngine(num_samples=500,
+                                                  num_warmup=1000),
+             likelihood=&#x27;negbinomial&#x27;, noise_scale=10, scale=1,
+             trend=GenLogisticTrend())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('b2ff64ca-abad-45af-a198-7be91ac4c9ac') type="checkbox" ><label for=UUID('b2ff64ca-abad-45af-a198-7be91ac4c9ac') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
+                                 LinearFourierSeasonality(effect_mode=&#x27;multiplicative&#x27;,
+                                                          fourier_terms_list=[3,
+                                                                              8],
+                                                          freq=&#x27;D&#x27;,
+                                                          prior_scale=0.1,
+                                                          sp_list=[7, 365.25]),
+                                 &#x27;^$&#x27;)],
+             inference_engine=MCMCInferenceEngine(num_samples=500,
+                                                  num_warmup=1000),
+             likelihood=&#x27;negbinomial&#x27;, noise_scale=10, scale=1,
+             trend=GenLogisticTrend())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('7884a627-742a-4ea7-a8d3-456a04cd06fa') type="checkbox" ><label for=UUID('7884a627-742a-4ea7-a8d3-456a04cd06fa') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('cd63166d-7ef6-49fb-a3c1-34f090ae0f2b') type="checkbox" ><label for=UUID('cd63166d-7ef6-49fb-a3c1-34f090ae0f2b') class='sk-toggleable__label sk-toggleable__label-arrow'>GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div></div></div></div></div></div></div></div>
 
 
 
@@ -884,23 +910,23 @@ display(preds.head())
   <tbody>
     <tr>
       <th>2015-11-27</th>
-      <td>55.041217</td>
+      <td>53.219396</td>
     </tr>
     <tr>
       <th>2015-11-28</th>
-      <td>41.431572</td>
+      <td>38.691269</td>
     </tr>
     <tr>
       <th>2015-11-29</th>
-      <td>40.868442</td>
+      <td>38.393169</td>
     </tr>
     <tr>
       <th>2015-11-30</th>
-      <td>54.293689</td>
+      <td>52.234695</td>
     </tr>
     <tr>
       <th>2015-12-01</th>
-      <td>55.470487</td>
+      <td>54.221753</td>
     </tr>
   </tbody>
 </table>
@@ -944,28 +970,28 @@ interval.head()
   <tbody>
     <tr>
       <th>2015-11-27</th>
-      <td>28.0</td>
-      <td>92.00</td>
+      <td>29.95</td>
+      <td>78.05</td>
     </tr>
     <tr>
       <th>2015-11-28</th>
-      <td>19.0</td>
-      <td>67.05</td>
+      <td>19.00</td>
+      <td>60.05</td>
     </tr>
     <tr>
       <th>2015-11-29</th>
-      <td>19.0</td>
-      <td>68.00</td>
+      <td>20.00</td>
+      <td>59.00</td>
     </tr>
     <tr>
       <th>2015-11-30</th>
-      <td>27.0</td>
-      <td>89.00</td>
+      <td>30.00</td>
+      <td>81.00</td>
     </tr>
     <tr>
       <th>2015-12-01</th>
-      <td>27.0</td>
-      <td>92.00</td>
+      <td>32.00</td>
+      <td>84.00</td>
     </tr>
   </tbody>
 </table>
@@ -1026,11 +1052,10 @@ fig.show()
 # Forecast samples
 yhat_samples = model.predict_samples(fh=fh)
 # Samples of all sites (capacity, for example, that we had set as deterministic with numpyro.deterministic)
-site_samples = model.predict_all_sites_samples(fh=fh)
+site_samples = model.predict_component_samples(fh=fh)
 
 
 ```
-<p class="cell-output-title jp-RenderedText jp-OutputArea-output">Output: <span class="cell-output-count">[11]</span></p>
 
 
 ```python
@@ -1066,54 +1091,54 @@ yhat_samples.head()
       <th>0</th>
       <th>1</th>
       <th>...</th>
-      <th>1998</th>
-      <th>1999</th>
+      <th>498</th>
+      <th>499</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>2015-11-27</th>
-      <td>33</td>
-      <td>75</td>
-      <td>...</td>
       <td>57</td>
-      <td>32</td>
+      <td>69</td>
+      <td>...</td>
+      <td>76</td>
+      <td>59</td>
     </tr>
     <tr>
       <th>2015-11-28</th>
-      <td>25</td>
-      <td>65</td>
+      <td>12</td>
+      <td>61</td>
       <td>...</td>
-      <td>44</td>
-      <td>40</td>
+      <td>47</td>
+      <td>23</td>
     </tr>
     <tr>
       <th>2015-11-29</th>
+      <td>28</td>
       <td>32</td>
-      <td>48</td>
       <td>...</td>
-      <td>33</td>
-      <td>44</td>
+      <td>34</td>
+      <td>50</td>
     </tr>
     <tr>
       <th>2015-11-30</th>
-      <td>14</td>
-      <td>43</td>
+      <td>53</td>
+      <td>61</td>
       <td>...</td>
-      <td>44</td>
-      <td>74</td>
+      <td>52</td>
+      <td>49</td>
     </tr>
     <tr>
       <th>2015-12-01</th>
-      <td>51</td>
-      <td>37</td>
+      <td>41</td>
+      <td>41</td>
       <td>...</td>
-      <td>83</td>
-      <td>45</td>
+      <td>49</td>
+      <td>71</td>
     </tr>
   </tbody>
 </table>
-<p>5 rows × 2000 columns</p>
+<p>5 rows × 500 columns</p>
 </div>
 
 
@@ -1182,43 +1207,43 @@ site_quantiles.head()
   <tbody>
     <tr>
       <th>2015-11-27</th>
-      <td>41.743521</td>
-      <td>40.527408</td>
+      <td>41.990723</td>
+      <td>41.033727</td>
       <td>...</td>
-      <td>40.527408</td>
-      <td>43.051518</td>
+      <td>41.033727</td>
+      <td>42.931708</td>
     </tr>
     <tr>
       <th>2015-11-28</th>
-      <td>41.837430</td>
-      <td>40.625047</td>
+      <td>42.082448</td>
+      <td>41.123694</td>
       <td>...</td>
-      <td>40.625047</td>
-      <td>43.141949</td>
+      <td>41.123694</td>
+      <td>43.018511</td>
     </tr>
     <tr>
       <th>2015-11-29</th>
-      <td>41.931490</td>
-      <td>40.723310</td>
+      <td>42.174330</td>
+      <td>41.221618</td>
       <td>...</td>
-      <td>40.723310</td>
-      <td>43.233582</td>
+      <td>41.221618</td>
+      <td>43.109031</td>
     </tr>
     <tr>
       <th>2015-11-30</th>
-      <td>42.025701</td>
-      <td>40.818086</td>
+      <td>42.266368</td>
+      <td>41.312846</td>
       <td>...</td>
-      <td>40.818086</td>
-      <td>43.320542</td>
+      <td>41.312846</td>
+      <td>43.202342</td>
     </tr>
     <tr>
       <th>2015-12-01</th>
-      <td>42.120064</td>
-      <td>40.910278</td>
+      <td>42.358563</td>
+      <td>41.405760</td>
       <td>...</td>
-      <td>40.910278</td>
-      <td>43.409120</td>
+      <td>41.405760</td>
+      <td>43.288783</td>
     </tr>
   </tbody>
 </table>
@@ -1299,6 +1324,7 @@ ax.set_xlim(fh.to_timestamp().min(), fh.to_timestamp().max())
 fig.legend()
 ax.set_title("Total number of stars (forecast)")
 fig.show()
+
 
 ```
 <p class="cell-output-title jp-RenderedText jp-OutputArea-output">Output: <span class="cell-output-count">[14]</span></p>

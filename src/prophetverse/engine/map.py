@@ -111,10 +111,14 @@ class MAPInferenceEngine(BaseInferenceEngine):
                 guide,
                 optimizer,
                 loss=Trace_ELBO(),
+            )
+            return svi_.run(
+                rng_key=rng_key,
                 progress_bar=progress_bar,
                 stable_update=stable_update,
+                num_steps=num_steps,
+                **kwargs,
             )
-            return svi_.run(rng_key=rng_key, num_steps=num_steps, **kwargs)
 
         self.run_results_: SVIRunResult = get_result(
             self._rng_key,

@@ -171,6 +171,7 @@ class HierarchicalProphet(BaseProphetForecaster):
         noise_scale=0.05,
         correlation_matrix_concentration=1.0,
         rng_key=None,
+        inference_engine=None,
     ):
 
         self.noise_scale = noise_scale
@@ -192,6 +193,7 @@ class HierarchicalProphet(BaseProphetForecaster):
             exogenous_effects=exogenous_effects,
             # Base Bayesian forecaster
             rng_key=rng_key,
+            inference_engine=inference_engine,
             inference_method=inference_method,
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
@@ -405,6 +407,22 @@ class HierarchicalProphet(BaseProphetForecaster):
                 self.internal_y_indexes_.droplevel(-1).unique().tolist()
             )
         )
+
+    def _postprocess_output(self, y: pd.DataFrame) -> pd.DataFrame:
+        """Postprocess outputs, by aggregating them.
+
+        Parameters
+        ----------
+        y : pd.DataFrame
+            dataframe with output predictions
+
+        Returns
+        -------
+        pd.DataFrame
+            postprocessed dataframe
+
+        """
+        return self.aggregator_.transform(y)
 
     @classmethod
     def get_test_params(cls, parameter_set="default") -> List[dict[str, Any]]:

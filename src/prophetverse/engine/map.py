@@ -21,6 +21,7 @@ from prophetverse.engine.optimizer import (
 from prophetverse.utils.deprecation import deprecation_warning
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
+DEFAULT_PROGRESS_BAR = True
 
 
 class MAPInferenceEngine(BaseInferenceEngine):
@@ -50,15 +51,19 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self,
         optimizer_factory: numpyro.optim._NumPyroOptim = None,
         optimizer: Optional[BaseOptimizer] = None,
-        num_steps=10000,
+        num_steps=10_000,
         num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
         rng_key=None,
+        progress_bar: bool = DEFAULT_PROGRESS_BAR,
+        stable_update=False,
     ):
 
         self.optimizer_factory = optimizer_factory
         self.optimizer = optimizer
         self.num_steps = num_steps
         self.num_samples = num_samples
+        self.progress_bar = progress_bar
+        self.stable_update = stable_update
         super().__init__(rng_key)
 
         deprecation_warning(
@@ -67,8 +72,8 @@ class MAPInferenceEngine(BaseInferenceEngine):
             "Please use the `optimizer` parameter instead.",
         )
 
-        if optimizer_factory is None:
-            optimizer = AdamOptimizer(step_size=0.001)
+        if optimizer_factory is None and optimizer is None:
+            optimizer = AdamOptimizer(1e-3)
 
         if self.optimizer is None and optimizer_factory is not None:
             optimizer = _OptimizerFromCallable(optimizer_factory)
@@ -92,10 +97,28 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.guide_ = AutoDelta(self.model_, init_loc_fn=init_to_mean())
 
         def get_result(
-            rng_key, model, guide, optimizer, num_steps, **kwargs
+            rng_key,
+            model,
+            guide,
+            optimizer,
+            num_steps,
+            progress_bar,
+            stable_update,
+            **kwargs,
         ) -> SVIRunResult:
-            svi_ = SVI(model, guide, optimizer, loss=Trace_ELBO())
-            return svi_.run(rng_key=rng_key, num_steps=num_steps, **kwargs)
+            svi_ = SVI(
+                model,
+                guide,
+                optimizer,
+                loss=Trace_ELBO(),
+            )
+            return svi_.run(
+                rng_key=rng_key,
+                progress_bar=progress_bar,
+                stable_update=stable_update,
+                num_steps=num_steps,
+                **kwargs,
+            )
 
         self.run_results_: SVIRunResult = get_result(
             self._rng_key,
@@ -103,7 +126,9 @@ class MAPInferenceEngine(BaseInferenceEngine):
             self.guide_,
             self._optimizer.create_optimizer(),
             self.num_steps,
-            **kwargs
+            stable_update=self.stable_update,
+            progress_bar=self.progress_bar,
+            **kwargs,
         )
 
         self.raise_error_if_nan_loss(self.run_results_)

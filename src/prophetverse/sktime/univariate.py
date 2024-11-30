@@ -170,6 +170,7 @@ class Prophetverse(BaseProphetForecaster):
         likelihood="normal",
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         """Initialize the Prophet model."""
         self.noise_scale = noise_scale
@@ -190,6 +191,7 @@ class Prophetverse(BaseProphetForecaster):
             default_effect=default_effect,
             exogenous_effects=exogenous_effects,
             # BaseBayesianForecaster
+            inference_engine=inference_engine,
             inference_method=inference_method,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
@@ -356,16 +358,19 @@ class Prophetverse(BaseProphetForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
+        from prophetverse.effects.trend import FlatTrend
+        from prophetverse.engine import MCMCInferenceEngine
+
         params = [
             {
                 "optimizer_steps": 1,
                 "inference_method": "map",
             },
             {
-                "inference_method": "mcmc",
-                "mcmc_samples": 1,
-                "mcmc_warmup": 1,
-                "mcmc_chains": 1,
+                "inference_engine": MCMCInferenceEngine(
+                    num_chains=1, num_samples=1, num_warmup=1
+                ),
+                "trend": FlatTrend(),
             },
         ]
 

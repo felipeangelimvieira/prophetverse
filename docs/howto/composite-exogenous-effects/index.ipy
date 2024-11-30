@@ -1,0 +1,134 @@
+# %% [markdown]
+# 
+# # Composition of effects
+# 
+# In previous examples, we saw how to create a custom effect, particularly de `LogEffect`,
+# which scales the impact of a variable by a logarithm. 
+#
+# What if we want to use the effect of another variable as a multiplicative factor of the
+# current effect? One classic example would be using holidays or seasonality to scale
+# the effect of another input, that might be proportional to these effects. Probably,
+# marketing investments are a good example of this. We will implement such a composite
+# effect in this section.
+#
+# %%
+
+
+from typing import Any, Dict, List
+import jax.numpy as jnp
+import pandas as pd
+
+from prophetverse.effects.base import BaseEffect
+
+
+class WrapEffectAndScaleByAnother(BaseEffect):
+    """Wrap an effect and scale it by another effect.
+
+    Parameters
+    ----------
+    effect : BaseEffect
+        The effect to wrap.
+    
+    """
+
+    _tags = {"skip_predict_if_no_match": False, "supports_multivariate": False}
+
+    def __init__(
+        self,
+        effect: BaseEffect,
+        base_effect_name: str,
+    ):
+
+        self.effect = effect
+        self.base_effect_name = base_effect_name
+
+        super().__init__()
+        
+        self.set_tags({"supports_multivariate": self.effect.supports_multivariate,
+                       "skip_predict_if_no_match": self.effect.skip_predict_if_no_match
+                       })
+        
+
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+        """Initialize the effect.
+
+        This method is called during `fit()` of the forecasting model.
+        It receives the Exogenous variables DataFrame and should be used to initialize
+        any necessary parameters or data structures, such as detecting the columns that
+        match the regex pattern.
+
+        This method MUST set _input_feature_columns_names to a list of column names
+
+        Parameters
+        ----------
+        y : pd.DataFrame
+            The timeseries dataframe
+
+        X : pd.DataFrame
+            The DataFrame to initialize the effect.
+
+        scale : float, optional
+            The scale of the timeseries. For multivariate timeseries, this is
+            a dataframe. For univariate, it is a simple float.
+
+        Returns
+        -------
+        None
+        """
+        self.effect.fit(X=X, y=y, scale=scale)
+        
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, Any]:
+        """Prepare input data to be passed to numpyro model.
+
+        Returns a dictionary with the data for the lift and for the inner effect.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input DataFrame containing the exogenous variables for the training
+            time indexes, if passed during fit, or for the forecasting time indexes, if
+            passed during predict.
+
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Dictionary with data for the lift and for the inner effect
+        """
+        return self.effect.transform(X=X, fh=fh)
+
+
+    def _predict(
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray]
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
+
+        Parameters
+        ----------
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
+
+        Returns
+        -------
+        jnp.ndarray
+            An array with shape (T,1) for univariate timeseries.
+        """
+        out = self.effect.predict(
+            data=data,  predicted_effects=predicted_effects
+        )
+
+        base_effect = predicted_effects[self.base_effect_name]
+        return base_effect * out
+
+    @property
+    def input_feature_column_names(self) -> List[str]:
+        """Return the input feature columns names."""
+        return self.effect.input_feature_column_names
+
+
+# %%

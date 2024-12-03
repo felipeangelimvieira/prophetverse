@@ -6,14 +6,13 @@
 import warnings
 
 warnings.simplefilter(action="ignore")
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
-from sktime.transformations.series.fourier import FourierFeatures
-from sktime.forecasting.compose import ForecastingPipeline
-from numpyro import distributions as dist
 import numpyro
+import pandas as pd
+from numpyro import distributions as dist
+from sktime.forecasting.compose import ForecastingPipeline
+from sktime.transformations.series.fourier import FourierFeatures
 
 numpyro.enable_x64()
 
@@ -47,6 +46,31 @@ ax = y.rename(columns={"y": "New series"}).plot.line()
 (y - true_exog_effect).rename(columns={"y": "Original series"}).plot.line(ax=ax)
 
 # %%
+
+from prophetverse.effects import HillEffect
+from prophetverse.effects.trend import PiecewiseLinearTrend
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.sktime import Prophetverse
+from prophetverse.utils.regex import exact
+
+model = (
+    Prophetverse()
+    >> PiecewiseLinearTrend(
+        changepoint_interval=100,
+        changepoint_prior_scale=0.1,
+        changepoint_range=-100,
+    )
+    >> MAPInferenceEngine(num_steps=10_000)
+) >> (
+    "exog_effect",
+    HillEffect(
+        half_max_prior=dist.Delta(0.5),
+        slope_prior=dist.Delta(1),
+        max_effect_prior=dist.Delta(2), 
+    ),
+    exact("exogenous"),
+)
+# %%
 from sktime.forecasting.model_selection import temporal_train_test_split
 
 y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=365 * 2)
@@ -56,9 +80,10 @@ y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=365
 #
 # In the last example, we used an effect that was imported from Prophetverse. You may, however, be interested in your own effects. Lets create a custom "Hill" effect, that is used in Marketing Mix Modelling applications.
 
+import jax.numpy as jnp
+
 # %%
 from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect
-import jax.numpy as jnp
 
 
 class HillEffect(BaseAdditiveOrMultiplicativeEffect):
@@ -116,15 +141,15 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         return effect
 
 
+import numpyro
+
+from prophetverse.effects.lift_experiment import LiftExperimentLikelihood
+from prophetverse.effects.linear import LinearEffect
 # %%
 from prophetverse.effects.log import LogEffect
-import numpyro
 from prophetverse.sktime import Prophetverse
 from prophetverse.sktime.seasonality import seasonal_transformer
-from prophetverse.effects.linear import LinearEffect
 from prophetverse.utils.regex import starts_with
-from prophetverse.effects.lift_experiment import LiftExperimentLikelihood
-
 
 exogenous_effects = [
     (

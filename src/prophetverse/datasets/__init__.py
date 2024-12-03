@@ -7,7 +7,7 @@ from .loaders import (
     load_tensorflow_github_stars,
     load_tourism,
 )
-from .synthetic import load_synthetic_squared_exogenous
+from .synthetic import load_composite_effect_example, load_synthetic_squared_exogenous
 
 __all__ = [
     "load_forecastingdata",
@@ -16,4 +16,5 @@ __all__ = [
     "load_tensorflow_github_stars",
     "load_tourism",
     "load_synthetic_squared_exogenous",
+    "load_composite_effect_example",
 ]

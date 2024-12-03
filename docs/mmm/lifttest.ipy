@@ -1,0 +1,237 @@
+# %% [markdown]
+# # Univariate timeseries and exogenous effects
+
+# %%
+# Disable warnings
+import warnings
+
+warnings.simplefilter(action="ignore")
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+from sktime.transformations.series.fourier import FourierFeatures
+from sktime.forecasting.compose import ForecastingPipeline
+from numpyro import distributions as dist
+import numpyro
+
+numpyro.enable_x64()
+
+# %% [markdown]
+# # Import dataset
+#
+# We import a dataset from Prophet's original repository. We then put it into sktime-friendly format, where the index is a `pd.PeriodIndex` and the colums are the time series.
+
+# %%
+df = pd.read_csv(
+    "https://raw.githubusercontent.com/facebook/prophet/main/examples/example_wp_log_peyton_manning.csv"
+)
+df["ds"] = pd.to_datetime(df["ds"]).dt.to_period("D")
+y = df.set_index("ds")
+display(y)
+
+# %%
+y2 = y.copy()
+# Set numpy seed
+np.random.seed(0)
+
+# Create random input
+X = pd.DataFrame(
+    np.abs(np.random.rand(len(y2), 1)) ** 4,
+    index=y2.index,
+    columns=["exog"],
+)
+true_exog_effect = np.log(1.5 * X["exog"].values.reshape((-1, 1)) + 1) * 0.8
+y = y + true_exog_effect
+ax = y.rename(columns={"y": "New series"}).plot.line()
+(y - true_exog_effect).rename(columns={"y": "Original series"}).plot.line(ax=ax)
+
+# %%
+from sktime.forecasting.model_selection import temporal_train_test_split
+
+y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=365 * 2)
+
+# %% [markdown]
+# ## Custom effect
+#
+# In the last example, we used an effect that was imported from Prophetverse. You may, however, be interested in your own effects. Lets create a custom "Hill" effect, that is used in Marketing Mix Modelling applications.
+
+# %%
+from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect
+import jax.numpy as jnp
+
+
+class HillEffect(BaseAdditiveOrMultiplicativeEffect):
+    """
+    Represents a Hill effect in a time series model.
+
+    Attributes:
+        half_max_prior: Prior distribution for the half-maximum parameter.
+        slope_prior: Prior distribution for the slope parameter.
+        max_effect_prior: Prior distribution for the maximum effect parameter.
+        effect_mode: Mode of the effect (either "additive" or "multiplicative").
+    """
+
+    def __init__(
+        self,
+        half_max_prior=None,
+        slope_prior=None,
+        max_effect_prior=None,
+        min_slope=0,
+        effect_mode="multiplicative",
+    ):
+
+        if half_max_prior is None:
+            half_max_prior = dist.Gamma(2, 1)
+        if slope_prior is None:
+            slope_prior = dist.HalfNormal(2)
+        if max_effect_prior is None:
+            max_effect_prior = dist.Gamma(2, 1)
+
+        self.half_max_prior = half_max_prior
+        self.slope_prior = slope_prior
+        self.min_slope = min_slope
+        self.max_effect_prior = max_effect_prior
+        self.effect_mode = effect_mode
+        super().__init__()
+
+    def _predict(self, data, previous_effects=None):
+        """
+        Computes the effect using the log transformation.
+
+        Args:
+            trend: The trend component.
+            data: The input data.
+
+        Returns:
+            The computed effect.
+        """
+
+        half_max = numpyro.sample("half_max", self.half_max_prior)
+        slope = numpyro.sample("slope", self.slope_prior) + self.min_slope
+        max_effect = numpyro.sample("max_effect", self.max_effect_prior)
+
+        effect = max_effect * (1 / (1 + (data / half_max) ** -slope))
+        effect = jnp.clip(effect, 0, max_effect)
+        return effect
+
+
+# %%
+from prophetverse.effects.log import LogEffect
+import numpyro
+from prophetverse.sktime import Prophetverse
+from prophetverse.sktime.seasonality import seasonal_transformer
+from prophetverse.effects.linear import LinearEffect
+from prophetverse.utils.regex import starts_with
+from prophetverse.effects.lift_experiment import LiftExperimentLikelihood
+
+
+exogenous_effects = [
+    (
+        "seasonality",
+        LinearEffect(
+            prior=dist.Normal(0, 0.1),
+            effect_mode="multiplicative",
+        ),
+        starts_with(["sin", "cos"]),
+    ),
+    ("exog", HillEffect(effect_mode="additive"), starts_with("exog")),
+]
+
+model = Prophetverse(
+    trend="linear",
+    changepoint_interval=300,
+    changepoint_prior_scale=0.0001,
+    exogenous_effects=exogenous_effects,
+    noise_scale=0.05,
+    optimizer_steps=50000,
+    optimizer_name="Adam",
+    optimizer_kwargs={"step_size": 0.0001},
+    inference_method="map",
+)
+model.fit(y=y_train, X=X_train)
+
+# %%
+sites = model.predict_all_sites(fh=X.index, X=X)
+
+fig, ax = plt.subplots(figsize=(4, 4))
+
+ax.scatter(sites["exog"], true_exog_effect, s=2)
+# 45 degree line
+ax.plot([0, 1], [0, 1], "k--")
+ax.set_xlabel("Predicted effect")
+ax.set_ylabel("True effect")
+ax.set_title("Effect estimation")
+fig.show()
+
+# %% [markdown]
+# ## Leveraging A/B tests results to better detect the effect
+#
+# In many cases, such as Marketing Mix Modeling, we have access to A/B tests or other experiments that allow us to estimate the effect of a given intervention. We can use this information to tune the output of our variable's effect. In Prophetverse, this can be achieved with `prophetverse.effects.LiftExperimentLikelihood`, that adds a likelihood term using the expected effect for a given date.
+
+# %%
+mocked_lift_test_experiment = pd.DataFrame(
+    data=np.random.normal(true_exog_effect, 0.1),
+    columns=["lift_results"],
+    index=y.index,
+)
+mocked_lift_test_experiment = mocked_lift_test_experiment.loc[y.index]
+# Remove some samples, since we may only have A/B tests for a subset of the data
+
+mocked_lift_test_experiment = mocked_lift_test_experiment.loc[
+    np.random.choice(mocked_lift_test_experiment.index, 100, replace=False)
+].reindex(mocked_lift_test_experiment.index)
+
+display(mocked_lift_test_experiment.head(), mocked_lift_test_experiment.dropna().head())
+
+# %%
+from prophetverse.effects import LiftExperimentLikelihood
+
+model_with_lift = model.clone()
+
+
+model_with_lift.set_params(
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearEffect(
+                prior=dist.Normal(0, 0.1),
+                effect_mode="multiplicative",
+            ),
+            starts_with(["sin", "cos"]),
+        ),
+        (
+            "exog",
+            LiftExperimentLikelihood(
+                HillEffect(effect_mode="additive"),
+                lift_test_results=mocked_lift_test_experiment,
+                prior_scale=0.001,
+            ),
+            starts_with("exog"),
+        ),
+    ]
+)
+
+model_with_lift.fit(y=y_train, X=X_train)
+
+# %%
+sites_with_lift = model_with_lift.predict_all_sites(fh=X.index, X=X)
+sites_with_lift.head()
+
+# %%
+fig, ax = plt.subplots(figsize=(4, 4))
+
+ax.scatter(
+    X["exog"], sites["exog"], s=2, label="Predicted effect without A/B test data"
+)
+ax.scatter(X["exog"], true_exog_effect, s=5, label="True effect")
+ax.scatter(
+    X["exog"],
+    sites_with_lift["exog"],
+    s=2,
+    label="Predicted effect with A/B test data",
+)
+ax.set_xlabel("Input value")
+ax.set_ylabel("Predicted effect")
+fig.legend()
+fig.show()

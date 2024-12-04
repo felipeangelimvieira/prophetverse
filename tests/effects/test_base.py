@@ -29,5 +29,14 @@ def test_bad_effect_mode():
 
 
 def test_not_fitted():
+
+    class EffectNotFitted(BaseEffect):
+        _tags = {"requires_fit_before_transform": False}
+
+    EffectNotFitted().transform(pd.DataFrame(), fh=pd.Index([]))
+
+    class EffectMustFit(BaseEffect):
+        _tags = {"requires_fit_before_transform": True}
+
     with pytest.raises(ValueError):
-        BaseEffect().transform(pd.DataFrame(), fh=pd.Index([]))
+        EffectMustFit().transform(pd.DataFrame(), fh=pd.Index([]))

@@ -1100,8 +1100,9 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         out = OrderedDict()
         for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
-            if effect.should_skip_predict:
-                continue
+            if columns is None or len(columns) == 0:
+                if effect.get_tag("skip_predict_if_no_match"):
+                    continue
 
             data: Dict[str, jnp.ndarray] = effect.transform(X[columns], fh=fh)
             out[effect_name] = data
@@ -1120,8 +1121,8 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         """
         return {
             effect_name: effect
-            for effect_name, effect, _ in self.exogenous_effects_
-            if not effect.should_skip_predict
+            for effect_name, effect, columns in self.exogenous_effects_
+            if len(columns) > 0 or not effect.get_tag("skip_predict_if_no_match")
         }
 
     def _get_trend_model(self):

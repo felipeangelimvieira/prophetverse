@@ -1,6 +1,6 @@
 """Composition of effects (Effects that wrap other effects)."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import jax.numpy as jnp
 import numpyro
@@ -141,8 +141,3 @@ class LiftExperimentLikelihood(BaseEffect):
             )
 
         return x
-
-    @property
-    def input_feature_column_names(self) -> List[str]:
-        """Return the input feature columns names."""
-        return self.effect._input_feature_column_names

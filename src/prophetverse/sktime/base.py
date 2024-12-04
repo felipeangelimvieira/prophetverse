@@ -605,7 +605,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if self._likelihood_is_discrete:
             return y
 
-        if isinstance(self._scale, float):
+        if isinstance(self._scale, (int, float)):
             return y / self._scale
 
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values

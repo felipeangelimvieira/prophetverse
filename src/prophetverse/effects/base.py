@@ -1,6 +1,6 @@
 """Module that stores abstract class of effects."""
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 import jax.numpy as jnp
 import pandas as pd
@@ -63,8 +63,6 @@ class BaseEffect(BaseObject):
 
     Attributes
     ----------
-    input_feature_column_names : List[str]
-        The names of the input feature columns. This is set during the `fit()` method.
     should_skip_predict : bool
         If True, the effect should be skipped during prediction. This is determined by
         the `skip_predict_if_no_match` tag and the presence of input feature columns
@@ -80,31 +78,12 @@ class BaseEffect(BaseObject):
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
+        # Is fit() required before calling transform()?
+        "requires_fit_before_transform": False,
     }
 
     def __init__(self):
-        self._input_feature_column_names: List[str] = []
         self._is_fitted: bool = False
-
-    @property
-    def input_feature_column_names(self) -> List[str]:
-        """Return the input feature columns names."""
-        return self._input_feature_column_names
-
-    @property
-    def should_skip_predict(self) -> bool:
-        """Return if the effect should be skipped by the forecaster.
-
-        Returns
-        -------
-        bool
-            If the effect should be skipped by the forecaster.
-        """
-        if not self._input_feature_column_names and self.get_tag(
-            "skip_predict_if_no_match", True
-        ):
-            return True
-        return False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -144,11 +123,6 @@ class BaseEffect(BaseObject):
                     f"The effect {self.__class__.__name__} does not "
                     + "support multivariate data"
                 )
-
-        if X is None or X.empty:
-            self._input_feature_column_names = []
-        else:
-            self._input_feature_column_names = X.columns.tolist()
 
         self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
@@ -205,19 +179,14 @@ class BaseEffect(BaseObject):
         ValueError
             If the effect has not been fitted.
         """
-        if not self._is_fitted:
+        if not self._is_fitted and self.get_tag("requires_fit_before_transform", True):
             raise ValueError("You must call fit() before calling this method")
-
-        # If apply should be skipped, return an empty dictionary
-        if self.should_skip_predict:
-            return {}
 
         if self.get_tag("filter_indexes_with_forecating_horizon_at_transform", True):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
 
-        X = X[self.input_feature_column_names]
         return self._transform(X, fh)
 
     def _transform(

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
+from sktime.datasets import load_forecastingdata
 from sktime.transformations.hierarchical.aggregate import Aggregator
 
 DATASET_MODULE_PATH = Path(__file__).parent
@@ -89,3 +90,37 @@ def load_tensorflow_github_stars():
     y = df[["day-stars"]]
 
     return y
+
+
+def load_pedestrian_count():
+    """Load the pedestrian count dataset.
+
+    Returns
+    -------
+    pd.DataFrame
+        The pedestrian count dataset.
+    """
+
+    def _parse_data(df):
+
+        dfs = []
+        # iterrows
+        for _, row in df.iterrows():
+
+            _df = pd.DataFrame(
+                data={
+                    "pedestrian_count": row["series_value"],
+                    "timestamp": pd.period_range(
+                        row["start_timestamp"],
+                        periods=len(row["series_value"]),
+                        freq="H",
+                    ),
+                },
+            )
+            _df["series_name"] = row["series_name"]
+            dfs.append(_df)
+
+        return pd.concat(dfs).set_index(["series_name", "timestamp"])
+
+    df, _ = load_forecastingdata("pedestrian_counts_dataset")
+    return _parse_data(df)

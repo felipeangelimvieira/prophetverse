@@ -48,6 +48,7 @@ def multivariate_model(
     if y is not None:
         y = y.squeeze(-1).T
 
+    mean = numpyro.deterministic("mean", mean)
     if is_single_series:
 
         mean = mean.reshape((-1, 1))
@@ -113,7 +114,7 @@ def univariate_model(
         data=data,
         exogenous_effects=exogenous_effects,
     )
-
+    mean = numpyro.deterministic("mean", mean)
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2):
@@ -153,7 +154,7 @@ def univariate_gamma_model(
     )
 
     mean = _to_positive(mean, 1e-5)
-
+    mean = numpyro.deterministic("mean", mean)
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2):
@@ -196,7 +197,7 @@ def univariate_negbinomial_model(
     mean = _to_positive(mean, 1e-5)
 
     mean = mean * scale
-
+    mean = numpyro.deterministic("mean", mean)
     noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
 
     with numpyro.plate("data", len(mean), dim=-2):

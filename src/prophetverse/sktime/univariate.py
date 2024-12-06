@@ -122,7 +122,7 @@ class Prophetverse(BaseProphetForecaster):
     likelihood : str, optional, default="normal"
         Likelihood to use for the model. Can be "normal", "gamma" or "negbinomial".
 
-    default_effect : AbstractEffectm optional, defalut=None
+    default_effect : AbstractEffect optional, defalut=None
         The default effect to be used when no effect is specified for a variable.
 
     default_exogenous_prior : tuple, default=None
@@ -170,11 +170,11 @@ class Prophetverse(BaseProphetForecaster):
         likelihood="normal",
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         """Initialize the Prophet model."""
         self.noise_scale = noise_scale
         self.feature_transformer = feature_transformer
-
         self.likelihood = likelihood
 
         super().__init__(
@@ -191,6 +191,7 @@ class Prophetverse(BaseProphetForecaster):
             default_effect=default_effect,
             exogenous_effects=exogenous_effects,
             # BaseBayesianForecaster
+            inference_engine=inference_engine,
             inference_method=inference_method,
             mcmc_samples=mcmc_samples,
             mcmc_warmup=mcmc_warmup,
@@ -357,16 +358,19 @@ class Prophetverse(BaseProphetForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
+        from prophetverse.effects.trend import FlatTrend
+        from prophetverse.engine import MCMCInferenceEngine
+
         params = [
             {
                 "optimizer_steps": 1,
                 "inference_method": "map",
             },
             {
-                "inference_method": "mcmc",
-                "mcmc_samples": 1,
-                "mcmc_warmup": 1,
-                "mcmc_chains": 1,
+                "inference_engine": MCMCInferenceEngine(
+                    num_chains=1, num_samples=1, num_warmup=1
+                ),
+                "trend": FlatTrend(),
             },
         ]
 

@@ -21,8 +21,17 @@ from prophetverse.effects.trend import (
     PiecewiseLinearTrend,
     PiecewiseLogisticTrend,
 )
-from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
+from prophetverse.engine import (
+    BaseInferenceEngine,
+    MAPInferenceEngine,
+    MCMCInferenceEngine,
+)
+from prophetverse.engine.optimizer import (
+    CosineScheduleAdamOptimizer,
+    _LegacyNumpyroOptimizer,
+)
 from prophetverse.utils import get_multiindex_loc
+from prophetverse.utils.deprecation import deprecation_warning
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -78,6 +87,7 @@ class BaseBayesianForecaster(BaseForecaster):
         optimizer_name: str = "Adam",
         optimizer_kwargs: Optional[dict] = None,
         scale=None,
+        inference_engine: Optional[BaseInferenceEngine] = None,
         *args,
         **kwargs,
     ):
@@ -91,7 +101,46 @@ class BaseBayesianForecaster(BaseForecaster):
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
         self.scale = scale
+        self.inference_engine = inference_engine
         super().__init__()
+
+        if self.inference_engine is not None:
+            self._inference_engine = self.inference_engine
+        else:
+            self._inference_engine = self._get_inference_engine()
+
+    def _get_inference_engine(self):
+        """Temporarily return the inference engine.
+
+        Returns
+        -------
+        BaseInferenceEngine
+            The inference engine.
+        """
+        deprecation_warning(
+            "inference_method",
+            "0.5.0",
+            "Use the `inference_engine` parameter instead.",
+        )
+
+        if self.inference_method == "map":
+            optimizer = self._optimizer()
+
+            return MAPInferenceEngine(
+                optimizer=optimizer,
+                num_steps=self.optimizer_steps,
+                rng_key=self.rng_key,
+            )
+        elif self.inference_method == "mcmc":
+            return MCMCInferenceEngine(
+                num_samples=self.mcmc_samples,
+                num_warmup=self.mcmc_warmup,
+                num_chains=self.mcmc_chains,
+                rng_key=self.rng_key,
+                dense_mass=False,
+            )
+        else:
+            raise ValueError(f"Unknown method {self.inference_method}")
 
     @property
     def _likelihood_is_discrete(self):
@@ -107,7 +156,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         return False
 
-    def optimizer(self) -> numpyro.optim._NumPyroOptim:
+    def _optimizer(self) -> numpyro.optim._NumPyroOptim:
         """Return the optimizer.
 
         Returns
@@ -129,21 +178,11 @@ class BaseBayesianForecaster(BaseForecaster):
 
         if optimizer_name.startswith("optax"):
 
-            import optax
-            from numpyro.optim import optax_to_numpyro
+            return CosineScheduleAdamOptimizer(**optimizer_kwargs)
 
-            scheduler = optax.cosine_decay_schedule(**optimizer_kwargs)
-
-            opt = optax_to_numpyro(
-                optax.chain(
-                    optax.scale_by_adam(),
-                    optax.scale_by_schedule(scheduler),
-                    optax.scale(-1.0),
-                )
-            )
-            return opt
-
-        return getattr(numpyro.optim, optimizer_name)(**optimizer_kwargs)
+        return _LegacyNumpyroOptimizer(
+            optimizer_name=optimizer_name, optimizer_kwargs=optimizer_kwargs
+        )
 
     # pragma: no cover
     def _get_fit_data(
@@ -248,25 +287,8 @@ class BaseBayesianForecaster(BaseForecaster):
         if rng_key is None:
             rng_key = jax.random.PRNGKey(24)
 
-        if self.inference_method == "mcmc":
-            self.inference_engine_ = MCMCInferenceEngine(
-                self.model,
-                num_samples=self.mcmc_samples,
-                num_warmup=self.mcmc_warmup,
-                num_chains=self.mcmc_chains,
-                rng_key=rng_key,
-            )
-        elif self.inference_method == "map":
-            self.inference_engine_ = MAPInferenceEngine(
-                self.model,
-                rng_key=rng_key,
-                optimizer_factory=self.optimizer,
-                num_steps=self.optimizer_steps,
-            )
-        else:
-            raise ValueError(f"Unknown method {self.inference_method}")
-
-        self.inference_engine_.infer(**data)
+        self.inference_engine_ = self._inference_engine.clone()
+        self.inference_engine_.infer(self.model, **data)
         self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
         return self
@@ -287,12 +309,41 @@ class BaseBayesianForecaster(BaseForecaster):
         pd.DataFrame
             Point forecasts for the forecasting horizon.
         """
-        predictive_samples = self.predict_samples(fh=fh, X=X)
-        y_pred = predictive_samples.mean(axis=1).to_frame(self._y.columns[0])
+        predictive_samples = self.predict_components(fh=fh, X=X)
+        mean = predictive_samples["mean"]
+        y_pred = mean.to_frame(self._y.columns[0])
 
-        return y_pred
+        return self._postprocess_output(y_pred)
 
     def predict_all_sites(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
+        """
+        Predicts the values for all sites.
+
+        Given a forecast horizon and optional input features, returns a DataFrame
+        the mean of the predicted values for all sites.
+
+        Parameters
+        ----------
+        fh : ForecastingHorizon
+            The forecast horizon, specifying the number of time steps to predict into
+            the future.
+        X : array-like, optional
+            The input features used for prediction. Defaults to None.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A DataFrame containing the predicted values for all sites, with the site
+            names as columns and the forecast horizon as the index.
+        """
+        deprecation_warning(
+            "predict_all_sites",
+            "0.5.0",
+            "Use the `predict_components` method instead.",
+        )
+        return self.predict_components(fh=fh, X=X)
+
+    def predict_components(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
         """
         Predicts the values for all sites.
 
@@ -329,6 +380,25 @@ class BaseBayesianForecaster(BaseForecaster):
 
         return self._inv_scale_y(out)
 
+    def _postprocess_output(self, y: pd.DataFrame) -> pd.DataFrame:
+        """Postprocess outputs. Default to do nothing.
+
+        This method is a placeholder for child classes that may need
+        to do specific postprocesing, for example the HierarchicalProphet
+
+        Parameters
+        ----------
+        y : pd.DataFrame
+            dataframe with output predictions
+
+        Returns
+        -------
+        pd.DataFrame
+            postprocessed dataframe
+
+        """
+        return y
+
     def _get_predictive_samples_dict(
         self, fh: ForecastingHorizon, X: Optional[pd.DataFrame] = None
     ) -> dict[str, jnp.ndarray]:
@@ -358,6 +428,30 @@ class BaseBayesianForecaster(BaseForecaster):
         return predictive_samples_
 
     def predict_all_sites_samples(self, fh, X=None):
+        """
+        Predicts samples for all sites.
+
+        Parameters
+        ----------
+        fh : int or array-like
+            The forecast horizon or an array-like object representing the forecast
+            horizons.
+        X : array-like, optional
+            The input features for prediction. Defaults to None.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A DataFrame containing the predicted samples for all sites.
+        """
+        deprecation_warning(
+            "predict_all_sites_samples",
+            "0.5.0",
+            "Use the `predict_component_samples` method instead.",
+        )
+        return self.predict_component_samples(fh=fh, X=X)
+
+    def predict_component_samples(self, fh, X=None):
         """
         Predicts samples for all sites.
 
@@ -511,7 +605,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if self._likelihood_is_discrete:
             return y
 
-        if isinstance(self._scale, float):
+        if isinstance(self._scale, (int, float)):
             return y / self._scale
 
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
@@ -748,6 +842,11 @@ class BaseBayesianForecaster(BaseForecaster):
         if not self._is_vectorized:
             return getattr(self, methodname)(X=X, fh=fh)
 
+        def _coerce_to_tuple(x):
+            if isinstance(x, (tuple, list)):
+                return x
+            return (x,)
+
         outs = []
         for idx, data in self.forecasters_.iterrows():
             forecaster = data[0]
@@ -760,6 +859,13 @@ class BaseBayesianForecaster(BaseForecaster):
                 for _ in range(_X.index.nlevels - 1):
                     _X = _X.droplevel(0)
             out = getattr(forecaster, methodname)(X=_X, fh=fh)
+
+            if not isinstance(idx, (tuple, list)):
+                idx = [idx]
+            new_index = pd.MultiIndex.from_tuples(
+                [[*idx, *_coerce_to_tuple(dateidx)] for dateidx in out.index]
+            )
+            out.set_index(new_index, inplace=True)
             outs.append(out)
         return pd.concat(outs, axis=0)
 
@@ -834,6 +940,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         optimizer_steps: int = 100_000,
         optimizer_name: str = "Adam",
         optimizer_kwargs: Optional[dict] = None,
+        inference_engine: Optional[BaseInferenceEngine] = None,
         scale=None,
     ):
 
@@ -859,7 +966,15 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             optimizer_name=optimizer_name,
             optimizer_kwargs=optimizer_kwargs,
             scale=scale,
+            inference_engine=inference_engine,
         )
+
+    @property
+    def _trend(self):
+        """Return trend.
+
+        This property is for compatibility with _HeterogenousMetaEstimator.
+        """
 
     @property
     def _exogenous_effects(self):
@@ -985,8 +1100,9 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         out = OrderedDict()
         for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
-            if effect.should_skip_predict:
-                continue
+            if columns is None or len(columns) == 0:
+                if effect.get_tag("skip_predict_if_no_match"):
+                    continue
 
             data: Dict[str, jnp.ndarray] = effect.transform(X[columns], fh=fh)
             out[effect_name] = data
@@ -1005,8 +1121,8 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         """
         return {
             effect_name: effect
-            for effect_name, effect, _ in self.exogenous_effects_
-            if not effect.should_skip_predict
+            for effect_name, effect, columns in self.exogenous_effects_
+            if len(columns) > 0 or not effect.get_tag("skip_predict_if_no_match")
         }
 
     def _get_trend_model(self):
@@ -1024,6 +1140,12 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             If the trend parameter is not one of 'linear', 'logistic', 'flat'
             or a BaseEffect instance.
         """
+        if isinstance(self.trend, str):
+            deprecation_warning(
+                "trend (str)",
+                "0.5.0",
+                "Pass a BaseEffect instance instead.",
+            )
         # Changepoints and trend
         if self.trend == "linear":
             return PiecewiseLinearTrend(
@@ -1113,3 +1235,47 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
         columns = columns.astype(str)
         return columns[columns.str.match(regex)]
+
+    def __rshift__(self, other):
+        """Right shift operator.
+
+        This method allows to chain effects and inference engines using the right shift
+
+        Paremeters
+        ----------
+        other : BaseEffect, tuple, list or BaseInferenceEngine
+            The object to chain with the current object.
+
+        Returns
+        -------
+        BaseProphetForecaster
+            A new instance of the class with the specified effect or inference engine.
+
+        Raises
+        ------
+        ValueError
+            If the type of the object is not valid.
+        """
+        exogenous_effects = (
+            [] if self.exogenous_effects is None else self.exogenous_effects
+        )
+        if isinstance(other, BaseEffect):
+            new_obj = self.clone()
+            return new_obj.set_params(trend=other)
+        if isinstance(other, tuple):
+
+            assert len(other) == 3
+            assert isinstance(other[1], BaseEffect)
+
+            new_obj = self.clone()
+            return new_obj.set_params(exogenous_effects=[*exogenous_effects, other])
+
+        if isinstance(other, list):
+            new_obj = self.clone()
+            return new_obj.set_params(exogenous_effects=[*exogenous_effects, *other])
+
+        if isinstance(other, BaseInferenceEngine):
+            new_obj = self.clone()
+            return new_obj.set_params(inference_engine=other)
+
+        raise ValueError("Invalid type for right shift operator")

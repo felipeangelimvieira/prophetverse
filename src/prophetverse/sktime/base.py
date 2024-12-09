@@ -104,6 +104,11 @@ class BaseBayesianForecaster(BaseForecaster):
         self.inference_engine = inference_engine
         super().__init__()
 
+        if self.scale:
+            self._scale = self.scale
+        else:
+            self._scale = None
+
         if self.inference_engine is not None:
             self._inference_engine = self.inference_engine
         else:

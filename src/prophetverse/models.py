@@ -248,7 +248,9 @@ def _compute_mean_univariate(
 
     predicted_effects: Dict[str, jnp.ndarray] = {}
 
-    trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
+    with numpyro.handlers.scope(prefix="trend"):
+        trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
+
     predicted_effects["trend"] = trend
 
     numpyro.deterministic("trend", trend)

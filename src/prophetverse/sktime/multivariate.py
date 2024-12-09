@@ -314,9 +314,7 @@ class HierarchicalProphet(BaseProphetForecaster):
         np.ndarray
             Predicted samples.
         """
-        fh_dates = fh.to_absolute(
-            cutoff=self.internal_y_indexes_.get_level_values(-1).max()
-        )
+        fh_dates = self.fh_to_index(fh)
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
         if not isinstance(fh, ForecastingHorizon):

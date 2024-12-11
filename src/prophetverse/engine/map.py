@@ -3,6 +3,7 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
+import warnings
 from typing import Optional
 
 import jax.numpy as jnp
@@ -13,9 +14,9 @@ from numpyro.infer.initialization import init_to_mean
 from numpyro.infer.svi import SVIRunResult
 
 from prophetverse.engine.base import BaseInferenceEngine
-from prophetverse.engine.optimizer import (
-    AdamOptimizer,
+from prophetverse.engine.optimizer.optimizer import (
     BaseOptimizer,
+    LBFGSSolver,
     _OptimizerFromCallable,
 )
 from prophetverse.utils.deprecation import deprecation_warning
@@ -57,6 +58,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         progress_bar: bool = DEFAULT_PROGRESS_BAR,
         stable_update=False,
         forward_mode_differentiation=False,
+        init_loc_fn=None,
     ):
 
         self.optimizer_factory = optimizer_factory
@@ -66,6 +68,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.progress_bar = progress_bar
         self.stable_update = stable_update
         self.forward_mode_differentiation = forward_mode_differentiation
+        self.init_loc_fn = init_loc_fn
         super().__init__(rng_key)
 
         deprecation_warning(
@@ -75,12 +78,24 @@ class MAPInferenceEngine(BaseInferenceEngine):
         )
 
         if optimizer_factory is None and optimizer is None:
-            optimizer = AdamOptimizer(1e-3)
+            optimizer = LBFGSSolver()
 
         if self.optimizer is None and optimizer_factory is not None:
             optimizer = _OptimizerFromCallable(optimizer_factory)
-
         self._optimizer = optimizer
+
+        self._init_loc_fn = init_loc_fn
+        if init_loc_fn is None:
+            self._init_loc_fn = init_to_mean()
+
+        self._num_steps = num_steps
+
+        if self._optimizer.get_tag("is_solver", False):  # type: ignore[union-attr]
+            warnings.warn(
+                "The optimizer is a solver, so the number of steps will be set to 1.",
+                stacklevel=2,
+            )
+            self._num_steps = 1
 
     def _infer(self, **kwargs):
         """
@@ -96,7 +111,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self
             The updated MAPInferenceEngine object.
         """
-        self.guide_ = AutoDelta(self.model_, init_loc_fn=init_to_mean())
+        self.guide_ = AutoDelta(self.model_, init_loc_fn=self._init_loc_fn)
 
         def get_result(
             rng_key,
@@ -129,7 +144,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
             self.model_,
             self.guide_,
             self._optimizer.create_optimizer(),
-            self.num_steps,
+            self._num_steps,
             stable_update=self.stable_update,
             progress_bar=self.progress_bar,
             forward_mode_differentiation=self.forward_mode_differentiation,

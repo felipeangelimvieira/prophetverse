@@ -26,7 +26,7 @@ from prophetverse.engine import (
     MAPInferenceEngine,
     MCMCInferenceEngine,
 )
-from prophetverse.engine.optimizer import (
+from prophetverse.engine.optimizer.optimizer import (
     CosineScheduleAdamOptimizer,
     _LegacyNumpyroOptimizer,
 )

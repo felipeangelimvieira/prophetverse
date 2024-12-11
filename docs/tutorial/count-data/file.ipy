@@ -8,13 +8,14 @@
 import warnings
 
 warnings.simplefilter(action="ignore")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
-from sktime.transformations.series.fourier import FourierFeatures
-from sktime.forecasting.compose import ForecastingPipeline
 from numpyro import distributions as dist
+from sktime.forecasting.compose import ForecastingPipeline
+from sktime.transformations.series.fourier import FourierFeatures
+
+from prophetverse.datasets.loaders import load_pedestrian_count
 
 # %% [markdown]
 # ## Import dataset
@@ -23,7 +24,6 @@ from numpyro import distributions as dist
 
 # %%
 
-from prophetverse.datasets.loaders import load_pedestrian_count
 y = load_pedestrian_count()
 
 # We take only one time series for simplicity
@@ -43,7 +43,7 @@ plt.show()
 
 # %% [markdown]
 
-#The full dataset is actually large, and plotting it all at once does not
+# The full dataset is actually large, and plotting it all at once does not
 # help a lot. Either way, let's plot the full dataset to see how it looks like:
 
 # %%
@@ -55,11 +55,11 @@ plt.show()
 # %% [markdown]
 # ## Fitting models
 #
-# The series has some clear patterns: a daily seasonality, a weekly seasonality, and 
-# a yearly seasonality. It also has many zeros, and a model assuming normal 
+# The series has some clear patterns: a daily seasonality, a weekly seasonality, and
+# a yearly seasonality. It also has many zeros, and a model assuming normal
 # distributed observations would not be able to capture this.
 #
-# First, let's fit and forecast with the standard prophet, 
+# First, let's fit and forecast with the standard prophet,
 # then see how the negative binomial model performs.
 #
 # ## Prophet with normal likelihood
@@ -70,11 +70,12 @@ plt.show()
 
 # %%
 from prophetverse.sktime import Prophetverse
+from prophetverse.utils.regex import no_input_columns
+
 from prophetverse.effects.fourier import LinearFourierSeasonality
 from prophetverse.effects.trend import FlatTrend
 from prophetverse.engine import MAPInferenceEngine
 from prophetverse.engine.optimizer import AdamOptimizer
-from prophetverse.utils.regex import no_input_columns
 
 
 # Here we set the prior for the seasonality effect
@@ -96,16 +97,13 @@ exogenous_effects = [
 model = Prophetverse(
     trend=FlatTrend(),
     exogenous_effects=exogenous_effects,
-    inference_engine=MAPInferenceEngine(
-        optimizer=AdamOptimizer(),
-        num_steps=20_000,
-    ),
+    inference_engine=MAPInferenceEngine(),
 )
 model.fit(y=y_train)
 
 # %% [markdown]
 # ### Forecasting with the normal model
-# Below we see the negative predictions, which is clear a limitation of this 
+# Below we see the negative predictions, which is clear a limitation of this
 # gaussian likelihood for this kind of data.
 # %%
 forecast_horizon = y_train.index[-100:].union(y_test.index[:300])
@@ -193,7 +191,7 @@ fig.show()
 
 # %% [markdown]
 # ## Comparing both forecasts side by side
-# 
+#
 # To make our point clear, we plot both forecasts side by side. Isn't it nice to have
 # forecasts that make sense? :smile:
 
@@ -222,3 +220,5 @@ ax.axvline(
 fig.legend(loc="center", ncol=4, bbox_to_anchor=(0.5, 0.8))
 fig.tight_layout()
 fig.show()
+
+# %%

@@ -30,6 +30,8 @@ import numpy as np
 import pandas as pd
 from numpyro import distributions as dist
 
+# %%
+from prophetverse.datasets.loaders import load_peyton_manning
 
 # %% [markdown]
 # ## Import dataset
@@ -37,8 +39,6 @@ from numpyro import distributions as dist
 # We import a dataset from Prophet's original repository. We then put it into sktime-friendly format, where the index is a `pd.PeriodIndex` and the colums are the time series.
 
 
-# %%
-from prophetverse.datasets.loaders import load_peyton_manning
 
 y = load_peyton_manning()
 display(y.head())
@@ -62,11 +62,11 @@ plt.show()
 # %%
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine import MAPInferenceEngine
-from prophetverse.engine.optimizer import AdamOptimizer, BFGSOptimizer
+from prophetverse.engine.optimizer import AdamOptimizer, LBFGSSolver
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils import no_input_columns
 
-optimizer = BFGSOptimizer(learning_rate=1e-3)
+optimizer = LBFGSSolver()
 model = Prophetverse(
     trend=PiecewiseLinearTrend(
         changepoint_interval=500,
@@ -75,7 +75,7 @@ model = Prophetverse(
     ),
     inference_engine=MAPInferenceEngine(
         optimizer=optimizer,
-        num_steps=1000,
+        num_steps=1,
     ),
 )
 model.fit(y=y)
@@ -131,7 +131,7 @@ model = Prophetverse(
     ],
     inference_engine=MAPInferenceEngine(
         optimizer=optimizer,
-        num_steps=1000,
+        num_steps=1,
     ),
 )
 model.fit(y=y)

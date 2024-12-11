@@ -8,10 +8,13 @@ AdamOptimizer and CosineScheduleAdamOptimizer.
 
 from typing import Optional
 
+import jax.numpy as jnp
 import numpyro
 import optax
 from numpyro.optim import _NumPyroOptim, optax_to_numpyro
 from skbase.base import BaseObject
+
+from prophetverse.engine.optimizer._numpyro_optax_minimizer import LBFGS
 
 __all__ = [
     "BaseOptimizer",
@@ -27,7 +30,7 @@ class BaseOptimizer(BaseObject):
     This abstract base class defines the interface that all optimizers must implement.
     """
 
-    _tags = {"object_type": "optimizer"}
+    _tags = {"object_type": "optimizer", "is_solver": False}
 
     def __init__(self):
         """
@@ -163,6 +166,71 @@ class BFGSOptimizer(BaseOptimizer):
         opt = optax.chain(linesearch, optax.scale(-1.0))
 
         return numpyro.optim.optax_to_numpyro(opt)
+
+
+class LBFGSSolver(BaseOptimizer):
+
+    _tags = {
+        "is_solver": True,
+    }
+
+    def __init__(
+        self,
+        max_iter: int = 10_000,
+        gtol: float = 1e-6,
+        tol: float = -jnp.inf,
+        learning_rate=1e-3,
+        memory_size=50,
+        scale_init_precond=True,
+        # linesearch
+        max_linesearch_steps=50,
+        initial_guess_strategy="one",
+        max_learning_rate=None,
+        linesearch_tol=0,
+        increase_factor=2,
+        slope_rtol=0.0001,
+        curv_rtol=0.9,
+        approx_dec_rtol=0.000001,
+        stepsize_precision=1e5,
+    ):
+        self.max_iter = max_iter
+        self.gtol = gtol
+        self.tol = tol
+        self.learning_rate = learning_rate
+        self.memory_size = memory_size
+        self.scale_init_precond = scale_init_precond
+
+        # Linesearch
+        self.max_linesearch_steps = max_linesearch_steps
+        self.initial_guess_strategy = initial_guess_strategy
+        self.max_learning_rate = max_learning_rate
+        self.linesearch_tol = linesearch_tol
+        self.increase_factor = increase_factor
+        self.slope_rtol = slope_rtol
+        self.curv_rtol = curv_rtol
+        self.approx_dec_rtol = approx_dec_rtol
+        self.stepsize_precision = stepsize_precision
+        super().__init__()
+
+    def create_optimizer(self):
+        return LBFGS(
+            max_iter=self.max_iter,
+            tol=self.tol,
+            gtol=self.gtol,
+            learning_rate=self.learning_rate,
+            memory_size=self.memory_size,
+            scale_init_precond=self.scale_init_precond,
+            # linesearch
+            max_linesearch_steps=self.max_linesearch_steps,
+            initial_guess_strategy="one",
+            max_learning_rate=self.max_learning_rate,
+            linesearch_tol=self.linesearch_tol,
+            increase_factor=self.increase_factor,
+            slope_rtol=self.slope_rtol,
+            curv_rtol=self.curv_rtol,
+            approx_dec_rtol=self.approx_dec_rtol,
+            stepsize_precision=self.stepsize_precision,
+        )
 
 
 class _LegacyNumpyroOptimizer(BaseOptimizer):

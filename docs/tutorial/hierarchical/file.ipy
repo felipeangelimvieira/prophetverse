@@ -6,7 +6,7 @@
 # The univariate `Prophetverse` model can seamlessly handle hierarchical timeseries
 # due to the package's compatibility with sktime. The `HierarchicalProphet` model
 # is specifically designed to handle hierarchical timeseries, by forecasting all
-# bottom-level series at once. 
+# bottom-level series at once.
 #
 # !!! note
 #     Currently, some features of the univariate Prophet are not available in the hierarchical
@@ -72,16 +72,19 @@ def plot_preds(y=None, preds={}, axs=None):
 #
 # Because of sktime's amazing interface, we can use the univariate Prophet seamlessly with hierarchical data. We do not reconcile it here, but it could be achieved with the `Reconciler` class.
 
+
+import jax.numpy as jnp
+
 # %%
 from prophetverse.effects import LinearFourierSeasonality
 from prophetverse.effects.trend import (PiecewiseLinearTrend,
                                         PiecewiseLogisticTrend)
 from prophetverse.engine import MAPInferenceEngine
-from prophetverse.engine.optimizer import AdamOptimizer, BFGSOptimizer
+from prophetverse.engine.optimizer import AdamOptimizer, LBFGSSolver
 from prophetverse.sktime.univariate import Prophetverse
 from prophetverse.utils import no_input_columns
 
-optimizer = AdamOptimizer(1e-3)
+optimizer = LBFGSSolver()
 model = Prophetverse(
     trend=PiecewiseLogisticTrend(
         changepoint_prior_scale=0.1,
@@ -103,7 +106,7 @@ model = Prophetverse(
     ],
     inference_engine=MAPInferenceEngine(
         optimizer=optimizer,
-        num_steps=10000
+        num_steps=1
     )
 )
 model.fit(y=y)
@@ -164,8 +167,10 @@ model_hier = HierarchicalProphet(
             no_input_columns,
         )
     ],
-    inference_engine=MAPInferenceEngine(optimizer=optimizer,
-                                        num_steps=40_000),
+    inference_engine=MAPInferenceEngine(
+        optimizer=optimizer,
+        num_steps=1,
+    ),
 )
 
 

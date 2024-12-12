@@ -255,23 +255,23 @@ fig.show()
   <tbody>
     <tr>
       <th>2010-01-01</th>
-      <td>-0.511580</td>
+      <td>14.956419</td>
     </tr>
     <tr>
       <th>2010-01-02</th>
-      <td>41.634559</td>
+      <td>1.694310</td>
     </tr>
     <tr>
       <th>2010-01-03</th>
-      <td>11.708982</td>
+      <td>28.520329</td>
     </tr>
     <tr>
       <th>2010-01-04</th>
-      <td>3.135654</td>
+      <td>15.180486</td>
     </tr>
     <tr>
       <th>2010-01-05</th>
-      <td>15.558547</td>
+      <td>20.784949</td>
     </tr>
   </tbody>
 </table>
@@ -307,23 +307,23 @@ fig.show()
   <tbody>
     <tr>
       <th>2010-01-01</th>
-      <td>4.370861</td>
+      <td>7.965604</td>
     </tr>
     <tr>
       <th>2010-01-02</th>
-      <td>9.556429</td>
+      <td>4.949906</td>
     </tr>
     <tr>
       <th>2010-01-03</th>
-      <td>7.587945</td>
+      <td>8.727381</td>
     </tr>
     <tr>
       <th>2010-01-04</th>
-      <td>6.387926</td>
+      <td>7.276312</td>
     </tr>
     <tr>
       <th>2010-01-05</th>
-      <td>2.404168</td>
+      <td>1.847596</td>
     </tr>
   </tbody>
 </table>
@@ -352,7 +352,6 @@ fig.show()
 
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine import MAPInferenceEngine
-from prophetverse.engine.optimizer import AdamOptimizer, BFGSOptimizer
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils.regex import exact
 
@@ -364,7 +363,7 @@ model = (
         changepoint_range=-100,
         
     )
-    >> MAPInferenceEngine(num_steps=50_000)
+    >> MAPInferenceEngine()
 ) >> (
     "exog_effect",
     SquaredEffect(
@@ -381,7 +380,7 @@ model
 
 
 
-<style>#sk-c3662db1-7d28-4dfe-8440-d23e3687c64f {
+<style>#sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -406,15 +405,15 @@ model
     }
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f pre {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 pre {
     padding: 0;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f input.sk-hidden--visually {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -426,7 +425,7 @@ model
     width: 1px;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-dashed-wrapped {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -434,7 +433,7 @@ model
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-container {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -444,7 +443,7 @@ model
     position: relative;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-text-repr-fallback {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -460,14 +459,14 @@ model
 
   /* Parallel-specific style estimator block */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-parallel-item::after {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-parallel {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -475,28 +474,28 @@ model
     position: relative;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-parallel-item {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-parallel-item:first-child::after {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-parallel-item:last-child::after {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-parallel-item:only-child::after {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-serial {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -514,14 +513,14 @@ model
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-toggleable {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f label.sk-toggleable__label {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -531,7 +530,7 @@ model
     text-align: center;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f label.sk-toggleable__label-arrow:before {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -539,13 +538,13 @@ model
     color: var(--sklearn-color-icon);
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f label.sk-toggleable__label-arrow:hover:before {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-toggleable__content {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -553,27 +552,27 @@ model
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-toggleable__content pre {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -581,38 +580,38 @@ model
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-label label.sk-toggleable__label,
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-label label {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-label label.sk-toggleable__label,
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-label:hover label.sk-toggleable__label {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-label label {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-label-container {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-estimator {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -622,7 +621,7 @@ model
   }
 
   /* on hover */
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f div.sk-estimator:hover {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -679,7 +678,7 @@ model
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f a.estimator_doc_link {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -694,27 +693,27 @@ model
   }
 
   /* On hover */
-  #sk-c3662db1-7d28-4dfe-8440-d23e3687c64f a.estimator_doc_link:hover {
+  #sk-10b2cad5-cd18-44e5-9f9c-544babad55a6 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id='sk-c3662db1-7d28-4dfe-8440-d23e3687c64f' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;exog_effect&#x27;,
-                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x163dd1910&gt;,
-                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x163d95ad0&gt;),
+</style><div id='sk-10b2cad5-cd18-44e5-9f9c-544babad55a6' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;exog_effect&#x27;,
+                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x13fcd0e90&gt;,
+                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x1508ec3d0&gt;),
                                  &#x27;^exogenous$&#x27;)],
-             inference_engine=MAPInferenceEngine(num_steps=50000),
+             inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=100,
                                         changepoint_prior_scale=0.1,
-                                        changepoint_range=-100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('6bb64194-be2b-42c1-acc8-4b617aed3c8b') type="checkbox" ><label for=UUID('6bb64194-be2b-42c1-acc8-4b617aed3c8b') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;exog_effect&#x27;,
-                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x163dd1910&gt;,
-                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x163d95ad0&gt;),
+                                        changepoint_range=-100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('069099de-79a0-4b6e-8efe-d0948e81a956') type="checkbox" ><label for=UUID('069099de-79a0-4b6e-8efe-d0948e81a956') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;exog_effect&#x27;,
+                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x13fcd0e90&gt;,
+                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x1508ec3d0&gt;),
                                  &#x27;^exogenous$&#x27;)],
-             inference_engine=MAPInferenceEngine(num_steps=50000),
+             inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=100,
                                         changepoint_prior_scale=0.1,
-                                        changepoint_range=-100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('256e56e0-31e9-4ede-b00b-3747f69dd199') type="checkbox" ><label for=UUID('256e56e0-31e9-4ede-b00b-3747f69dd199') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.1,
-                     changepoint_range=-100)</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('972722df-00a7-4504-a977-d1d2d2fa2b97') type="checkbox" ><label for=UUID('972722df-00a7-4504-a977-d1d2d2fa2b97') class='sk-toggleable__label sk-toggleable__label-arrow'>PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.1,
+                                        changepoint_range=-100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('b7f6d84a-c36a-46b1-a046-91cfcec931cc') type="checkbox" ><label for=UUID('b7f6d84a-c36a-46b1-a046-91cfcec931cc') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.1,
+                     changepoint_range=-100)</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('cc38ce66-9961-42bb-9dbe-e23108bc90f7') type="checkbox" ><label for=UUID('cc38ce66-9961-42bb-9dbe-e23108bc90f7') class='sk-toggleable__label sk-toggleable__label-arrow'>PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.1,
                      changepoint_range=-100)</pre></div></div></div></div></div></div></div></div></div></div>
 
 
@@ -759,23 +758,23 @@ y_pred.head()
   <tbody>
     <tr>
       <th>2011-07-15</th>
-      <td>21.782337</td>
+      <td>31.399237</td>
     </tr>
     <tr>
       <th>2011-07-16</th>
-      <td>19.701607</td>
+      <td>16.795490</td>
     </tr>
     <tr>
       <th>2011-07-17</th>
-      <td>26.434742</td>
+      <td>36.025959</td>
     </tr>
     <tr>
       <th>2011-07-18</th>
-      <td>41.059937</td>
+      <td>16.220688</td>
     </tr>
     <tr>
       <th>2011-07-19</th>
-      <td>12.419967</td>
+      <td>16.969715</td>
     </tr>
   </tbody>
 </table>
@@ -849,38 +848,38 @@ components.head()
   <tbody>
     <tr>
       <th>2010-01-01</th>
-      <td>0.814534</td>
-      <td>0.975764</td>
-      <td>0.930191</td>
-      <td>0.161231</td>
+      <td>17.593569</td>
+      <td>17.406477</td>
+      <td>17.369835</td>
+      <td>-0.187097</td>
     </tr>
     <tr>
       <th>2010-01-02</th>
-      <td>41.405857</td>
-      <td>41.578205</td>
-      <td>41.576435</td>
-      <td>0.172360</td>
+      <td>0.006424</td>
+      <td>-0.164400</td>
+      <td>-0.165823</td>
+      <td>-0.170824</td>
     </tr>
     <tr>
       <th>2010-01-03</th>
-      <td>13.318528</td>
-      <td>13.502026</td>
-      <td>13.603917</td>
-      <td>0.183490</td>
+      <td>27.817766</td>
+      <td>27.663198</td>
+      <td>27.745121</td>
+      <td>-0.154552</td>
     </tr>
     <tr>
       <th>2010-01-04</th>
-      <td>3.808372</td>
-      <td>4.002995</td>
-      <td>4.021019</td>
-      <td>0.194620</td>
+      <td>10.351842</td>
+      <td>10.213557</td>
+      <td>10.228052</td>
+      <td>-0.138279</td>
     </tr>
     <tr>
       <th>2010-01-05</th>
-      <td>13.581171</td>
-      <td>13.786910</td>
-      <td>13.910775</td>
-      <td>0.205750</td>
+      <td>20.048355</td>
+      <td>19.926350</td>
+      <td>20.025919</td>
+      <td>-0.122007</td>
     </tr>
   </tbody>
 </table>

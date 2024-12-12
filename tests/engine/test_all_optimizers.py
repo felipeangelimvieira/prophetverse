@@ -1,7 +1,7 @@
 import numpyro
 from skbase.testing.test_all_objects import BaseFixtureGenerator, QuickTester
 
-from prophetverse.engine.optimizer import BaseOptimizer
+from prophetverse.engine.optimizer.optimizer import BaseOptimizer
 
 
 class OptimizerFixtureGenerator(BaseFixtureGenerator):

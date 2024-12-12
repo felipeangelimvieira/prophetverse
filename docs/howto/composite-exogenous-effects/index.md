@@ -191,7 +191,6 @@ from prophetverse.effects import LinearEffect
 from prophetverse.effects.fourier import LinearFourierSeasonality
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine import MAPInferenceEngine
-from prophetverse.engine.optimizer import AdamOptimizer
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils.regex import exact, no_input_columns
 
@@ -219,10 +218,7 @@ model = Prophetverse(
             exact("investment"),
         ),
     ],
-    inference_engine=MAPInferenceEngine(
-        optimizer=AdamOptimizer(1e-4),
-        num_steps=100_000,
-    ),
+    inference_engine=MAPInferenceEngine(),
 )
 
 model.fit(y=y_train, X=X_train)
@@ -235,7 +231,7 @@ model
 
 
 
-<style>#sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c {
+<style>#sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -260,15 +256,15 @@ model
     }
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c pre {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 pre {
     padding: 0;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c input.sk-hidden--visually {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -280,7 +276,7 @@ model
     width: 1px;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-dashed-wrapped {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -288,7 +284,7 @@ model
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-container {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -298,7 +294,7 @@ model
     position: relative;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-text-repr-fallback {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -314,14 +310,14 @@ model
 
   /* Parallel-specific style estimator block */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-parallel-item::after {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-parallel {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -329,28 +325,28 @@ model
     position: relative;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-parallel-item {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-parallel-item:first-child::after {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-parallel-item:last-child::after {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-parallel-item:only-child::after {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-serial {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -368,14 +364,14 @@ model
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-toggleable {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c label.sk-toggleable__label {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -385,7 +381,7 @@ model
     text-align: center;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c label.sk-toggleable__label-arrow:before {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -393,13 +389,13 @@ model
     color: var(--sklearn-color-icon);
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c label.sk-toggleable__label-arrow:hover:before {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-toggleable__content {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -407,27 +403,27 @@ model
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-toggleable__content pre {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -435,38 +431,38 @@ model
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-label label.sk-toggleable__label,
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-label label {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-label label.sk-toggleable__label,
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-label:hover label.sk-toggleable__label {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-label label {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-label-container {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-estimator {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -476,7 +472,7 @@ model
   }
 
   /* on hover */
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c div.sk-estimator:hover {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -533,7 +529,7 @@ model
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c a.estimator_doc_link {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -548,12 +544,12 @@ model
   }
 
   /* On hover */
-  #sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c a.estimator_doc_link:hover {
+  #sk-95e9b702-5dd3-4997-8ace-6ebe627a4404 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id='sk-36e1ebe8-fc19-486e-859a-fceec2abcd3c' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
+</style><div id='sk-95e9b702-5dd3-4997-8ace-6ebe627a4404' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
                                  LinearFourierSeasonality(effect_mode=&#x27;multiplicative&#x27;,
                                                           fourier_terms_list=[5],
                                                           freq=&#x27;D&#x27;,
@@ -561,13 +557,12 @@ model
                                                           sp_list=[365.25]),
                                  &#x27;^$&#x27;),
                                 (&#x27;investment&#x27;,
-                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x166605810&gt;),
+                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x1102fbe90&gt;),
                                  &#x27;^investment$&#x27;)],
-             inference_engine=MAPInferenceEngine(num_steps=100000,
-                                                 optimizer=AdamOptimizer(step_size=0.0001)),
+             inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('cbef5460-6523-456b-a431-31fe1f3c30fb') type="checkbox" ><label for=UUID('cbef5460-6523-456b-a431-31fe1f3c30fb') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
+                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('95d8c5eb-2432-4002-931a-4eaa000658a5') type="checkbox" ><label for=UUID('95d8c5eb-2432-4002-931a-4eaa000658a5') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
                                  LinearFourierSeasonality(effect_mode=&#x27;multiplicative&#x27;,
                                                           fourier_terms_list=[5],
                                                           freq=&#x27;D&#x27;,
@@ -575,14 +570,13 @@ model
                                                           sp_list=[365.25]),
                                  &#x27;^$&#x27;),
                                 (&#x27;investment&#x27;,
-                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x166605810&gt;),
+                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x1102fbe90&gt;),
                                  &#x27;^investment$&#x27;)],
-             inference_engine=MAPInferenceEngine(num_steps=100000,
-                                                 optimizer=AdamOptimizer(step_size=0.0001)),
+             inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('dc8d274c-d3cf-4847-a1bc-5e886c21ba27') type="checkbox" ><label for=UUID('dc8d274c-d3cf-4847-a1bc-5e886c21ba27') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
-                     changepoint_range=-500)</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('962348f4-3f9a-40ad-affa-60dd2fb8eea5') type="checkbox" ><label for=UUID('962348f4-3f9a-40ad-affa-60dd2fb8eea5') class='sk-toggleable__label sk-toggleable__label-arrow'>PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('6a1d4dad-e026-4e37-9d4d-6f453a2c4604') type="checkbox" ><label for=UUID('6a1d4dad-e026-4e37-9d4d-6f453a2c4604') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                     changepoint_range=-500)</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('1323bb66-dd71-4e51-804b-d2f5cb64ba21') type="checkbox" ><label for=UUID('1323bb66-dd71-4e51-804b-d2f5cb64ba21') class='sk-toggleable__label sk-toggleable__label-arrow'>PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
                      changepoint_range=-500)</pre></div></div></div></div></div></div></div></div></div></div>
 
 

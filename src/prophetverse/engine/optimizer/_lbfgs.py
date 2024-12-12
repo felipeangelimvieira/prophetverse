@@ -1,3 +1,5 @@
+"""LBFGS solver for NumPyro."""
+
 from typing import Any, Callable, NamedTuple
 
 import chex
@@ -7,134 +9,15 @@ import optax
 import optax.tree_utils as otu
 from numpyro.optim import _NumPyroOptim
 
-
-def _optim_fn_from_transformation(transformation: optax.GradientTransformation):
-    """
-    Create an optimization function tuple (init_fn, update_fn, get_params_fn).
-
-    Parameters
-    ----------
-    transformation : optax.GradientTransformation
-        The gradient transformation that defines the optimizer update rules.
-
-    Returns
-    -------
-    Callable
-        A callable that returns a tuple of functions: (init_fn, update_fn,
-        get_params_fn).
-        - init_fn(params): Initializes the optimizer state given parameters.
-        - update_fn(step, grads, state): Updates the parameters and state given
-            gradients.
-        - get_params_fn(state): Retrieves the current parameters from the state.
-    """
-
-    def init_fn(params):
-        opt_state = transformation.init(params)
-        return params, opt_state
-
-    def update_fn(step, grads, state):
-        params, opt_state = state
-        updates, opt_state = transformation.update(grads, opt_state, params)
-        updated_params = optax.apply_updates(params, updates)
-        return updated_params, opt_state
-
-    def get_params_fn(state):
-        params, _ = state
-        return params
-
-    def optim_fn(*args, **kwargs):
-        return init_fn, update_fn, get_params_fn
-
-    return optim_fn
+from prophetverse.logger import logger
 
 
-class InfoState(NamedTuple):
-    """
-    A named tuple holding iteration information.
-
-    Attributes
-    ----------
-    iter_num : chex.Numeric
-        The current iteration number.
-    """
-
-    iter_num: chex.Numeric
-
-
-def print_info():
-    """
-    Create a gradient transformation.
-
-    Prints iteration number, function value,
-    and gradient norm at each step. This is useful for debugging and monitoring
-    the optimization process.
-
-    Returns
-    -------
-    optax.GradientTransformationExtraArgs
-        A gradient transformation that, when applied, prints optimization info
-        at each iteration.
-    """
-
-    def init_fn(params):
-        del params
-        return InfoState(iter_num=0)
-
-    def update_fn(updates, state, params, *, value, grad, **extra_args):
-        del params, extra_args
-
-        jax.debug.print(
-            "Iteration: {i}, Value: {v}, Gradient norm: {e}",
-            i=state.iter_num,
-            v=value,
-            e=otu.tree_l2_norm(grad),
-        )
-        return updates, InfoState(iter_num=state.iter_num + 1)
-
-    return optax.GradientTransformationExtraArgs(init_fn, update_fn)
-
-
-class BaseOptaxNumpyroOptim(_NumPyroOptim):
-    """
-    A base optimizer class compatible with NumPyro that uses optax transformations.
-
-    This class integrates an optax transformation into the NumPyro optimization
-    interface.
-    Subclasses need to implement `get_transformation()` to provide a suitable
-    optax.GradientTransformation.
-
-    Attributes
-    ----------
-    _transformation : optax.GradientTransformation
-        The optax transformation used for optimization updates.
-    """
-
-    def __init__(self):
-        self._transformation = self.get_transformation()
-        super().__init__(optim_fn=_optim_fn_from_transformation(self._transformation))
-
-    def get_transformation(self):
-        """
-        Get the optax gradient transformation used by this optimizer.
-
-        This method should be overridden by subclasses.
-
-        Returns
-        -------
-        optax.GradientTransformation
-            The gradient transformation to be used by the optimizer.
-        """
-        raise NotImplementedError
-
-
-class LBFGS(BaseOptaxNumpyroOptim):
+class LBFGS(_NumPyroOptim):
     """
     An L-BFGS optimizer integrated with NumPyro, using optax.
 
     Parameters
     ----------
-    max_iter : int, default=100
-        Maximum number of iterations.
     gtol : float, default=1e-6
         Gradient tolerance for stopping criterion.
     tol : float, default=1e-6
@@ -175,7 +58,7 @@ class LBFGS(BaseOptaxNumpyroOptim):
         memory_size=10,
         scale_init_precond=True,
         # linesearch
-        max_linesearch_steps=20,
+        max_linesearch_steps=50,
         initial_guess_strategy="one",
         max_learning_rate=None,
         linesearch_tol=0,
@@ -202,9 +85,9 @@ class LBFGS(BaseOptaxNumpyroOptim):
         self.approx_dec_rtol = approx_dec_rtol
         self.stepsize_precision = stepsize_precision
 
-        super().__init__()
+        self._transformation = self.get_transformation()
 
-    def get_transformation(self):
+    def get_transformation(self) -> optax.GradientTransformationExtraArgs:
         """
         Construct the gradient transformation for L-BFGS optimization with line search.
 
@@ -277,7 +160,23 @@ class LBFGS(BaseOptaxNumpyroOptim):
         step_num = otu.tree_get(final_state, "count")
         svi_state = step_num, (final_params, final_state)
 
-        return (value, grad), svi_state
+        return (value, None), svi_state
+
+    def get_params(self, state):
+        """Get the parameters from the state.
+
+        This method is called from numpyro's SVI.
+        """
+        step, (params, opt_state) = state
+        return params
+
+    def init(self, params):
+        """Initialize the optimizer state.
+
+        This method is called from numpyro's SVI.
+        """
+        opt_state = self._transformation.init(params)
+        return jnp.array(0), (params, opt_state)
 
 
 def run_opt(init_params, fun, opt, max_iter, gtol, tol):
@@ -342,3 +241,51 @@ def run_opt(init_params, fun, opt, max_iter, gtol, tol):
 
     _, grad = value_and_grad_fun(final_params, state=final_state)
     return final_params, final_state, final_value, grad
+
+
+class InfoState(NamedTuple):
+    """
+    A named tuple holding iteration information.
+
+    Attributes
+    ----------
+    iter_num : chex.Numeric
+        The current iteration number.
+    """
+
+    iter_num: chex.Numeric
+
+
+def print_info():
+    """
+    Create a gradient transformation.
+
+    Prints iteration number, function value,
+    and gradient norm at each step. This is useful for debugging and monitoring
+    the optimization process.
+
+    Returns
+    -------
+    optax.GradientTransformationExtraArgs
+        A gradient transformation that, when applied, prints optimization info
+        at each iteration.
+    """
+
+    def init_fn(params):
+        del params
+        return InfoState(iter_num=0)
+
+    def update_fn(updates, state, params, *, value, grad, **extra_args):
+
+        del params, extra_args
+
+        fmt = "Iteration: {i}, Value: {v}, Gradient norm: {e}"
+
+        def _log(*args, **kwargs):
+            logger.debug(fmt.format(*args, **kwargs))
+
+        jax.debug.callback(_log, i=state.iter_num, v=value, e=otu.tree_l2_norm(grad))
+
+        return updates, InfoState(iter_num=state.iter_num + 1)
+
+    return optax.GradientTransformationExtraArgs(init_fn, update_fn)

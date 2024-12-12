@@ -14,7 +14,7 @@ import optax
 from numpyro.optim import _NumPyroOptim, optax_to_numpyro
 from skbase.base import BaseObject
 
-from prophetverse.engine.optimizer._numpyro_optax_minimizer import LBFGS
+from prophetverse.engine.optimizer._lbfgs import LBFGS
 
 __all__ = [
     "BaseOptimizer",
@@ -176,7 +176,6 @@ class LBFGSSolver(BaseOptimizer):
 
     def __init__(
         self,
-        max_iter: int = 10_000,
         gtol: float = 1e-6,
         tol: float = -jnp.inf,
         learning_rate=1e-3,
@@ -193,7 +192,6 @@ class LBFGSSolver(BaseOptimizer):
         approx_dec_rtol=0.000001,
         stepsize_precision=1e5,
     ):
-        self.max_iter = max_iter
         self.gtol = gtol
         self.tol = tol
         self.learning_rate = learning_rate
@@ -210,7 +208,16 @@ class LBFGSSolver(BaseOptimizer):
         self.curv_rtol = curv_rtol
         self.approx_dec_rtol = approx_dec_rtol
         self.stepsize_precision = stepsize_precision
+
         super().__init__()
+
+        self.max_iter = 1000
+
+    def set_max_iter(self, max_iter: int):
+
+        new_obj = self.clone()
+        new_obj.max_iter = max_iter
+        return new_obj
 
     def create_optimizer(self):
         return LBFGS(

@@ -3,7 +3,6 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
-import warnings
 from typing import Optional
 
 import jax.numpy as jnp
@@ -15,6 +14,7 @@ from numpyro.infer.svi import SVIRunResult
 
 from prophetverse.engine.base import BaseInferenceEngine
 from prophetverse.engine.optimizer.optimizer import (
+    AdamOptimizer,
     BaseOptimizer,
     LBFGSSolver,
     _OptimizerFromCallable,
@@ -22,7 +22,7 @@ from prophetverse.engine.optimizer.optimizer import (
 from prophetverse.utils.deprecation import deprecation_warning
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
-DEFAULT_PROGRESS_BAR = True
+DEFAULT_PROGRESS_BAR = False
 
 
 class MAPInferenceEngine(BaseInferenceEngine):
@@ -91,9 +91,8 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self._num_steps = num_steps
 
         if self._optimizer.get_tag("is_solver", False):  # type: ignore[union-attr]
-            warnings.warn(
-                "The optimizer is a solver, so the number of steps will be set to 1.",
-                stacklevel=2,
+            self._optimizer = self._optimizer.set_max_iter(  # type: ignore[union-attr]
+                self._num_steps
             )
             self._num_steps = 1
 
@@ -203,6 +202,20 @@ class MAPInferenceEngine(BaseInferenceEngine):
         )
         self.samples_ = predictive(rng_key=self._rng_key, **kwargs)
         return self.samples_
+
+    @classmethod
+    def get_test_params(*args, **kwargs):
+        """Return test params for unit testing."""
+        return [
+            {
+                "optimizer": LBFGSSolver(),
+                "num_steps": 100,
+            },
+            {
+                "optimizer": AdamOptimizer(),
+                "num_steps": 100,
+            },
+        ]
 
 
 class MAPInferenceEngineError(Exception):

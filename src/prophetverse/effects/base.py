@@ -223,6 +223,7 @@ class BaseEffect(BaseObject):
         self,
         data: Dict,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+        params: Optional[Dict[str, jnp.ndarray]] = None,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -244,14 +245,65 @@ class BaseEffect(BaseObject):
         if predicted_effects is None:
             predicted_effects = {}
 
-        x = self._predict(data, predicted_effects)
+        if params is None:
+            params = self.sample_params(data, predicted_effects)
+
+        x = self._predict(data, predicted_effects, params)
 
         return x
 
-    def _predict(
+    def sample_params(
         self,
         data: Dict,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+    ):
+        """Sample parameters from the prior distribution.
+
+        Parameters
+        ----------
+        data : Dict
+            The data to be used for sampling the parameters, obtained from
+            `transform` method.
+
+        predicted_effects : Optional[Dict[str, jnp.ndarray]]
+            A dictionary containing the predicted effects, by default None.
+
+        Returns
+        -------
+        Dict
+            A dictionary containing the sampled parameters.
+        """
+        if predicted_effects is None:
+            predicted_effects = {}
+
+        return self._sample_params(data, predicted_effects)
+
+    def _sample_params(
+        self,
+        data: Any,
         predicted_effects: Dict[str, jnp.ndarray],
+    ):
+        """Sample parameters from the prior distribution.
+
+        Should be implemented by subclasses to provide the actual sampling logic.
+
+        Parameters
+        ----------
+        data : Any
+            The data to be used for sampling the parameters, obtained from
+            `transform` method.
+        predicted_effects : Dict[str, jnp.ndarray]
+            A dictionary containing the predicted effects, by default None.
+
+        Returns
+        -------
+        Dict
+            A dictionary containing the sampled parameters.
+        """
+        return {}
+
+    def _predict(
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], params: Dict
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -273,7 +325,10 @@ class BaseEffect(BaseObject):
         raise NotImplementedError("Subclasses must implement _predict()")
 
     def __call__(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray]
+        self,
+        data: Dict,
+        predicted_effects: Dict[str, jnp.ndarray],
+        params: Optional[Dict[str, jnp.ndarray]] = None,
     ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
@@ -301,9 +356,10 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         or "multiplicative".
     """
 
-    def __init__(self, effect_mode="additive"):
+    def __init__(self, effect_mode="additive", base_effect_name: str = "trend"):
 
         self.effect_mode = effect_mode
+        self.base_effect_name = base_effect_name
 
         if effect_mode not in ["additive", "multiplicative"]:
             raise ValueError(
@@ -317,6 +373,7 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         self,
         data: Any,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+        params: Optional[Dict[str, jnp.ndarray]] = None,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -336,19 +393,29 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
             number of series.
         """
         if predicted_effects is None:
+            predicted_effects = {}
+
+        if params is None:
+            params = self.sample_params(data, predicted_effects)
+
+        if (
+            self.base_effect_name not in predicted_effects
+            and self.effect_mode == "multiplicative"
+        ):
             raise ValueError(
                 "BaseAdditiveOrMultiplicativeEffect requires trend in"
                 + " predicted_effects"
             )
 
-        trend = predicted_effects["trend"]
-        if trend.ndim == 1:
-            trend = trend.reshape((-1, 1))
-
-        x = super().predict(data=data, predicted_effects=predicted_effects)
-        x = x.reshape(trend.shape)
+        x = super().predict(
+            data=data, predicted_effects=predicted_effects, params=params
+        )
 
         if self.effect_mode == "additive":
             return x
 
-        return trend * x
+        base_effect = predicted_effects[self.base_effect_name]
+        if base_effect.ndim == 1:
+            base_effect = base_effect.reshape((-1, 1))
+        x = x.reshape(base_effect.shape)
+        return base_effect * x

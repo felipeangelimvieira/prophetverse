@@ -430,6 +430,13 @@ class BaseBayesianForecaster(BaseForecaster):
         predict_data = self._get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
+
+        keys_to_delete = []
+        for key in predictive_samples_.keys():
+            if key.endswith(":ignore"):
+                keys_to_delete.append(key)
+        for key in keys_to_delete:
+            del predictive_samples_[key]
         return predictive_samples_
 
     def predict_all_sites_samples(self, fh, X=None):

@@ -9,6 +9,66 @@ from prophetverse.effects.base import BaseEffect
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
 
 
+class MySimpleEffectName(BaseEffect):
+    """Base class for effects."""
+
+    _tags = {
+        # Supports multivariate data? Can this
+        # Effect be used with Multiariate prophet?
+        "supports_multivariate": False,
+        # If no columns are found, should
+        # _predict be skipped?
+        "skip_predict_if_no_match": True,
+        # Should only the indexes related to the forecasting horizon be passed to
+        # _transform?
+        "filter_indexes_with_forecating_horizon_at_transform": True,
+    }
+
+    def __init__(self, param1: Any, param2: Any):
+        self.param1 = param1
+        self.param2 = param2
+
+    def _sample_params(self, data, predicted_effects):
+        # call numpyro.sample to sample the parameters of the effect
+        # return a dictionary with the sampled parameters, where
+        # key is the name of the parameter and value is the sampled value
+        return {}
+
+    def _predict(
+        self,
+        data: Any,
+        predicted_effects: Dict[str, jnp.ndarray],
+        params: Dict[str, jnp.ndarray],
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
+
+        Parameters
+        ----------
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray], optional
+            A dictionary containing the predicted effects, by default None.
+
+        params : Dict[str, jnp.ndarray]
+            A dictionary containing the sampled parameters of the effect.
+
+        Returns
+        -------
+        jnp.ndarray
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
+        """
+        # predicted effects come with the following shapes:
+        # (T, 1) shaped array for univariate timeseries
+        # (N, T, 1) shaped array for multivariate timeseries, where N is the number of
+        # series
+
+        # Here you use the params to compute the effect.
+        raise NotImplementedError("Subclasses must implement _predict()")
+
+
 class MyEffectName(BaseEffect):
     """Base class for effects."""
 
@@ -76,10 +136,17 @@ class MyEffectName(BaseEffect):
         array = series_to_tensor_or_array(X)
         return array
 
-    def predict(
+    def _sample_params(self, data, predicted_effects):
+        # call numpyro.sample to sample the parameters of the effect
+        # return a dictionary with the sampled parameters, where
+        # key is the name of the parameter and value is the sampled value
+        return {}
+
+    def _predict(
         self,
-        data: Dict,
+        data: Any,
         predicted_effects: Dict[str, jnp.ndarray],
+        params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -91,6 +158,9 @@ class MyEffectName(BaseEffect):
         predicted_effects : Dict[str, jnp.ndarray], optional
             A dictionary containing the predicted effects, by default None.
 
+        params : Dict[str, jnp.ndarray]
+            A dictionary containing the sampled parameters of the effect.
+
         Returns
         -------
         jnp.ndarray
@@ -98,11 +168,10 @@ class MyEffectName(BaseEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        # Get the trend
+        # predicted effects come with the following shapes:
         # (T, 1) shaped array for univariate timeseries
         # (N, T, 1) shaped array for multivariate timeseries, where N is the number of
         # series
-        # trend: jnp.ndarray = predicted_effects["trend"]
-        # Or user predicted_effects.get("trend") to return None if the trend is
-        # not found
+
+        # Here you use the params to compute the effect.
         raise NotImplementedError("Subclasses must implement _predict()")

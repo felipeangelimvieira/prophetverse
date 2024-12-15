@@ -13,15 +13,6 @@ Prophetverse leverages the theory behind the Prophet model for time series forec
 
 <div class="grid cards" markdown>
 
--   :material-clock-fast:{ .lg .middle } __Set up in 5 minutes__
-
-    ---
-
-    Install `Prophetverse` with `pip` and get up
-    and forecasting in minutes
-
-    [:octicons-arrow-right-24: Getting started](getting-started)
-
 -   :material-school:{ .lg .middle } __Theory__
 
     ---
@@ -30,15 +21,24 @@ Prophetverse leverages the theory behind the Prophet model for time series forec
 
     [:octicons-arrow-right-24: Read the post](the-theory)
 
--   :material-file:{ .lg .middle } __Examples__
+-   :material-lightbulb-on:{ .lg .middle } __Basic examples__
 
     ---
 
     Go the example gallery and see how to use the model, and its features!
 
-    [:octicons-arrow-right-24: Examples](examples/univariate)
+    [:octicons-arrow-right-24: Examples](tutorial/univariate)
 
--   :material-book:{ .lg .middle } __Reference__
+-   :material-cogs:{ .lg .middle } __Advanced examples__
+
+    ---
+
+    Learn how to customize timeseries components
+
+    [:octicons-arrow-right-24: How-to](howto)
+
+
+-   :material-book-open-page-variant:{ .lg .middle } __Reference__
 
     ---
 

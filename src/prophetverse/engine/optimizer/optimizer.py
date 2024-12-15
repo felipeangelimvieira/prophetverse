@@ -20,6 +20,7 @@ __all__ = [
     "BaseOptimizer",
     "AdamOptimizer",
     "CosineScheduleAdamOptimizer",
+    "LBFGSSolver",
 ]
 
 
@@ -64,17 +65,15 @@ class AdamOptimizer(BaseOptimizer):
     Adam optimizer for NumPyro models.
 
     This class implements the Adam optimization algorithm.
+
+    Parameters
+    ----------
+    step_size : float, optional
+        The step size (learning rate) for the optimizer. Default is 0.001.
     """
 
     def __init__(self, step_size=0.001):
-        """
-        Initialize the AdamOptimizer.
-
-        Parameters
-        ----------
-        step_size : float, optional
-            The step size (learning rate) for the optimizer. Default is 0.001.
-        """
+        """Initialize the AdamOptimizer."""
         self.step_size = step_size
         super().__init__()
 
@@ -96,23 +95,20 @@ class CosineScheduleAdamOptimizer(BaseOptimizer):
 
     This optimizer combines the Adam optimizer with a cosine decay schedule
     for the learning rate.
+
+    Parameters
+    ----------
+    init_value : float, optional
+        Initial learning rate. Default is 0.001.
+    decay_steps : int, optional
+        Number of steps over which the learning rate decays. Default is 100_000.
+    alpha : float, optional
+        Final multiplier for the learning rate. Default is 0.0.
+    exponent : int, optional
+        Exponent for the cosine decay schedule. Default is 1.
     """
 
     def __init__(self, init_value=0.001, decay_steps=100_000, alpha=0.0, exponent=1):
-        """
-        Initialize the CosineScheduleAdamOptimizer.
-
-        Parameters
-        ----------
-        init_value : float, optional
-            Initial learning rate. Default is 0.001.
-        decay_steps : int, optional
-            Number of steps over which the learning rate decays. Default is 100_000.
-        alpha : float, optional
-            Final multiplier for the learning rate. Default is 0.0.
-        exponent : int, optional
-            Exponent for the cosine decay schedule. Default is 1.
-        """
         self.init_value = init_value
         self.decay_steps = decay_steps
         self.alpha = alpha
@@ -145,30 +141,49 @@ class CosineScheduleAdamOptimizer(BaseOptimizer):
         return opt
 
 
-class BFGSOptimizer(BaseOptimizer):
-
-    def __init__(self, learning_rate=1e-3, memory_size=10, scale_init_precond=True):
-
-        self.learning_rate = learning_rate
-        self.memory_size = memory_size
-        self.scale_init_precond = scale_init_precond
-        super().__init__()
-
-    def create_optimizer(self):
-
-        # Linesearch
-        linesearch = optax.scale_by_lbfgs(
-            memory_size=self.memory_size,
-            scale_init_precond=self.scale_init_precond,
-        )
-
-        # Optimizer
-        opt = optax.chain(linesearch, optax.scale(-1.0))
-
-        return numpyro.optim.optax_to_numpyro(opt)
-
-
 class LBFGSSolver(BaseOptimizer):
+    """
+    L-BFGS solver.
+
+    This solver is more practical than other optimizers since it usually does not
+    require tuning of hyperparameters to get better estimates.
+
+    If your model does not converge with the default hyperparameters, you can try
+    increasing `memory_size`, `max_linesearch_steps`, or setting a larger number
+    of steps.
+
+    Parameters
+    ----------
+    gtol : float, default=1e-6
+        Gradient tolerance for stopping criterion.
+    tol : float, default=1e-6
+        Function value tolerance for stopping criterion.
+    learning_rate : float, default=1e-3
+        Initial learning rate.
+    memory_size : int, default=10
+        Memory size for L-BFGS updates.
+    scale_init_precond : bool, default=True
+        Whether to scale the initial preconditioner.
+    max_linesearch_steps : int, default=20
+        Maximum number of line search steps.
+    initial_guess_strategy : str, default="one"
+        Strategy for the initial line search step size guess.
+    max_learning_rate : float, optional
+        Maximum allowed learning rate during line search.
+    linesearch_tol : float, default=0
+        Tolerance parameter for line search.
+    increase_factor : float, default=2
+        Factor by which to increase step size during line search when conditions are
+        met.
+    slope_rtol : float, default=0.0001
+        Relative tolerance for slope in the line search.
+    curv_rtol : float, default=0.9
+        Curvature condition tolerance for line search.
+    approx_dec_rtol : float, default=0.000001
+        Approximate decrease tolerance for line search.
+    stepsize_precision : float, default=1e5
+        Stepsize precision tolerance.
+    """
 
     _tags = {
         "is_solver": True,
@@ -214,12 +229,13 @@ class LBFGSSolver(BaseOptimizer):
         self.max_iter = 1000
 
     def set_max_iter(self, max_iter: int):
-
+        """Set the maximum number of iterations for the solver."""
         new_obj = self.clone()
         new_obj.max_iter = max_iter
         return new_obj
 
     def create_optimizer(self):
+        """Create and return a NumPyro L-BFGS solver instance."""
         return LBFGS(
             max_iter=self.max_iter,
             tol=self.tol,
@@ -245,21 +261,19 @@ class _LegacyNumpyroOptimizer(BaseOptimizer):
     Legacy optimizer.
 
     This class allows the use of any optimizer available in numpyro.optim by name.
+
+    Parameters
+    ----------
+    optimizer_name : str, optional
+        The name of the optimizer to use from numpyro.optim. Default is "Adam".
+    optimizer_kwargs : dict, optional
+        Keyword arguments to pass to the optimizer. Default is None.
     """
 
     def __init__(
         self, optimizer_name: str = "Adam", optimizer_kwargs: Optional[dict] = None
     ):
-        """
-        Initialize the _LegacyNumpyroOptimizer.
-
-        Parameters
-        ----------
-        optimizer_name : str, optional
-            The name of the optimizer to use from numpyro.optim. Default is "Adam".
-        optimizer_kwargs : dict, optional
-            Keyword arguments to pass to the optimizer. Default is None.
-        """
+        """Initialize the _LegacyNumpyroOptimizer."""
         self.optimizer_name = optimizer_name
         self.optimizer_kwargs = optimizer_kwargs
         super().__init__()

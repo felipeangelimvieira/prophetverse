@@ -44,11 +44,12 @@ y_{mean} &= \sum\limits_{i=1}^n f_i(x_i(t), \{f_j(x_j)\}_{j<i}) \\
          &= f_1(x_1(t)) + f_2(x_2(t), f_1(x_1(t))) + \ldots + f_n(t, \{f_j(x_j)\}_{j<n})
 \end{align}
 
-where \
-- the first component $f_1$ accounts for the trend
-- the second component $f_2$ is other regression component that could interact with the trend $f_1$
-- the third component $f_3$ is another regression component that could interact with $f_1$, and $f_2$ 
-- And the next components can always interact with the previously defined components.
+where 
+
+* the first component $f_1$ accounts for the trend
+* the second component $f_2$ is other regression component that could interact with the trend $f_1$
+* the third component $f_3$ is another regression component that could interact with $f_1$, and $f_2$ 
+* And the next components can always interact with the previously defined components.
 
 
 This definition superseeds the
@@ -70,7 +71,7 @@ likelihood, $\phi$ is the identity function, but for Gamma and Negative Binomial
 
 $$
 \phi(k) = \begin{cases}
-k & \text{if } k > 10^5 \\
+k & \text{if } k > z \\
 z\exp(k-z) & \text{if } k \leq z
 \end{cases}
 $$
@@ -198,6 +199,10 @@ $$
 
 Here, `P` is the period (e.g., 365.25 for yearly seasonality), and $a_k$ and $b_k$ are the Fourier coefficients that the model estimates. The choice of `K` depends on the granularity of the seasonal changes one wishes to capture.
 A Normal prior is placed on the coefficients, $a_k, b_k \sim \mathcal{N}(0, \sigma_s)$, where $\sigma_s$ is a hyperparameter.
+
+See [`LinearFourierSeasonality`](/reference/effects/#prophetverse.effects.LinearFourierSeasonality) for more details on the hyperparameters of the effect
+
+
 
 
 ### Matrix Formulation of Fourier Series

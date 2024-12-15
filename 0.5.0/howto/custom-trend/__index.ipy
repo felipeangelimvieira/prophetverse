@@ -1,0 +1,104 @@
+# %% [markdown]
+
+# Use-case: forecasting product adoption
+
+# **Diffusion of innovations** is a theory that seeks to explain how, why, and at what rate new ideas and technology spread through cultures. This theory was formulated by E.M. Rogers in 1962 and is often used to understand the adoption or spread of new products and technologies among different groups of people.
+
+# An innovation is something new or significantly improved. This can include products, ideas, or practices that are perceived as new by an individual or other unit of adoption. Diffusion refers to the process by which an innovation is communicated over time among the participants in a social system.
+
+# The diffusion of innovations theory applies to a variety of new ideas. Here are a few examples:
+
+# ## Examples of Processes Following Diffusion of Innovations
+
+# 1. **Number of new unique users**: The number of new unique users of a product or service can be modeled using the diffusion of innovations theory. This can help businesses forecast their growth and plan for future expansion.
+
+# 2. **Technology Adoption**: Perhaps the most common application of the theory, technology adoption refers to how new gadgets, software, or platforms spread among users. For instance, the adoption of smartphones followed this diffusion process, starting with innovators and tech enthusiasts before reaching the broader public.
+
+# 3. **Healthcare Practices**: New medical practices, treatments, or health campaigns spread among medical professionals and the public using the diffusion framework. An example could be the adoption of telemedicine, which has seen increased acceptance over recent years.
+
+# 4. **Sustainable Practices**: The adoption of renewable energy sources like solar panels or wind turbines often follows the diffusion of innovations model. Innovators begin by testing and using these technologies, which gradually become more mainstream as their advantages and efficiencies are recognized.
+
+# 5. **Agricultural Techniques**: New farming technologies or methods, such as hydroponics or genetically modified crops, also spread through agricultural communities by following the principles of diffusion of innovations.
+
+# ## The Bell-Shaped Curve
+
+# The diffusion of innovations can be visualized using a bell-shaped curve, often called the "diffusion curve." This curve is crucial for understanding the rate at which new ideas and technologies are adopted in a society. Here's how it aligns with the categories of adopters:
+
+# - **Innovators** make up the first small section on the left of the curve. These are the first few who adopt the innovation.
+# - **Early Adopters** follow next and represent a slightly larger segment as the curve starts to ascend.
+# - **Early Majority** forms the first large segment of the curve, where it reaches and crosses the mean. Adoption is becoming more common and widespread here.
+# - **Late Majority** comes next, at the point where the curve starts to descend. This group adopts just as the new idea or technology begins to feel outdated.
+# - **Laggards** are the last segment, where the curve tails off. Adoption within this group occurs very slowly and often only when necessary.
+
+# The bell-shaped curve reflects the cumulative adoption of innovations over time, demonstrating that the speed of adoption typically starts slow, accelerates until it reaches the majority of the potential market, and then slows down as fewer non-adopters remain.
+
+# This curve is central to strategic decisions in marketing, product development, and policy-making, helping stakeholders identify when and how to best introduce new ideas or technologies to different segments of society.
+
+# ## The dataset
+
+# As a proxy for diffusion of innovations, we will use the number of stars received by Tensorflow Repository over time. Although this is not a perfect measure of adoption, it can give us an idea of how the popularity of the repository has grown since its inception.
+
+# This repository had an initial explosion of stars during the first ~10 days, which we will ignore since the daily granularity is not enough to capture the initial growth (hourly might work). After that, the number of starts grew by following a bell-shaped curve, which we will try to model. This curve might be related to the popularity of deep learning itself.
+
+# <div class="admonition note">
+#     <p class="admonition-title">Note</p>
+#     <p>This dataset was obtained from https://github.com/emanuelef/daily-stars-explorer. </p>
+# </div>
+
+
+
+
+# %%
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from prophetverse.datasets.loaders import load_tensorflow_github_stars
+
+y = load_tensorflow_github_stars()
+
+fig, ax = plt.subplots()
+# First 30 days
+y.iloc[:30].plot.line(ax=ax)
+y.iloc[:30].cumsum()["day-stars"].rename("Cumulative sum").plot.line(ax=ax, legend=True)
+ax.set_title("First 30 days")
+fig.show()
+
+fig, axs = plt.subplots(nrows=2, sharex=True)
+y.iloc[30:].plot.line(ax=axs[0])
+y.iloc[30:].cumsum()["day-stars"].rename("Cumulative sum").plot.line(ax=axs[1])
+# FIgure title
+fig.suptitle("After the first 30 days")
+fig.show()
+
+# %% [markdown]
+# ## Modeling the Diffusion of Innovations
+#
+# To model this behaviour with Prophetverse, we will use the custom trend feature.
+#
+# We will define a trend model class that implements the generalized logistic curve,
+# which accepts assymetric curves. We will also add another premise: a varying capacity, which will allow us to model a linear growth of the total addressable market (TAM) over time.  Let $G(t)$ be the logistic curve defining the acumulated number of stars at time $t$:
+#
+# $$
+# \begin{align*}
+# G(t) &= \frac{C_1(t-t_0) + C_2}{\left(1 + \exp(-\alpha v (t - t_0))\right)^{\frac{1}{v}}} \\
+# \text{where} & \\
+# C_2 \in \mathbb{R}_+ &= \text{is the constant capacity term}\\
+# C_1 \in \mathbb{R}_+ &= \text{is the linear increasing rate of the capacity}\\
+# t_0 \in \mathbb{R} &= \text{is the time offset term}\\
+# v \in \mathbb{R}_+ &= \text{determines the shape of the curve} \\
+# \alpha \in \mathbb{R} &= \text{is the rate}
+# \end{align*}
+# $$
+#
+#  It's derivative is:
+#
+# $$
+#  \begin{align*}
+#  g(t) &= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C_1}{C_1(t-t_0) + C_2}G(T)
+#  \end{align*}
+# $$
+#
+#  That curve can be used as trend to model a diffusion process.
+#  Below, we plot it for a combination of parameters
+
+# %%

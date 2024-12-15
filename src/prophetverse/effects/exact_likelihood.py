@@ -11,10 +11,10 @@ from prophetverse.utils.frame_to_array import series_to_tensor_or_array
 
 from .base import BaseEffect
 
-__all__ = ["LiftExperimentLikelihood"]
+__all__ = ["ExactLikelihood"]
 
 
-class LiftExperimentLikelihood(BaseEffect):
+class ExactLikelihood(BaseEffect):
     """Wrap an effect and applies a normal likelihood to its output.
 
     This class uses an input as a reference for the effect, and applies a normal
@@ -22,10 +22,10 @@ class LiftExperimentLikelihood(BaseEffect):
 
     Parameters
     ----------
-    effect : BaseEffect
-        The effect to wrap.
-    lift_test_results : pd.DataFrame
-        A dataframe with the lift test results. Should be in sktime format, and must
+    effect_name : str
+        The effect to use in the likelihood.
+    reference_df : pd.DataFrame
+        A dataframe with the reference values. Should be in sktime format, and must
         have the same index as the input data.
     prior_scale : float
         The scale of the prior distribution for the likelihood.
@@ -35,20 +35,20 @@ class LiftExperimentLikelihood(BaseEffect):
 
     def __init__(
         self,
-        effect: BaseEffect,
-        lift_test_results: pd.DataFrame,
+        effect_name: str,
+        reference_df: pd.DataFrame,
         prior_scale: float,
     ):
 
-        self.effect = effect
-        self.lift_test_results = lift_test_results
+        self.effect_name = effect_name
+        self.reference_df = reference_df
         self.prior_scale = prior_scale
 
         assert self.prior_scale > 0, "prior_scale must be greater than 0"
 
         super().__init__()
 
-    def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
         """Initialize the effect.
 
         This method is called during `fit()` of the forecasting model.
@@ -74,9 +74,7 @@ class LiftExperimentLikelihood(BaseEffect):
         -------
         None
         """
-        self.effect.fit(X=X, y=y, scale=scale)
         self.timeseries_scale = scale
-        super().fit(X=X, y=y, scale=scale)
 
     def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, Any]:
         """Prepare input data to be passed to numpyro model.
@@ -99,17 +97,19 @@ class LiftExperimentLikelihood(BaseEffect):
             Dictionary with data for the lift and for the inner effect
         """
         data_dict = {}
-        data_dict["inner_effect_data"] = self.effect._transform(X, fh=fh)
 
-        X_lift = self.lift_test_results.reindex(fh, fill_value=jnp.nan)
+        X_lift = self.reference_df.reindex(fh, fill_value=jnp.nan)
         lift_array = series_to_tensor_or_array(X_lift)
-        data_dict["observed_lift"] = lift_array / self.timeseries_scale
-        data_dict["obs_mask"] = ~jnp.isnan(data_dict["observed_lift"])
+        data_dict["observed_reference_value"] = lift_array / self.timeseries_scale
+        data_dict["obs_mask"] = ~jnp.isnan(data_dict["observed_reference_value"])
 
         return data_dict
 
     def _predict(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray]
+        self,
+        data: Dict,
+        predicted_effects: Dict[str, jnp.ndarray],
+        params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -126,18 +126,16 @@ class LiftExperimentLikelihood(BaseEffect):
         jnp.ndarray
             An array with shape (T,1) for univariate timeseries.
         """
-        observed_lift = data["observed_lift"]
+        observed_reference_value = data["observed_reference_value"]
         obs_mask = data["obs_mask"]
 
-        x = self.effect.predict(
-            data=data["inner_effect_data"], predicted_effects=predicted_effects
-        )
+        x = predicted_effects[self.effect_name]
 
         with numpyro.handlers.mask(mask=obs_mask):
             numpyro.sample(
                 "lift_experiment",
                 dist.Normal(x, self.prior_scale),
-                obs=observed_lift,
+                obs=observed_reference_value,
             )
 
         return x

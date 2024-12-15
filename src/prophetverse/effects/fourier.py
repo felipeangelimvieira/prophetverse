@@ -124,10 +124,26 @@ class LinearFourierSeasonality(BaseEffect):
 
         return array
 
+    def _sample_params(self, data, predicted_effects=None):
+        """Sample parameters from the prior distribution.
+
+        Parameters
+        ----------
+        data : jnp.ndarray
+            The data to be used for sampling the parameters.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the sampled parameters.
+        """
+        return self.linear_effect_.sample_params(data, predicted_effects)
+
     def _predict(
         self,
         data: Dict,
         predicted_effects: Dict[str, jnp.ndarray],
+        params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -147,5 +163,7 @@ class LinearFourierSeasonality(BaseEffect):
             number of series.
         """
         return self.linear_effect_.predict(
-            data=data, predicted_effects=predicted_effects
+            data=data,
+            predicted_effects=predicted_effects,
+            params=params,
         )

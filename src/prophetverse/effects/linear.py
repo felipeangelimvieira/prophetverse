@@ -40,10 +40,22 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
         super().__init__(effect_mode=effect_mode)
 
+    def _sample_params(self, data, predicted_effects=None):
+
+        n_features = data.shape[-1]
+
+        with numpyro.plate("features_plate", n_features, dim=-1):
+            coefficients = numpyro.sample("coefs", self.prior)
+
+        return {
+            "coefficients": coefficients,
+        }
+
     def _predict(
         self,
         data: Any,
-        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]],
+        params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -62,10 +74,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        n_features = data.shape[-1]
-
-        with numpyro.plate("features_plate", n_features, dim=-1):
-            coefficients = numpyro.sample("coefs", self.prior)
+        coefficients = params["coefficients"]
 
         if coefficients.ndim == 1:
             coefficients = jnp.expand_dims(coefficients, axis=-1)

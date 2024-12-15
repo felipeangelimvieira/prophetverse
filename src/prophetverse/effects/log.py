@@ -38,10 +38,19 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
         self.rate_prior = rate_prior or dist.Gamma(1, 1)
         super().__init__(effect_mode=effect_mode)
 
+    def _sample_params(self, data, predicted_effects):
+        scale = numpyro.sample("log_scale", self.scale_prior)
+        rate = numpyro.sample("log_rate", self.rate_prior)
+        return {
+            "scale": scale,
+            "rate": rate,
+        }
+
     def _predict(  # type: ignore[override]
         self,
         data: jnp.ndarray,
-        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+        predicted_effects: Dict[str, jnp.ndarray],
+        params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -60,8 +69,9 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        scale = numpyro.sample("log_scale", self.scale_prior)
-        rate = numpyro.sample("log_rate", self.rate_prior)
+        scale = params["scale"]
+        rate = params["rate"]
+
         effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))
 
         return effect

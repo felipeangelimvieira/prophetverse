@@ -40,7 +40,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
         super().__init__(effect_mode=effect_mode)
 
-    def _sample_params(self, data, predicted_effects=None):
+    def _sample_params(self, data, predicted_effects):
 
         n_features = data.shape[-1]
 
@@ -54,7 +54,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
     def _predict(
         self,
         data: Any,
-        predicted_effects: Optional[Dict[str, jnp.ndarray]],
+        predicted_effects: Dict[str, jnp.ndarray],
         params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """Apply and return the effect values.
@@ -64,8 +64,8 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         data : Any
             Data obtained from the transformed method.
 
-        predicted_effects : Dict[str, jnp.ndarray], optional
-            A dictionary containing the predicted effects, by default None.
+        predicted_effects : Dict[str, jnp.ndarray]
+            A dictionary containing the predicted effects
 
         Returns
         -------

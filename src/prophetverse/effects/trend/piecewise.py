@@ -5,7 +5,7 @@ This module contains the implementation of piecewise trend models (logistic and 
 """
 
 import itertools
-from typing import Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -157,7 +157,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         idx = self._fh_to_index(fh)
         return self.get_changepoint_matrix(idx)
 
-    def _sample_params(self, data, predicted_effects=None):
+    def _sample_params(self, data: Any, predicted_effects: Dict[str, jnp.ndarray]):
 
         changepoint_matrix = data
 
@@ -546,7 +546,25 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
         return global_rates, offset
 
-    def _sample_params(self, data, predicted_effects=None):
+    def _sample_params(self, data, predicted_effects):
+        """
+        Sample params for the effect.
+
+        Use super to sample the changepoint coefficients and offset, and then sample
+        the capacity using the capacity prior.
+
+        Parameters
+        ----------
+        data : Any
+            The input data.
+        predicted_effects : Dict[str, jnp.ndarray]
+            The predicted effects
+
+        Returns
+        -------
+        dict
+            The sampled parameters.
+        """
         with numpyro.plate("series", self.n_series, dim=-3):
             capacity = numpyro.sample("capacity", self.capacity_prior)
 
@@ -556,7 +574,10 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         }
 
     def _predict(  # type: ignore[override]
-        self, data: jnp.ndarray, predicted_effects, params
+        self,
+        data: Any,
+        predicted_effects: Dict[str, jnp.ndarray],
+        params: Dict[str, jnp.ndarray],
     ) -> jnp.ndarray:
         """
         Compute the trend for the given changepoint matrix.

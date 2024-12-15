@@ -81,7 +81,8 @@ class LiftExperimentLikelihood(BaseEffect):
         -------
         None
         """
-        self.effect.fit(X=X, y=y, scale=scale)
+        self.effect_ = self.effect.clone()
+        self.effect_.fit(X=X, y=y, scale=scale)
         self.timeseries_scale = scale
         super().fit(X=X, y=y, scale=scale)
 
@@ -106,8 +107,13 @@ class LiftExperimentLikelihood(BaseEffect):
             Dictionary with data for the lift and for the inner effect
         """
         data_dict = {}
-        data_dict["inner_effect_data"] = self.effect._transform(X, fh=fh)
+        data_dict["inner_effect_data"] = self.effect_._transform(X, fh=fh)
 
+        # Check if fh and self.lift_test_results have same index type
+        if not isinstance(fh, self.lift_test_results.index.__class__):
+            raise TypeError(
+                "fh and self.lift_test_results must have the same index type"
+            )
         X_lift = self.lift_test_results.reindex(fh, fill_value=jnp.nan)
 
         data_dict["observed_lift"] = (
@@ -119,8 +125,25 @@ class LiftExperimentLikelihood(BaseEffect):
 
         return data_dict
 
-    def _sample_params(self, data, predicted_effects=None):
-        return self.effect.sample_params(
+    def _sample_params(self, data, predicted_effects):
+        """
+        Sample the parameters of the effect.
+
+        Calls the sample_params method of the inner effect.
+
+        Parameters
+        ----------
+        data : Any
+            Data obtained from the transformed method.
+        predicted_effects : Dict[str, jnp.ndarray]
+            A dictionary containing the predicted effects
+
+        Returns
+        -------
+        Dict[str, jnp.ndarray]
+            A dictionary containing the sampled parameters of the effect.
+        """
+        return self.effect_.sample_params(
             data=data["inner_effect_data"], predicted_effects=predicted_effects
         )
 
@@ -150,35 +173,35 @@ class LiftExperimentLikelihood(BaseEffect):
         x_end = data["x_end"].reshape((-1, 1))
         obs_mask = data["obs_mask"]
 
-        effect_params = self.effect.sample_params(
-            data=data["inner_effect_data"],
-            predicted_effects=predicted_effects,
-        )
-
         predicted_effects_masked = {
             k: v[obs_mask] for k, v in predicted_effects.items()
         }
 
-        x = self.effect.predict(
+        # Call the effect a first time
+        x = self.effect_.predict(
             data=data["inner_effect_data"],
             predicted_effects=predicted_effects,
             params=params,
         )
 
-        y_start = self.effect.predict(
+        # Get the start and end values
+        y_start = self.effect_.predict(
             data=x_start,
             predicted_effects=predicted_effects_masked,
-            params=effect_params,
+            params=params,
         )
-        y_end = self.effect.predict(
-            data=x_end, predicted_effects=predicted_effects_masked, params=effect_params
+        y_end = self.effect_.predict(
+            data=x_end, predicted_effects=predicted_effects_masked, params=params
         )
 
+        # Calculate the delta_y
         delta_y = jnp.abs(y_end - y_start)
 
         with numpyro.handlers.scale(scale=self.likelihood_scale):
             distribution = GammaReparametrized(delta_y, self.prior_scale)
 
+            # Add :ignore so that the model removes this
+            # sample when organizing the output dataframe
             numpyro.sample(
                 "lift_experiment:ignore",
                 distribution,

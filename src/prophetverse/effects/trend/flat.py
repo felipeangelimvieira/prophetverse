@@ -1,5 +1,7 @@
 """Flat trend model."""
 
+from typing import Any, Dict
+
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
@@ -56,7 +58,7 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
         idx = X.index
         return jnp.ones((len(idx), 1))
 
-    def _sample_params(self, data, predicted_effects=None):
+    def _sample_params(self, data: Any, predicted_effects: Dict[str, jnp.ndarray]):
         """Sample parameters from the prior distribution.
 
         Parameters

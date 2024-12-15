@@ -133,7 +133,7 @@ class ExactLikelihood(BaseEffect):
 
         with numpyro.handlers.mask(mask=obs_mask):
             numpyro.sample(
-                "lift_experiment",
+                "exact_likelihood:ignore",
                 dist.Normal(x, self.prior_scale),
                 obs=observed_reference_value,
             )

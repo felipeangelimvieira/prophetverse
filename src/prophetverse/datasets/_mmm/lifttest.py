@@ -235,11 +235,11 @@ def get_simulated_lift_test(X, model, samples, true_effect, n=10):
                 "lift": lift[col],
                 "x_start": X.loc[:, col],
                 "x_end": X_b.loc[:, col],
-                "y_start": true_effect.loc[:, col],
-                "y_end": true_effect_b.loc[:, col],
+                # "y_start": true_effect.loc[:, col],
+                # "y_end": true_effect_b.loc[:, col],
             },
         )
-        outs.append(lift_test_dataframe.sample(n=n, replace=False))
+        outs.append(lift_test_dataframe.sample(n=n, replace=False, random_state=0))
 
     return tuple(outs)
 

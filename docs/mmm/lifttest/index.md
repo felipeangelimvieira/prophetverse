@@ -26,7 +26,7 @@ y, X, lift_test, true_effect, model = get_dataset()
 
 
     
-![png](index_files/output_1_4.png)
+![png](index_files/output_1_3.png)
     
 
 
@@ -94,90 +94,68 @@ lift_test1
       <th>lift</th>
       <th>x_start</th>
       <th>x_end</th>
-      <th>y_start</th>
-      <th>y_end</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>2003-09-23</th>
-      <td>0.023834</td>
-      <td>0.438379</td>
-      <td>0.296444</td>
-      <td>0.476027</td>
-      <td>0.452193</td>
+      <th>2000-10-25</th>
+      <td>0.153197</td>
+      <td>0.727573</td>
+      <td>0.110823</td>
     </tr>
     <tr>
-      <th>2003-06-12</th>
-      <td>0.020512</td>
-      <td>0.271027</td>
-      <td>0.215251</td>
-      <td>0.445301</td>
-      <td>0.424789</td>
+      <th>2001-05-04</th>
+      <td>0.026069</td>
+      <td>0.734700</td>
+      <td>0.386165</td>
     </tr>
     <tr>
-      <th>2003-03-03</th>
-      <td>0.026642</td>
-      <td>0.292420</td>
-      <td>0.214701</td>
-      <td>0.451179</td>
-      <td>0.424538</td>
+      <th>2000-10-05</th>
+      <td>0.106792</td>
+      <td>0.823932</td>
+      <td>0.159322</td>
     </tr>
     <tr>
-      <th>2002-06-16</th>
-      <td>0.009863</td>
-      <td>0.575173</td>
-      <td>0.454239</td>
-      <td>0.487610</td>
-      <td>0.477747</td>
+      <th>2002-03-06</th>
+      <td>0.018927</td>
+      <td>0.634787</td>
+      <td>0.406046</td>
     </tr>
     <tr>
-      <th>2000-06-18</th>
-      <td>0.002472</td>
-      <td>0.964047</td>
-      <td>0.858556</td>
-      <td>0.501780</td>
-      <td>0.499307</td>
+      <th>2002-06-11</th>
+      <td>0.014647</td>
+      <td>0.613452</td>
+      <td>0.431412</td>
     </tr>
     <tr>
-      <th>2000-07-15</th>
-      <td>0.033913</td>
-      <td>0.938153</td>
-      <td>0.372900</td>
-      <td>0.501229</td>
-      <td>0.467317</td>
+      <th>2000-12-27</th>
+      <td>0.163153</td>
+      <td>0.735653</td>
+      <td>0.103977</td>
     </tr>
     <tr>
-      <th>2002-03-13</th>
-      <td>0.027197</td>
-      <td>0.594851</td>
-      <td>0.339861</td>
-      <td>0.488815</td>
-      <td>0.461617</td>
+      <th>2000-09-06</th>
+      <td>0.014425</td>
+      <td>0.868366</td>
+      <td>0.538854</td>
     </tr>
     <tr>
-      <th>2001-04-02</th>
-      <td>0.004581</td>
-      <td>0.829985</td>
-      <td>0.697827</td>
-      <td>0.498518</td>
-      <td>0.493937</td>
+      <th>2002-04-24</th>
+      <td>0.079895</td>
+      <td>0.547882</td>
+      <td>0.179940</td>
     </tr>
     <tr>
-      <th>2002-11-04</th>
-      <td>0.045651</td>
-      <td>0.175535</td>
-      <td>0.123226</td>
-      <td>0.403070</td>
-      <td>0.357418</td>
+      <th>2002-12-09</th>
+      <td>0.166648</td>
+      <td>0.151073</td>
+      <td>0.051690</td>
     </tr>
     <tr>
-      <th>2002-12-12</th>
-      <td>0.076229</td>
-      <td>0.104470</td>
-      <td>0.065267</td>
-      <td>0.333004</td>
-      <td>0.256775</td>
+      <th>2003-11-10</th>
+      <td>0.061573</td>
+      <td>0.554193</td>
+      <td>0.214952</td>
     </tr>
   </tbody>
 </table>
@@ -355,7 +333,7 @@ new_model.fit(y=y, X=X)
 
 
 
-<style>#sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 {
+<style>#sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -380,15 +358,15 @@ new_model.fit(y=y, X=X)
     }
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 pre {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 pre {
     padding: 0;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 input.sk-hidden--visually {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -400,7 +378,7 @@ new_model.fit(y=y, X=X)
     width: 1px;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-dashed-wrapped {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -408,7 +386,7 @@ new_model.fit(y=y, X=X)
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-container {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -418,7 +396,7 @@ new_model.fit(y=y, X=X)
     position: relative;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-text-repr-fallback {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -434,14 +412,14 @@ new_model.fit(y=y, X=X)
 
   /* Parallel-specific style estimator block */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-parallel-item::after {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-parallel {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -449,28 +427,28 @@ new_model.fit(y=y, X=X)
     position: relative;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-parallel-item {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-parallel-item:first-child::after {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-parallel-item:last-child::after {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-parallel-item:only-child::after {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-serial {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -488,14 +466,14 @@ new_model.fit(y=y, X=X)
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-toggleable {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 label.sk-toggleable__label {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -505,7 +483,7 @@ new_model.fit(y=y, X=X)
     text-align: center;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 label.sk-toggleable__label-arrow:before {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -513,13 +491,13 @@ new_model.fit(y=y, X=X)
     color: var(--sklearn-color-icon);
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 label.sk-toggleable__label-arrow:hover:before {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-toggleable__content {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -527,27 +505,27 @@ new_model.fit(y=y, X=X)
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-toggleable__content pre {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -555,38 +533,38 @@ new_model.fit(y=y, X=X)
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-label label.sk-toggleable__label,
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-label label {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-label label.sk-toggleable__label,
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-label:hover label.sk-toggleable__label {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-label label {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-label-container {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-estimator {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -596,7 +574,7 @@ new_model.fit(y=y, X=X)
   }
 
   /* on hover */
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 div.sk-estimator:hover {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -653,7 +631,7 @@ new_model.fit(y=y, X=X)
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 a.estimator_doc_link {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -668,12 +646,12 @@ new_model.fit(y=y, X=X)
   }
 
   /* On hover */
-  #sk-36d4e3cb-6801-4880-a196-a21510fdc5e6 a.estimator_doc_link:hover {
+  #sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id='sk-36d4e3cb-6801-4880-a196-a21510fdc5e6' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
+</style><div id='sk-447328ab-f9ef-4630-86c2-6f42aa21f4c7' class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
                                  LinearFourierSeasonality(effect_mode=&#x27;multiplicative&#x27;,
                                                           fourier_terms_list=[3],
                                                           freq=&#x27;D&#x27;,
@@ -682,10 +660,11 @@ new_model.fit(y=y, X=X)
                                  &#x27;^$&#x27;),
                                 (&#x27;investment1&#x27;,
                                  LiftExperimentLikelihood(effect=HillEffect(effect_mode=&#x27;additive&#x27;,
-                                                                            half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x31b44d650&gt;,
+                                                                            half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x31da99cd0&gt;,
                                                                             max_effect_prior...
-2004-06-27  0.420033  0.793289  0.281071  0.650520  0.230487
-2002-01-17  0.171978  0.665964  0.456242  0.546110  0.374131,
+2002-04-24  0.155792  0.656459  0.466476
+2002-12-09  0.047018  0.240272  0.182935
+2003-11-10  0.446803  0.672043  0.127181,
                                                           prior_scale=0.01),
                                  &#x27;^investment2$&#x27;)],
              inference_engine=MAPInferenceEngine(num_steps=1000,
@@ -693,7 +672,7 @@ new_model.fit(y=y, X=X)
                                                                        memory_size=100)),
              trend=PiecewiseLinearTrend(changepoint_interval=100,
                                         changepoint_prior_scale=0.001,
-                                        changepoint_range=-100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('d85b518c-c7b3-4dc9-8359-090afa3a4140') type="checkbox" ><label for=UUID('d85b518c-c7b3-4dc9-8359-090afa3a4140') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
+                                        changepoint_range=-100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden><div class="sk-item sk-dashed-wrapped"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('c4dd95b5-6926-455a-81d6-5a50e820bbc3') type="checkbox" ><label for=UUID('c4dd95b5-6926-455a-81d6-5a50e820bbc3') class='sk-toggleable__label sk-toggleable__label-arrow'>Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[(&#x27;seasonality&#x27;,
                                  LinearFourierSeasonality(effect_mode=&#x27;multiplicative&#x27;,
                                                           fourier_terms_list=[3],
                                                           freq=&#x27;D&#x27;,
@@ -702,10 +681,11 @@ new_model.fit(y=y, X=X)
                                  &#x27;^$&#x27;),
                                 (&#x27;investment1&#x27;,
                                  LiftExperimentLikelihood(effect=HillEffect(effect_mode=&#x27;additive&#x27;,
-                                                                            half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x31b44d650&gt;,
+                                                                            half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x31da99cd0&gt;,
                                                                             max_effect_prior...
-2004-06-27  0.420033  0.793289  0.281071  0.650520  0.230487
-2002-01-17  0.171978  0.665964  0.456242  0.546110  0.374131,
+2002-04-24  0.155792  0.656459  0.466476
+2002-12-09  0.047018  0.240272  0.182935
+2003-11-10  0.446803  0.672043  0.127181,
                                                           prior_scale=0.01),
                                  &#x27;^investment2$&#x27;)],
              inference_engine=MAPInferenceEngine(num_steps=1000,
@@ -713,8 +693,8 @@ new_model.fit(y=y, X=X)
                                                                        memory_size=100)),
              trend=PiecewiseLinearTrend(changepoint_interval=100,
                                         changepoint_prior_scale=0.001,
-                                        changepoint_range=-100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('8a06b9ef-f5af-4768-8c56-fee7fa1b1149') type="checkbox" ><label for=UUID('8a06b9ef-f5af-4768-8c56-fee7fa1b1149') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.001,
-                     changepoint_range=-100)</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('fbd99ce8-9ed8-49b5-95a1-186ee7f1aeea') type="checkbox" ><label for=UUID('fbd99ce8-9ed8-49b5-95a1-186ee7f1aeea') class='sk-toggleable__label sk-toggleable__label-arrow'>PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.001,
+                                        changepoint_range=-100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class='sk-label-container'><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('7a621d02-1a2a-47b0-a17d-2367754b3584') type="checkbox" ><label for=UUID('7a621d02-1a2a-47b0-a17d-2367754b3584') class='sk-toggleable__label sk-toggleable__label-arrow'>trend: PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.001,
+                     changepoint_range=-100)</pre></div></div></div><div class="sk-serial"><div class='sk-item'><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id=UUID('9f52cf30-8722-4f57-8eb5-0703963d46a2') type="checkbox" ><label for=UUID('9f52cf30-8722-4f57-8eb5-0703963d46a2') class='sk-toggleable__label sk-toggleable__label-arrow'>PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.001,
                      changepoint_range=-100)</pre></div></div></div></div></div></div></div></div></div></div>
 
 

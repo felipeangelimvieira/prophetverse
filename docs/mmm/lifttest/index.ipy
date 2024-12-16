@@ -1,31 +1,55 @@
 # %% [markdown]
 # # Lift test
-
-import matplotlib.pyplot as plt
-import numpy as np
+# In this example, we will show how you can leverage lift tests executed in the past to improve the detection of the effect of an intervention.
+# This example is inspired by the one in [PyMC-Marketing documentation](https://www.pymc-marketing.io/en/stable/notebooks/mmm/mmm_lift_test.html).
+#
+# ## Get data from simulated dataset
+# In this exercise, we will load  a synthetic dataset
+# composed of a target timeseries (sales, for example) and
+# two exogenous variables (investment1 and investment2).
+# The two variables are highly correlated.
+#
+# From this dataset, we also obtain the results of a lift test.
 # %%
-import pandas as pd
+import matplotlib.pyplot as plt
 
-index = pd.period_range("2000-01-01", "2005-01-01", freq="D")
-rng = np.random.default_rng(0)
+from prophetverse.datasets._mmm.lifttest import get_dataset
 
-X = pd.DataFrame(
-    {
-        "investment1": np.cumsum(rng.normal(0, 1, size=len(index))),
-        "investment2": np.cumsum(rng.normal(0, 1, size=len(index))),
-    },
-    index=index,
-)
-X -= X.min()
-X /= X.max()
-X += 0.05
+y, X, lift_test, true_effect, model = get_dataset()
 
-X["investment2"] = X["investment1"] + 0.1 + rng.normal(0, 0.01, size=len(index))
-X.plot.line(alpha=0.9)
 
+# %%
+
+fig, ax = plt.subplots(figsize=(10, 15), nrows=3, sharex=True)
+y.plot.line(ax=ax[0])
+ax[0].set_title("Sales")
+X.plot.line(alpha=0.9, ax=ax[1])
+ax[1].set_title("Exogenous variables")
+true_effect.plot.line(ax=ax[2])
+ax[2].set_title("True effect of investment1 and investment2")
+fig.show()
+
+# %% [markdown]
+# The lift test dataframe looks like below, with the information
+# of how a delta in the exogenous variable (investment1 and investment2)
+# affects the target variable (sales). Note that the lift test
+# is assigned to dates, since the effect of the intervention can
+# vary with time.
+
+# %%
+
+lift_test1, lift_test2 = lift_test
+lift_test1
+
+# %% [markdown]
+# ## Creating the model
+# We create the model to estimate the effect of the exogenous variables.
+# Since this is an exercise, we use the effects that are the ground truth.
+# However, we will see that even with a correct specification, the correlated
+# exogenous variables can lead to bad estimates.
+# %%
 import numpyro.distributions as dist
 
-# %%
 from prophetverse.effects import (HillEffect, LinearEffect,
                                   LinearFourierSeasonality)
 from prophetverse.effects.trend import PiecewiseLinearTrend
@@ -56,7 +80,7 @@ model = Prophetverse(
             "investment1",
             HillEffect(
                 half_max_prior=dist.HalfNormal(0.2),
-                slope_prior=dist.Gamma(2,1),
+                slope_prior=dist.Gamma(2, 1),
                 max_effect_prior=dist.HalfNormal(1.5),
                 effect_mode="additive",
             ),
@@ -71,146 +95,73 @@ model = Prophetverse(
             exact("investment2"),
         ),
     ],
-    inference_engine=MAPInferenceEngine(num_steps=1),
-)
-
-
-from prophetverse.experimental.simulate import simulate
-
-samples = simulate(
-    model=model,
-    fh=X.index,
-    X=X,
-)
-
-# %%
-
-y = pd.DataFrame(data={"sales" : samples["obs"][0].flatten()}, index=index)
-true_effect = pd.DataFrame(
-    data={
-        "investment1": samples["investment1"][0].flatten(),
-        "investment2": samples["investment2"][0].flatten(),
-    },
-    index=index,
-    
-)
-
-fig, ax = plt.subplots(figsize=(10, 5))
-y.plot.line(ax=ax)
-fig.show()
-
-fig, ax = plt.subplots(figsize=(10, 5))
-true_effect.plot.line(ax=ax)
-fig.show()
-
-
-# %%
-
-import logging
-
-from prophetverse.engine.optimizer import LBFGSSolver
-from prophetverse.logger import logger
-
-logging.basicConfig()
-logging.root.setLevel(logging.DEBUG)
-
-model = model.set_params(
     inference_engine=MAPInferenceEngine(
-                        num_steps=1000,
-                        optimizer=LBFGSSolver(memory_size=100,
-                                              max_linesearch_steps=100)
-))
+        num_steps=1000, optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100)
+    ),
+)
+
 model.fit(y=y, X=X)
-
-components = model.predict_components(fh=index, X=X)
-
+components = model.predict_components(fh=X.index, X=X)
 
 # %%
 
 fig, ax = plt.subplots(figsize=(10, 5))
-components["obs"].plot.line(ax=ax)
-y.plot.line(ax=ax, color="black")
-# %%
-
-plt.figure()
-plt.scatter(X["investment1"], components["investment1"])
-plt.scatter(X["investment1"], true_effect["investment1"], color="black")
-
-
-plt.figure()
-plt.scatter(X["investment2"], components["investment2"])
-plt.scatter(X["investment2"], true_effect["investment2"], color="black")
-
+y.plot.line(ax=ax, color="black", label="Sales")
+components["obs"].to_frame("Forecast").plot.line(ax=ax)
+fig.show()
 
 # %%
-def get_simulated_lift_test(X, n=10):
-    X_b = X.copy()
 
-    for col in ["investment1", "investment2"]:
-        
-        
-        X_b[col] = X_b[col]*rng.uniform(0.1, 0.9, size=X.shape[0])
+fig, axs = plt.subplots(figsize=(10, 10), nrows=2, sharex=True)
 
-    samples_b = simulate(
-        model=model.clone().set_params(inference_engine__num_steps=1),
-        fh=X.index,
-        X=X_b,
-        do={k: v[0] for k, v in samples.items()},
-    )
+ax = axs[0]
 
-    true_effect_b = pd.DataFrame(
-        index=X_b.index,
-        data={
-            "investment1": samples_b["investment1"][0].flatten(),
-            "investment2": samples_b["investment2"][0].flatten(),
-        },
-    )
+ax.scatter(X["investment1"], 
+           components["investment1"],
+           label="Inferred effect")
+ax.scatter(X["investment1"], 
+           true_effect["investment1"],
+            label="True effect", color="black")
+ax.set_title("Investment1")
+ax.legend()
 
-    lift = np.abs(true_effect_b  - true_effect)
+ax = axs[1]
+ax.scatter(X["investment2"], components["investment2"])
+ax.scatter(X["investment2"], true_effect["investment2"], color="black")
+ax.set_title("Investment2")
 
-    outs = []
+fig.show()
 
-    for col in ["investment1", "investment2"]:
-        lift_test_dataframe = pd.DataFrame(
-            index=X.index,
-            data={
-                "lift": lift[col],
-                "x_start": X.loc[:, col],
-                "x_end": X_b.loc[:, col],
-                "y_start": true_effect.loc[:, col],
-                "y_end": true_effect_b.loc[:, col],
-            },
-        )
-        outs.append(lift_test_dataframe.sample(n=n, replace=False))
+# %% [markdown]
 
-    return tuple(outs)
-
-
-lift_test_dataframe1, lift_test_dataframe2 = get_simulated_lift_test(X,  n=7)
+# ## Using lift test to improve the estimation
+# We will use the lift test to improve the estimation of the effect of the exogenous variables.
+# We wrap the original effects of `investment1` and `investment2` in a `LiftExperimentLikelihood` effect.
+# This effect will use the lift test data to add a new likelihood term to the model.
+#
+# ### Creating the effects
 # %%
 
 from prophetverse.effects.lift_likelihood import LiftExperimentLikelihood
 
 lift_experiment_effect1 = LiftExperimentLikelihood(
        effect=model.get_params()["investment1"],
-        lift_test_results=lift_test_dataframe1,
+        lift_test_results=lift_test1,
         prior_scale=1e-2,
         likelihood_scale=1,
 )
 
 lift_experiment_effect2 = LiftExperimentLikelihood(
     effect=model.get_params()["investment2"],
-    lift_test_results=lift_test_dataframe2,
+    lift_test_results=lift_test2,
     prior_scale=1e-2,
     likelihood_scale=1,
 )
 
+# %% [markdown]
+# ### Fitting the new model
+
 # %%
-
-from numpyro.infer.initialization import init_to_feasible, init_to_sample
-
-from prophetverse.engine.optimizer import LBFGSSolver
-
 new_model = model.clone()
 new_model.set_params(
     investment1=lift_experiment_effect1,
@@ -219,7 +170,7 @@ new_model.set_params(
 new_model.fit(y=y, X=X)
 
 # %%
-new_components = new_model.predict_components(fh=index, X=X)
+new_components = new_model.predict_components(fh=X.index, X=X)
 
 # %%
 
@@ -229,50 +180,47 @@ y.plot.line(ax=ax, color="black")
 new_components["obs"].plot.line(ax=ax)
 
 # %%
+fig, axs = plt.subplots(figsize=(10, 10), nrows=2, sharex=True)
 
-plt.figure()
-plt.scatter(X["investment1"], components["investment1"])
-plt.scatter(X["investment1"], true_effect["investment1"], color="black")
-plt.scatter(X["investment1"], new_components["investment1"], color="tab:orange")
+ax = axs[0]
 
-for date in lift_test_dataframe1.index:
-    baseline = true_effect.loc[date, "investment1"]
-    plt.plot(
-        [
-            lift_test_dataframe1.loc[date, "x_start"],
-            lift_test_dataframe1.loc[date, "x_end"],
-        ],
-        [
-            lift_test_dataframe1.loc[date, "y_start"],
-            lift_test_dataframe1.loc[date, "y_end"],
-        ],
-        color="red",
-        alpha=0.8,
-    )
-plt.show()
+ax.scatter(X["investment1"], 
+           components["investment1"],
+           label="Previous inferred effect", alpha=0.5)
+ax.scatter(X["investment1"], 
+           new_components["investment1"],
+           label="New inferred effect", alpha=0.5)
+ax.scatter(X["investment1"], 
+           true_effect["investment1"],
+           label="True effect", color="black")
+ax.set_title("Investment1")
+ax.legend()
+
+ax = axs[1]
+ax.scatter(X["investment2"], 
+           components["investment2"],
+           label="Previous inferred effect", alpha=0.5)
+ax.scatter(X["investment2"], 
+           new_components["investment2"],
+           label="New inferred effect", alpha=0.5)
+ax.scatter(X["investment2"], 
+           true_effect["investment2"],
+           color="black", label="True effect")
+ax.set_title("Investment2")
+ax.legend()
+fig.show()
 
 
-plt.figure()
-plt.scatter(X["investment2"], components["investment2"])
-plt.scatter(X["investment2"], true_effect["investment2"], color="black")
-plt.scatter(X["investment2"], new_components["investment2"], color="tab:orange")
-
-
-for date in lift_test_dataframe2.index:
-    baseline = true_effect.loc[date, "investment1"]
-    plt.plot(
-        [
-            lift_test_dataframe2.loc[date, "x_start"],
-            lift_test_dataframe2.loc[date, "x_end"],
-        ],
-        [ 
-            lift_test_dataframe2.loc[date, "y_start"],
-            lift_test_dataframe2.loc[date, "y_end"],
-        ],
-        color="red",
-        alpha=0.9,
-    )
-plt.show()
-
+# %% [markdown]
+#
+# ## Conclusion
+#
+# In this example, we showed how you can use lift tests to improve the estimation of the effect of exogenous variables.
+# The highlights are the following:
+#
+# - We used a synthetic dataset with two exogenous variables that are highly correlated.
+# - We showed that even with a correct specification of the model, the correlated exogenous variables can lead to bad estimates.
+# - We then used the lift test to improve the estimation of the effect of the exogenous variables.
+# - We wrapped the original effects in a `LiftExperimentLikelihood` effect that uses the lift test data to add a new likelihood term to the model.
 
 # %%

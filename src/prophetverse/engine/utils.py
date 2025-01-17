@@ -1,3 +1,5 @@
+"""Utils for inference engines."""
+
 from typing import Dict
 
 import jax.numpy as jnp
@@ -7,8 +9,7 @@ from prophetverse.exc import ConvergenceError
 
 
 def assert_mcmc_converged(summary: Dict[str, Dict[str, jnp.ndarray]], max_r_hat: float):
-    """
-    Asserts that an MCMC program has converged.
+    """Assert that an MCMC program has converged.
 
     Parameters
     ----------
@@ -26,7 +27,6 @@ def assert_mcmc_converged(summary: Dict[str, Dict[str, jnp.ndarray]], max_r_hat:
     ------
     ConvergenceError
     """
-
     for name, parameter_summary in summary.items():
         # NB: some variables have deterministic elements (s.a. samples from LKJCov).
         mask = np.isnan(parameter_summary["n_eff"])
@@ -35,7 +35,8 @@ def assert_mcmc_converged(summary: Dict[str, Dict[str, jnp.ndarray]], max_r_hat:
         if (r_hat <= max_r_hat).all():
             continue
 
-        # TODO: might be better to print entire summary instead of just which parameter didn't converge
+        # TODO: might be better to print entire
+        #  summary instead of just which parameter didn't converge
         raise ConvergenceError(f"Parameter '{name}' did not converge!")
 
     return

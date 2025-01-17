@@ -2,8 +2,9 @@
 
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
+
 from operator import attrgetter
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 import jax.numpy as jnp
 from numpyro.diagnostics import summary
@@ -114,8 +115,9 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             group_by_chain = False
             samples = mcmc_.get_samples(group_by_chain=group_by_chain)
 
-            # NB: we fetch sample sites to avoid calculating convergence check on deterministic sites, basically same
-            # approach as in `mcmc.print_summary`.
+            # NB: we fetch sample sites to avoid calculating convergence
+            # check on deterministic sites, basically same approach
+            # as in `mcmc.print_summary`.
             sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
 
             # TODO: might be better to check convergence across chains instead?

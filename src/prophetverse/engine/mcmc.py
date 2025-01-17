@@ -118,6 +118,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             # approach as in `mcmc.print_summary`.
             sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
 
+            # TODO: might be better to check convergence across chains instead?
             filtered_samples = {k: v for k, v in samples.items() if k in sites}
             summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
 

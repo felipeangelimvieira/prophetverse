@@ -1,0 +1,2 @@
+class ConvergenceError(Exception):
+    pass

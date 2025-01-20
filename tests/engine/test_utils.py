@@ -39,7 +39,7 @@ def not_converged_summary(rng_key, shape):
 
 
     kernel = NUTS(model)
-    mcmc = MCMC(kernel, num_warmup=5, num_samples=5, num_chains=4)
+    mcmc = MCMC(kernel, num_warmup=5, num_samples=5, num_chains=4, progress_bar=False)
     mcmc.run(rng_key)
 
     samples = mcmc.get_samples(group_by_chain=True)

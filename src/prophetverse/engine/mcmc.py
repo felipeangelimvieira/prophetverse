@@ -112,7 +112,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             )
             mcmc_.run(rng_key, **kwargs)
 
-            group_by_chain = False
+            group_by_chain = True
             samples = mcmc_.get_samples(group_by_chain=group_by_chain)
 
             # NB: we fetch sample sites to avoid calculating convergence
@@ -120,11 +120,12 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             # as in `mcmc.print_summary`.
             sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
 
-            # TODO: might be better to check convergence across chains instead?
             filtered_samples = {k: v for k, v in samples.items() if k in sites}
             summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
 
-            return samples, summary_
+            flattened_samples = {k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()}
+
+            return flattened_samples, summary_
 
         self.posterior_samples_, self.summary_ = get_posterior_samples(
             self._rng_key,

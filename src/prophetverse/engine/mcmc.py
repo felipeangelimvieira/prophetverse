@@ -129,7 +129,9 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             else:
                 summary_ = {}
 
-            flattened_samples = {k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()}
+            flattened_samples = {
+                k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()
+            }
 
             return flattened_samples, summary_
 

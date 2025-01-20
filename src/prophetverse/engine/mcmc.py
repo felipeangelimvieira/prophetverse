@@ -120,8 +120,14 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             # as in `mcmc.print_summary`.
             sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
 
-            filtered_samples = {k: v for k, v in samples.items() if k in sites}
-            summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
+            # NB: we keep it simple and only calculate a summary check whenever it
+            # satisfies the requirements of split_gelman_rubin. As it's not likely
+            # users will use less than four samples.
+            if num_samples >= 4:
+                filtered_samples = {k: v for k, v in samples.items() if k in sites}
+                summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
+            else:
+                summary_ = {}
 
             flattened_samples = {k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()}
 
@@ -138,7 +144,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             **kwargs
         )
 
-        if self.r_hat:
+        if self.r_hat and self.summary_:
             assert_mcmc_converged(self.summary_, self.r_hat)
 
         return self

@@ -995,7 +995,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         This property is for compatibility with _HeterogenousMetaEstimator.
         """
         if self.exogenous_effects is None:
-            return []
+            return [(None, None)]
         return [(name, effect) for name, effect, _ in self.exogenous_effects]
 
     @_exogenous_effects.setter

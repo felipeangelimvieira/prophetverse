@@ -933,6 +933,8 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
     _steps_attr = "_exogenous_effects"
     _steps_fitted_attr = "exogenous_effects_"
 
+    _tags = {"visual_block_kind": "parallel"}
+
     def __init__(
         self,
         trend: Union[BaseEffect, str] = "linear",

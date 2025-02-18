@@ -981,12 +981,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             inference_engine=inference_engine,
         )
 
-    @property
-    def _trend(self):
-        """Return trend.
-
-        This property is for compatibility with _HeterogenousMetaEstimator.
-        """
+        self._trend = self._get_trend_model()
 
     @property
     def _exogenous_effects(self):
@@ -1291,3 +1286,54 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             return new_obj.set_params(inference_engine=other)
 
         raise ValueError("Invalid type for right shift operator")
+
+    def _sk_visual_block_(self):
+        """
+        Implement visual block.
+
+        The try except is used since the methods used inside
+        _get_default_visual_block are private in sktime, and not public,
+        and may be changed in the future.
+        """
+        try:
+            # Tries to get the default visual block
+            return self._get_default_visual_block()
+
+        except Exception as e:
+            return super()._sk_visual_block_()
+
+    def _get_default_visual_block(self):
+        """Make default visual block."""
+        from sktime.utils._estimator_html_repr import _VisualBlock, _get_visual_block
+
+        visual_blocks = []
+        visual_block_names = []
+
+        steps = getattr(self, self._steps_attr)
+        steps = [("trend", self._trend)] + steps
+        names, estimators = zip(*steps)
+
+        name_details = [str(est) for est in estimators]
+
+        visual_blocks.append(
+            _VisualBlock(
+                "serial",
+                estimators,
+                names=names,
+                name_details=name_details,
+                dash_wrapped=False,
+            )
+        )
+        visual_block_names.append("effects")
+
+        inference_engine = self._inference_engine
+        visual_blocks.append(_get_visual_block(inference_engine))
+        visual_block_names.append("inference_engine")
+
+        return _VisualBlock(
+            "parallel",
+            visual_blocks,
+            names=visual_block_names,
+            name_details=[None] * len(visual_blocks),
+            dash_wrapped=False,
+        )

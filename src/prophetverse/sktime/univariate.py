@@ -257,7 +257,7 @@ class Prophetverse(BaseProphetForecaster):
         """
         fh = y.index.get_level_values(-1).unique()
 
-        self.trend_model_ = self._get_trend_model()
+        self.trend_model_ = self._trend.clone()
 
         if self._likelihood_is_discrete:
             # Scale the data, since _get_fit_data receives

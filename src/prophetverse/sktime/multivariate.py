@@ -277,7 +277,7 @@ class HierarchicalProphet(BaseProphetForecaster):
             exogenous_data = {}
 
         # Trend model
-        self.trend_model_ = self._get_trend_model()
+        self.trend_model_ = self._trend.clone()
         self.trend_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh)
 

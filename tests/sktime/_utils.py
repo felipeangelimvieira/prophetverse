@@ -13,8 +13,8 @@ from prophetverse.sktime.multivariate import HierarchicalProphet
 
 EXTRA_FORECAST_FUNCS = [
     "predict_interval",
-    "predict_all_sites",
-    "predict_all_sites_samples",
+    "predict_components",
+    "predict_component_samples",
     "predict_samples",
 ]
 

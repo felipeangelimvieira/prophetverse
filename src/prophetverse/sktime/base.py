@@ -980,13 +980,12 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             elif self.trend == "logistic":
                 return PiecewiseLogisticTrend()
             # Raise error because self.trend str is deprecated since 0.6.0
-            else:
-                ValueError(
-                    "String values for trend are deprecated since 0.6.0. "
-                    "Please use a effect instance, such as PiecewiseLinearEffect."
-                )
+            elif self.trend == "flat":
+                return FlatTrend()
 
-        return self.trend
+        if isinstance(self.trend, BaseEffect):
+            return self.trend
+        raise ValueError(f"trend must be in {_VALID_TREND_STRINGS} or be a Effect")
 
     def _validate_hyperparams(self):
         """Validate the hyperparameters."""

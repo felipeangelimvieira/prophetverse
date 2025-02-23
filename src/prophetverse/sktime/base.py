@@ -31,7 +31,6 @@ from prophetverse.engine.optimizer.optimizer import (
     _LegacyNumpyroOptimizer,
 )
 from prophetverse.utils import get_multiindex_loc
-from prophetverse.utils.deprecation import deprecation_warning
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -47,27 +46,11 @@ class BaseBayesianForecaster(BaseForecaster):
     ----------
     rng_key: KeyArray
         The RNG Key to use for sampling.
-    inference_method: str
-        The inference method to use. Can be either "mcmc" or "map".
-    mcmc_samples: int
-        The number of MCMC samples to draw.
-    mcmc_warmup: int
-        The number of warmup steps for MCMC.
-    mcmc_chains: int
-        The number of MCMC chains to run.
-    optimizer_steps: int
-        The number of optimization steps to run, in case of MAP inference.
-    optimizer_name: str
-        The name of the optimizer to use, in case of MAP inference. Should be the name
-        of a optimizer in the `numpyro.optim` module.
-        "optax" uses a cosine decay schedule.
-    optimizer_kwargs: dict
-        Additional keyword arguments to pass to the optimizer.
-    scale: float or pd.Series, optional
-        The scale of the target variable. If not provided, it will be inferred from the
-        training data.
-
-
+    scale: Union[float, pd.Series, pd.DataFrame]
+        The scaling factor for the target variable.
+    inference_engine: Optional[BaseInferenceEngine]
+        The inference engine to use for sampling.
+        If None, the default MCMCInferenceEngine is used.
     """
 
     _tags = {
@@ -79,27 +62,11 @@ class BaseBayesianForecaster(BaseForecaster):
     def __init__(
         self,
         rng_key: jax.typing.ArrayLike = None,
-        inference_method: str = "map",
-        mcmc_samples: int = 2000,
-        mcmc_warmup: int = 200,
-        mcmc_chains: int = 4,
-        optimizer_steps: int = 100_000,
-        optimizer_name: str = "Adam",
-        optimizer_kwargs: Optional[dict] = None,
         scale=None,
         inference_engine: Optional[BaseInferenceEngine] = None,
-        *args,
-        **kwargs,
     ):
 
         self.rng_key = rng_key
-        self.mcmc_samples = mcmc_samples
-        self.mcmc_warmup = mcmc_warmup
-        self.mcmc_chains = mcmc_chains
-        self.inference_method = inference_method
-        self.optimizer_steps = optimizer_steps
-        self.optimizer_name = optimizer_name
-        self.optimizer_kwargs = optimizer_kwargs
         self.scale = scale
         self.inference_engine = inference_engine
         super().__init__()
@@ -112,40 +79,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if self.inference_engine is not None:
             self._inference_engine = self.inference_engine
         else:
-            self._inference_engine = self._get_inference_engine()
-
-    def _get_inference_engine(self):
-        """Temporarily return the inference engine.
-
-        Returns
-        -------
-        BaseInferenceEngine
-            The inference engine.
-        """
-        deprecation_warning(
-            "inference_method",
-            "0.5.0",
-            "Use the `inference_engine` parameter instead.",
-        )
-
-        if self.inference_method == "map":
-            optimizer = self._optimizer()
-
-            return MAPInferenceEngine(
-                optimizer=optimizer,
-                num_steps=self.optimizer_steps,
-                rng_key=self.rng_key,
-            )
-        elif self.inference_method == "mcmc":
-            return MCMCInferenceEngine(
-                num_samples=self.mcmc_samples,
-                num_warmup=self.mcmc_warmup,
-                num_chains=self.mcmc_chains,
-                rng_key=self.rng_key,
-                dense_mass=False,
-            )
-        else:
-            raise ValueError(f"Unknown method {self.inference_method}")
+            self._inference_engine = MCMCInferenceEngine()
 
     @property
     def _likelihood_is_discrete(self):
@@ -160,34 +94,6 @@ class BaseBayesianForecaster(BaseForecaster):
             True if the forecaster uses a discrete likelihood, False otherwise.
         """
         return False
-
-    def _optimizer(self) -> numpyro.optim._NumPyroOptim:
-        """Return the optimizer.
-
-        Returns
-        -------
-        _NumPyroOptim
-            An instance of the optimizer.
-        """
-        optimizer_kwargs = self.optimizer_kwargs
-        optimizer_name = self.optimizer_name
-        rng_key = self.rng_key
-
-        if rng_key is None:
-            rng_key = jax.random.PRNGKey(24)
-
-        if optimizer_kwargs is None:
-            optimizer_kwargs = {"step_size": 1e-4}
-        if optimizer_name is None:
-            optimizer_name = "Adam"
-
-        if optimizer_name.startswith("optax"):
-
-            return CosineScheduleAdamOptimizer(**optimizer_kwargs)
-
-        return _LegacyNumpyroOptimizer(
-            optimizer_name=optimizer_name, optimizer_kwargs=optimizer_kwargs
-        )
 
     # pragma: no cover
     def _get_fit_data(
@@ -320,34 +226,6 @@ class BaseBayesianForecaster(BaseForecaster):
 
         return self._postprocess_output(y_pred)
 
-    def predict_all_sites(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
-        """
-        Predicts the values for all sites.
-
-        Given a forecast horizon and optional input features, returns a DataFrame
-        the mean of the predicted values for all sites.
-
-        Parameters
-        ----------
-        fh : ForecastingHorizon
-            The forecast horizon, specifying the number of time steps to predict into
-            the future.
-        X : array-like, optional
-            The input features used for prediction. Defaults to None.
-
-        Returns
-        -------
-        pandas.DataFrame
-            A DataFrame containing the predicted values for all sites, with the site
-            names as columns and the forecast horizon as the index.
-        """
-        deprecation_warning(
-            "predict_all_sites",
-            "0.5.0",
-            "Use the `predict_components` method instead.",
-        )
-        return self.predict_components(fh=fh, X=X)
-
     def predict_components(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
         """
         Predicts the values for all sites.
@@ -438,30 +316,6 @@ class BaseBayesianForecaster(BaseForecaster):
         for key in keys_to_delete:
             del predictive_samples_[key]
         return predictive_samples_
-
-    def predict_all_sites_samples(self, fh, X=None):
-        """
-        Predicts samples for all sites.
-
-        Parameters
-        ----------
-        fh : int or array-like
-            The forecast horizon or an array-like object representing the forecast
-            horizons.
-        X : array-like, optional
-            The input features for prediction. Defaults to None.
-
-        Returns
-        -------
-        pandas.DataFrame
-            A DataFrame containing the predicted samples for all sites.
-        """
-        deprecation_warning(
-            "predict_all_sites_samples",
-            "0.5.0",
-            "Use the `predict_component_samples` method instead.",
-        )
-        return self.predict_component_samples(fh=fh, X=X)
 
     def predict_component_samples(self, fh, X=None):
         """
@@ -936,47 +790,21 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
     def __init__(
         self,
         trend: Union[BaseEffect, str] = "linear",
-        changepoint_interval: int = 25,
-        changepoint_range: Union[float, int] = 0.8,
-        changepoint_prior_scale: float = 0.001,
-        offset_prior_scale: float = 0.1,
-        capacity_prior_scale=0.2,
-        capacity_prior_loc=1.1,
         exogenous_effects: Optional[List[BaseEffect]] = None,
         default_effect: Optional[BaseEffect] = None,
         rng_key: jax.typing.ArrayLike = None,
-        inference_method: str = "map",
-        mcmc_samples: int = 2000,
-        mcmc_warmup: int = 200,
-        mcmc_chains: int = 4,
-        optimizer_steps: int = 100_000,
-        optimizer_name: str = "Adam",
-        optimizer_kwargs: Optional[dict] = None,
         inference_engine: Optional[BaseInferenceEngine] = None,
         scale=None,
     ):
 
         # Trend related hyperparams
         self.trend = trend
-        self.changepoint_interval = changepoint_interval
-        self.changepoint_range = changepoint_range
-        self.changepoint_prior_scale = changepoint_prior_scale
-        self.offset_prior_scale = offset_prior_scale
-        self.capacity_prior_scale = capacity_prior_scale
-        self.capacity_prior_loc = capacity_prior_loc
 
         # Exogenous variables related hyperparams
         self.exogenous_effects = exogenous_effects
         self.default_effect = default_effect
         super().__init__(
             rng_key=rng_key,
-            inference_method=inference_method,
-            mcmc_samples=mcmc_samples,
-            mcmc_warmup=mcmc_warmup,
-            mcmc_chains=mcmc_chains,
-            optimizer_steps=optimizer_steps,
-            optimizer_name=optimizer_name,
-            optimizer_kwargs=optimizer_kwargs,
             scale=scale,
             inference_engine=inference_engine,
         )
@@ -1148,51 +976,13 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             or a BaseEffect instance.
         """
         if isinstance(self.trend, str):
-            deprecation_warning(
-                "trend (str)",
-                "0.5.0",
-                "Pass a BaseEffect instance instead.",
-            )
-        # Changepoints and trend
-        if self.trend == "linear":
-            return PiecewiseLinearTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
+            # Raise error because self.trend str is deprecated since 0.6.0
+            raise ValueError(
+                "String values for trend are deprecated since 0.6.0. "
+                "Please use a effect instance, such as PiecewiseLinearEffect."
             )
 
-        elif self.trend == "linear_raw":
-            return PiecewiseLinearTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-                remove_seasonality_before_suggesting_initial_vals=False,
-            )
-
-        elif self.trend == "logistic":
-            return PiecewiseLogisticTrend(
-                changepoint_interval=self.changepoint_interval,
-                changepoint_range=self.changepoint_range,
-                changepoint_prior_scale=self.changepoint_prior_scale,
-                offset_prior_scale=self.offset_prior_scale,
-                capacity_prior=dist.TransformedDistribution(
-                    dist.HalfNormal(self.capacity_prior_scale),
-                    dist.transforms.AffineTransform(
-                        loc=self.capacity_prior_loc, scale=1
-                    ),
-                ),
-            )
-        elif self.trend == "flat":
-            return FlatTrend(changepoint_prior_scale=self.changepoint_prior_scale)
-
-        elif isinstance(self.trend, BaseEffect):
-            return self.trend
-
-        raise ValueError(
-            "trend must be either 'linear', 'logistic' or a BaseEffect instance."
-        )
+        return self.trend
 
     def _validate_hyperparams(self):
         """Validate the hyperparameters."""

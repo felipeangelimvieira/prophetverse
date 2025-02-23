@@ -57,9 +57,9 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
 
     def __init__(
         self,
-        changepoint_interval: int,
-        changepoint_range: int,
-        changepoint_prior_scale: dist.Distribution,
+        changepoint_interval: int = 25,
+        changepoint_range: int = 0.8,
+        changepoint_prior_scale: dist.Distribution = 0.001,
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
@@ -483,9 +483,9 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
     def __init__(
         self,
-        changepoint_interval: int,
-        changepoint_range: int,
-        changepoint_prior_scale: float,
+        changepoint_interval: int = 25,
+        changepoint_range: int = 0.8,
+        changepoint_prior_scale: float = 0.001,
         offset_prior_scale=10,
         capacity_prior: dist.Distribution = None,
         **kwargs,
@@ -495,7 +495,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
                 dist.HalfNormal(
                     0.2,
                 ),
-                dist.transforms.AffineTransform(loc=1.05, scale=1),
+                dist.transforms.AffineTransform(loc=1.1, scale=1),
             )
 
         self.capacity_prior = capacity_prior

@@ -3,6 +3,7 @@ import pytest
 from numpyro.infer.svi import SVIRunResult
 
 from prophetverse.engine import MAPInferenceEngine, MAPInferenceEngineError
+from prophetverse.engine.optimizer import AdamOptimizer
 
 
 def test_raises_error_when_nan_loss():
@@ -17,7 +18,7 @@ def test_raises_error_when_nan_loss():
         params={"param1": jnp.array([1, 2, 3])}, state=None, losses=jnp.array([1, 2, 3])
     )
 
-    inf_engine = MAPInferenceEngine(lambda *args: None)
+    inf_engine = MAPInferenceEngine(optimizer=AdamOptimizer())
 
     assert inf_engine.raise_error_if_nan_loss(good_svi_result) is None
     with pytest.raises(MAPInferenceEngineError):

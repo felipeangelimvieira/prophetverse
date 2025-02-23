@@ -17,7 +17,6 @@ from prophetverse.engine.optimizer.optimizer import (
     AdamOptimizer,
     BaseOptimizer,
     LBFGSSolver,
-    _OptimizerFromCallable,
 )
 from prophetverse.utils.deprecation import deprecation_warning
 

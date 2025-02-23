@@ -263,13 +263,10 @@ class Prophetverse(BaseProphetForecaster):
             A list of dictionaries containing test parameters.
         """
         from prophetverse.effects.trend import FlatTrend
-        from prophetverse.engine import MCMCInferenceEngine
+        from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine
 
         params = [
-            {
-                "optimizer_steps": 1,
-                "inference_method": "map",
-            },
+            {"inference_engine": MAPInferenceEngine(num_steps=1)},
             {
                 "inference_engine": MCMCInferenceEngine(
                     num_chains=1, num_samples=1, num_warmup=1

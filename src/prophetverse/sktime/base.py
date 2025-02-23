@@ -26,11 +26,10 @@ from prophetverse.engine import (
     MAPInferenceEngine,
     MCMCInferenceEngine,
 )
-from prophetverse.engine.optimizer.optimizer import (
-    CosineScheduleAdamOptimizer,
-    _LegacyNumpyroOptimizer,
-)
+from prophetverse.engine.optimizer.optimizer import CosineScheduleAdamOptimizer
 from prophetverse.utils import get_multiindex_loc
+
+_VALID_TREND_STRINGS = ["linear", "logistic", "flat"]
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -976,33 +975,28 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             or a BaseEffect instance.
         """
         if isinstance(self.trend, str):
+            if self.trend == "linear":
+                return PiecewiseLinearTrend()
+            elif self.trend == "logistic":
+                return PiecewiseLogisticTrend()
             # Raise error because self.trend str is deprecated since 0.6.0
-            raise ValueError(
-                "String values for trend are deprecated since 0.6.0. "
-                "Please use a effect instance, such as PiecewiseLinearEffect."
-            )
+            else:
+                ValueError(
+                    "String values for trend are deprecated since 0.6.0. "
+                    "Please use a effect instance, such as PiecewiseLinearEffect."
+                )
 
         return self.trend
 
     def _validate_hyperparams(self):
         """Validate the hyperparameters."""
-        if self.changepoint_interval <= 0:
-            raise ValueError("changepoint_interval must be greater than 0.")
-        if self.changepoint_prior_scale <= 0:
-            raise ValueError("changepoint_prior_scale must be greater than 0.")
-        if self.capacity_prior_scale <= 0:
-            raise ValueError("capacity_prior_scale must be greater than 0.")
-        if self.capacity_prior_loc <= 0:
-            raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.offset_prior_scale <= 0:
-            raise ValueError("offset_prior_scale must be greater than 0.")
-        if self.trend not in [
-            "linear",
-            "linear_raw",
-            "logistic",
-            "flat",
-        ] and not isinstance(self.trend, BaseEffect):
-            raise ValueError('trend must be either "linear" or "logistic".')
+
+        if self.trend not in _VALID_TREND_STRINGS and not isinstance(
+            self.trend, BaseEffect
+        ):
+            raise ValueError(
+                f"trend must be in {_VALID_TREND_STRINGS} or be a Effect"  # noqa
+            )
 
     def _match_columns(
         self, columns: Union[pd.Index, List[str]], regex: Union[str, None]

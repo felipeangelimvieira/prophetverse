@@ -3,7 +3,7 @@ from numpyro import distributions as dist
 
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.effects.trend.flat import FlatTrend
-from prophetverse.sktime.seasonality import seasonal_transformer
+from prophetverse.effects import LinearFourierSeasonality
 from prophetverse.sktime.univariate import (
     _DISCRETE_LIKELIHOODS,
     _LIKELIHOOD_MODEL_MAP,
@@ -28,24 +28,23 @@ MODELS = [
     ProphetNegBinomial,
 ]
 
+SEASONAL_EFFECT = (
+    "seasonality",
+    LinearFourierSeasonality(sp_list=[7, 365.25], fourier_terms_list=[1, 1], freq="D"),
+    None,
+)
 HYPERPARAMS = [
     dict(
         trend=FlatTrend(),
-        feature_transformer=seasonal_transformer(
-            yearly_seasonality=True, weekly_seasonality=True
-        ),
+        exogenous_effects=[SEASONAL_EFFECT],
     ),
     dict(
-        feature_transformer=seasonal_transformer(
-            yearly_seasonality=True, weekly_seasonality=True
-        ),
+        exogenous_effects=[SEASONAL_EFFECT],
         default_effect=LinearEffect(effect_mode="multiplicative"),
     ),
     dict(
-        feature_transformer=seasonal_transformer(
-            yearly_seasonality=True, weekly_seasonality=True
-        ),
         exogenous_effects=[
+            SEASONAL_EFFECT,
             ("lineareffect1", LinearEffect(), r"(x1).*"),
             ("lineareffect1_repeated", LinearEffect(), r"(x1).*"),
             ("lineareffect2", LinearEffect(prior=dist.Laplace(0, 1)), r"(x2).*"),

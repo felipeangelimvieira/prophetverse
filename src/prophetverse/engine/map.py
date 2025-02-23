@@ -34,14 +34,25 @@ class MAPInferenceEngine(BaseInferenceEngine):
 
     Parameters
     ----------
-    model : Callable
-        The probabilistic model to perform inference on.
-    optimizer_factory : numpyro.optim._NumPyroOptim, optional
-        The optimizer to use for SVI. Defaults to None.
+    optimizer : Optional[BaseOptimizer]
+        The optimizer to be used for inference. If not provided, the default is
+        LBFGSSolver.
     num_steps : int, optional
-        The number of optimization steps to perform. Defaults to 10000.
-    rng_key : jax.random.PRNGKey, optional
-        The random number generator key. Defaults to None.
+        The number of steps to run the optimizer. Default is 10000.
+    num_samples : int, optional
+        The number of samples to generate during prediction.
+        Default is _DEFAULT_PREDICT_NUM_SAMPLES.
+    rng_key : optional
+        The random number generator key.
+    progress_bar : bool, optional
+        Whether to display a progress bar during inference. Default is DEFAULT_PROGRESS_BAR.
+    stable_update : bool, optional
+        Whether to use stable update during inference. Default is False.
+    forward_mode_differentiation : bool, optional
+        Whether to use forward mode differentiation. Default is False.
+    init_loc_fn : optional
+        The function to initialize the location parameter. If not provided, the default is init_to_mean.
+
     """
 
     _tags = {
@@ -50,7 +61,6 @@ class MAPInferenceEngine(BaseInferenceEngine):
 
     def __init__(
         self,
-        optimizer_factory: numpyro.optim._NumPyroOptim = None,
         optimizer: Optional[BaseOptimizer] = None,
         num_steps=10_000,
         num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
@@ -61,7 +71,6 @@ class MAPInferenceEngine(BaseInferenceEngine):
         init_loc_fn=None,
     ):
 
-        self.optimizer_factory = optimizer_factory
         self.optimizer = optimizer
         self.num_steps = num_steps
         self.num_samples = num_samples
@@ -77,11 +86,9 @@ class MAPInferenceEngine(BaseInferenceEngine):
             "Please use the `optimizer` parameter instead.",
         )
 
-        if optimizer_factory is None and optimizer is None:
+        if optimizer is None:
             optimizer = LBFGSSolver()
 
-        if self.optimizer is None and optimizer_factory is not None:
-            optimizer = _OptimizerFromCallable(optimizer_factory)
         self._optimizer = optimizer
 
         self._init_loc_fn = init_loc_fn
@@ -91,6 +98,9 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self._num_steps = num_steps
 
         if self._optimizer.get_tag("is_solver", False):  # type: ignore[union-attr]
+            # If solver, there's a single "solver step". For compatibility,
+            # we set num_steps to 1 and max_iter to the original num_steps.
+
             self._optimizer = self._optimizer.set_max_iter(  # type: ignore[union-attr]
                 self._num_steps
             )

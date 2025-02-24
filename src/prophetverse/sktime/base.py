@@ -26,11 +26,10 @@ from prophetverse.engine import (
     MAPInferenceEngine,
     MCMCInferenceEngine,
 )
-from prophetverse.engine.optimizer.optimizer import (
-    CosineScheduleAdamOptimizer,
-    _LegacyNumpyroOptimizer,
-)
+from prophetverse.engine.optimizer.optimizer import CosineScheduleAdamOptimizer
 from prophetverse.utils import get_multiindex_loc
+
+_VALID_TREND_STRINGS = ["linear", "logistic", "flat"]
 
 
 class BaseBayesianForecaster(BaseForecaster):
@@ -248,7 +247,7 @@ class BaseBayesianForecaster(BaseForecaster):
             names as columns and the forecast horizon as the index.
         """
         if self._is_vectorized:
-            return self._vectorize_predict_method("predict_all_sites", X=X, fh=fh)
+            return self._vectorize_predict_method("predict_components", X=X, fh=fh)
 
         fh_as_index = self.fh_to_index(fh)
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
@@ -336,7 +335,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         if self._is_vectorized:
             return self._vectorize_predict_method(
-                "predict_all_sites_samples", X=X, fh=fh
+                "predict_component_samples", X=X, fh=fh
             )
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
@@ -976,33 +975,27 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             or a BaseEffect instance.
         """
         if isinstance(self.trend, str):
+            if self.trend == "linear":
+                return PiecewiseLinearTrend()
+            elif self.trend == "logistic":
+                return PiecewiseLogisticTrend()
             # Raise error because self.trend str is deprecated since 0.6.0
-            raise ValueError(
-                "String values for trend are deprecated since 0.6.0. "
-                "Please use a effect instance, such as PiecewiseLinearEffect."
-            )
+            elif self.trend == "flat":
+                return FlatTrend()
 
-        return self.trend
+        if isinstance(self.trend, BaseEffect):
+            return self.trend
+        raise ValueError(f"trend must be in {_VALID_TREND_STRINGS} or be a Effect")
 
     def _validate_hyperparams(self):
         """Validate the hyperparameters."""
-        if self.changepoint_interval <= 0:
-            raise ValueError("changepoint_interval must be greater than 0.")
-        if self.changepoint_prior_scale <= 0:
-            raise ValueError("changepoint_prior_scale must be greater than 0.")
-        if self.capacity_prior_scale <= 0:
-            raise ValueError("capacity_prior_scale must be greater than 0.")
-        if self.capacity_prior_loc <= 0:
-            raise ValueError("capacity_prior_loc must be greater than 0.")
-        if self.offset_prior_scale <= 0:
-            raise ValueError("offset_prior_scale must be greater than 0.")
-        if self.trend not in [
-            "linear",
-            "linear_raw",
-            "logistic",
-            "flat",
-        ] and not isinstance(self.trend, BaseEffect):
-            raise ValueError('trend must be either "linear" or "logistic".')
+
+        if self.trend not in _VALID_TREND_STRINGS and not isinstance(
+            self.trend, BaseEffect
+        ):
+            raise ValueError(
+                f"trend must be in {_VALID_TREND_STRINGS} or be a Effect"  # noqa
+            )
 
     def _match_columns(
         self, columns: Union[pd.Index, List[str]], regex: Union[str, None]

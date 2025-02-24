@@ -412,9 +412,14 @@ class HierarchicalProphet(BaseProphetForecaster):
         """
         from prophetverse.engine.map import MAPInferenceEngine
         from prophetverse.engine.mcmc import MCMCInferenceEngine
+        from prophetverse.engine.optimizer import AdamOptimizer
 
         return [
-            {"inference_engine": MAPInferenceEngine(num_steps=1)},
+            {
+                "inference_engine": MAPInferenceEngine(
+                    num_steps=1, optimizer=AdamOptimizer()
+                )
+            },
             {
                 "inference_engine": MCMCInferenceEngine(
                     num_samples=1, num_warmup=1, num_chains=1

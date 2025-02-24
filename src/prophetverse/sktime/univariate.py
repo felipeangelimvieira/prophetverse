@@ -260,9 +260,15 @@ class Prophetverse(BaseProphetForecaster):
         """
         from prophetverse.effects.trend import FlatTrend
         from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine
+        from prophetverse.engine.optimizer import AdamOptimizer
 
         params = [
-            {"inference_engine": MAPInferenceEngine(num_steps=1)},
+            {
+                "trend": FlatTrend(),
+                "inference_engine": MAPInferenceEngine(
+                    num_steps=1, optimizer=AdamOptimizer()
+                ),
+            },
             {
                 "inference_engine": MCMCInferenceEngine(
                     num_chains=1, num_samples=1, num_warmup=1

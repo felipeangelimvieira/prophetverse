@@ -1,7 +1,5 @@
 """Test the sktime contract for Prophet and HierarchicalProphet."""
 
-import gc  # noqa: F401
-
 import pytest  # noqa: F401
 from sktime.utils.estimator_checks import check_estimator, parametrize_with_checks
 

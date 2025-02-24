@@ -80,7 +80,12 @@ def test_hyperparams(hyperparams):
     hierarchy_levels = (2, 1)
     y = make_y(hierarchy_levels)
     X = make_random_X(y)
-    forecaster = HierarchicalProphet(**hyperparams)
+    forecaster = HierarchicalProphet(
+        **hyperparams,
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        ),
+    )
     execute_fit_predict_test(forecaster, y, X)
 
 
@@ -122,7 +127,9 @@ def test_hierarchical_with_series_with_zeros():
     y.iloc[:, :] = 0
 
     forecaster = HierarchicalProphet(
-        optimizer_steps=5, changepoint_interval=2, mcmc_samples=2, mcmc_warmup=2
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
     )
 
     forecaster.fit(y)

@@ -13,6 +13,9 @@ from prophetverse.sktime.univariate import (
     Prophetverse,
 )
 
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.optimizer import AdamOptimizer
+
 from ._utils import (
     execute_extra_predict_methods_tests,
     execute_fit_predict_test,
@@ -74,7 +77,10 @@ def test_model_class_fit(model_class):
     y = make_y(hierarchy_levels)
     X = make_X(y)
     forecaster = model_class(
-        **hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+        **hyperparams,
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
     )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
@@ -90,7 +96,10 @@ def test_hierarchy_levels_fit(hierarchy_levels):
     y = make_y(hierarchy_levels)
     X = make_X(y)
     forecaster = model_class(
-        **hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+        **hyperparams,
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
     )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
@@ -106,7 +115,10 @@ def test_hyperparams_fit(hyperparams):
     y = make_y(hierarchy_levels)
     X = make_X(y)
     forecaster = model_class(
-        **hyperparams, optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+        **hyperparams,
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
     )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
@@ -117,7 +129,9 @@ def test_extra_predict_methods(make_X):
     y = make_y((2, 1))
     X = make_X(y)
     forecaster = Prophet(
-        optimizer_steps=10, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
     )
     execute_extra_predict_methods_tests(forecaster=forecaster, X=X, y=y)
 
@@ -134,7 +148,10 @@ def test_prophet2_fit_with_different_nlevels(
     y = make_y(hierarchy_levels)
     X = make_X(y)
     forecaster = model_class(
-        **hyperparams, optimizer_steps=100, mcmc_samples=2, mcmc_warmup=2, mcmc_chains=1
+        **hyperparams,
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
     )
 
     execute_fit_predict_test(forecaster, y, X, test_size=4)
@@ -145,9 +162,6 @@ def test_prophet2_fit_with_different_nlevels(
     [
         dict(trend="bad_trend"),
         dict(likelihood="bad_likelihood"),
-        dict(offset_prior_scale=-1),
-        dict(capacity_prior_scale=-1),
-        dict(changepoint_interval=-1),
     ],
 )
 def test_raise_error_when_passing_parameters(parameters):

@@ -195,9 +195,7 @@ class Prophetverse(BaseProphetForecaster):
             "trend_model": self.trend_model_,
             "noise_scale": self.noise_scale,
             "scale": self._scale,
-            "exogenous_effects": (
-                self.non_skipped_exogenous_effect if self._has_exogenous else None
-            ),
+            "exogenous_effects": self.non_skipped_exogenous_effect,
         }
 
         inputs = {
@@ -237,9 +235,7 @@ class Prophetverse(BaseProphetForecaster):
 
         trend_data = self.trend_model_.transform(X=X, fh=fh_as_index)
 
-        exogenous_data = (
-            self._transform_effects(X, fh_as_index) if self._has_exogenous else None
-        )
+        exogenous_data = self._transform_effects(X, fh_as_index)
 
         return dict(
             y=None,

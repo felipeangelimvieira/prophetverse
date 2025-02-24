@@ -247,7 +247,7 @@ class BaseBayesianForecaster(BaseForecaster):
             names as columns and the forecast horizon as the index.
         """
         if self._is_vectorized:
-            return self._vectorize_predict_method("predict_all_sites", X=X, fh=fh)
+            return self._vectorize_predict_method("predict_components", X=X, fh=fh)
 
         fh_as_index = self.fh_to_index(fh)
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
@@ -335,7 +335,7 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         if self._is_vectorized:
             return self._vectorize_predict_method(
-                "predict_all_sites_samples", X=X, fh=fh
+                "predict_component_samples", X=X, fh=fh
             )
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)

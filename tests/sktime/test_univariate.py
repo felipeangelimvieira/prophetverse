@@ -61,9 +61,8 @@ HYPERPARAMS = [
     dict(
         trend="linear",
     ),
-    dict(trend="logistic", offset_prior_scale=0.5),
+    dict(trend="logistic"),
     dict(trend="flat"),
-    dict(inference_method="mcmc"),
 ]
 
 

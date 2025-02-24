@@ -313,6 +313,7 @@ class Prophet(Prophetverse):
         default_effect=None,
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         super().__init__(
             feature_transformer=feature_transformer,
@@ -323,6 +324,7 @@ class Prophet(Prophetverse):
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,
+            inference_engine=inference_engine,
         )
 
 
@@ -353,6 +355,7 @@ class ProphetGamma(Prophetverse):
         default_effect=None,
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         super().__init__(
             noise_scale=noise_scale,
@@ -362,6 +365,7 @@ class ProphetGamma(Prophetverse):
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,
+            inference_engine=inference_engine,
         )
 
 
@@ -392,6 +396,7 @@ class ProphetNegBinomial(Prophetverse):
         default_effect=None,
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         super().__init__(
             noise_scale=noise_scale,
@@ -401,4 +406,5 @@ class ProphetNegBinomial(Prophetverse):
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,
+            inference_engine=inference_engine,
         )

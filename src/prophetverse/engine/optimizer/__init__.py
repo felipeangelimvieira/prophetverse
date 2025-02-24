@@ -5,9 +5,7 @@ from .optimizer import (
     BaseOptimizer,
     CosineScheduleAdamOptimizer,
     LBFGSSolver,
-    _LegacyNumpyroOptimizer,
     _NumPyroOptim,
-    _OptimizerFromCallable,
 )
 
 __all__ = [

@@ -195,9 +195,7 @@ class Prophetverse(BaseProphetForecaster):
             "trend_model": self.trend_model_,
             "noise_scale": self.noise_scale,
             "scale": self._scale,
-            "exogenous_effects": (
-                self.non_skipped_exogenous_effect if self._has_exogenous else None
-            ),
+            "exogenous_effects": self.non_skipped_exogenous_effect,
         }
 
         inputs = {
@@ -237,9 +235,7 @@ class Prophetverse(BaseProphetForecaster):
 
         trend_data = self.trend_model_.transform(X=X, fh=fh_as_index)
 
-        exogenous_data = (
-            self._transform_effects(X, fh_as_index) if self._has_exogenous else None
-        )
+        exogenous_data = self._transform_effects(X, fh_as_index)
 
         return dict(
             y=None,
@@ -263,12 +259,15 @@ class Prophetverse(BaseProphetForecaster):
             A list of dictionaries containing test parameters.
         """
         from prophetverse.effects.trend import FlatTrend
-        from prophetverse.engine import MCMCInferenceEngine
+        from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine
+        from prophetverse.engine.optimizer import AdamOptimizer
 
         params = [
             {
-                "optimizer_steps": 1,
-                "inference_method": "map",
+                "trend": FlatTrend(),
+                "inference_engine": MAPInferenceEngine(
+                    num_steps=1, optimizer=AdamOptimizer()
+                ),
             },
             {
                 "inference_engine": MCMCInferenceEngine(
@@ -314,6 +313,7 @@ class Prophet(Prophetverse):
         default_effect=None,
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         super().__init__(
             feature_transformer=feature_transformer,
@@ -324,6 +324,7 @@ class Prophet(Prophetverse):
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,
+            inference_engine=inference_engine,
         )
 
 
@@ -354,6 +355,7 @@ class ProphetGamma(Prophetverse):
         default_effect=None,
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         super().__init__(
             noise_scale=noise_scale,
@@ -363,6 +365,7 @@ class ProphetGamma(Prophetverse):
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,
+            inference_engine=inference_engine,
         )
 
 
@@ -393,6 +396,7 @@ class ProphetNegBinomial(Prophetverse):
         default_effect=None,
         scale=None,
         rng_key=None,
+        inference_engine=None,
     ):
         super().__init__(
             noise_scale=noise_scale,
@@ -402,4 +406,5 @@ class ProphetNegBinomial(Prophetverse):
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,
+            inference_engine=inference_engine,
         )

@@ -9,12 +9,12 @@ from sktime.utils._testing.hierarchical import _bottom_hier_datagen, _make_hiera
 
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime.multivariate import HierarchicalProphet
-from prophetverse.sktime.seasonality import seasonal_transformer
+
 
 EXTRA_FORECAST_FUNCS = [
     "predict_interval",
-    "predict_all_sites",
-    "predict_all_sites_samples",
+    "predict_components",
+    "predict_component_samples",
     "predict_samples",
 ]
 

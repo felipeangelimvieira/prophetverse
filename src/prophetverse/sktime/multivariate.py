@@ -151,23 +151,10 @@ class HierarchicalProphet(BaseProphetForecaster):
     def __init__(
         self,
         trend: Union[BaseEffect, str] = "linear",
-        changepoint_interval: int = 25,
-        changepoint_range: Union[float, int] = 0.8,
-        changepoint_prior_scale: float = 0.001,
-        offset_prior_scale: float = 0.1,
-        capacity_prior_scale=0.2,
-        capacity_prior_loc=1.1,
         feature_transformer: BaseTransformer = None,
         exogenous_effects=None,
         default_effect=None,
         shared_features=None,
-        mcmc_samples=2000,
-        mcmc_warmup=200,
-        mcmc_chains=4,
-        inference_method="map",
-        optimizer_name="Adam",
-        optimizer_kwargs=None,
-        optimizer_steps=100_000,
         noise_scale=0.05,
         correlation_matrix_concentration=1.0,
         rng_key=None,
@@ -182,25 +169,12 @@ class HierarchicalProphet(BaseProphetForecaster):
         super().__init__(
             # Trend
             trend=trend,
-            changepoint_interval=changepoint_interval,
-            changepoint_range=changepoint_range,
-            changepoint_prior_scale=changepoint_prior_scale,
-            offset_prior_scale=offset_prior_scale,
-            capacity_prior_scale=capacity_prior_scale,
-            capacity_prior_loc=capacity_prior_loc,
             # Exog effects
             default_effect=default_effect,
             exogenous_effects=exogenous_effects,
             # Base Bayesian forecaster
             rng_key=rng_key,
             inference_engine=inference_engine,
-            inference_method=inference_method,
-            optimizer_name=optimizer_name,
-            optimizer_kwargs=optimizer_kwargs,
-            optimizer_steps=optimizer_steps,
-            mcmc_samples=mcmc_samples,
-            mcmc_warmup=mcmc_warmup,
-            mcmc_chains=mcmc_chains,
         )
 
         self.model = multivariate_model  # type: ignore[method-assign]
@@ -436,15 +410,19 @@ class HierarchicalProphet(BaseProphetForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
+        from prophetverse.engine.map import MAPInferenceEngine
+        from prophetverse.engine.mcmc import MCMCInferenceEngine
+        from prophetverse.engine.optimizer import AdamOptimizer
+
         return [
             {
-                "optimizer_steps": 1,
-                "inference_method": "map",
+                "inference_engine": MAPInferenceEngine(
+                    num_steps=1, optimizer=AdamOptimizer()
+                )
             },
             {
-                "inference_method": "mcmc",
-                "mcmc_samples": 1,
-                "mcmc_warmup": 1,
-                "mcmc_chains": 1,
+                "inference_engine": MCMCInferenceEngine(
+                    num_samples=1, num_warmup=1, num_chains=1
+                ),
             },
         ]

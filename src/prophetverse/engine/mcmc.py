@@ -3,10 +3,16 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
+from operator import attrgetter
+from typing import Dict, Tuple
+
+import jax.numpy as jnp
+from numpyro.diagnostics import summary
 from numpyro.infer import MCMC, NUTS, Predictive
 from numpyro.infer.initialization import init_to_mean
 
 from prophetverse.engine.base import BaseInferenceEngine
+from prophetverse.engine.utils import assert_mcmc_converged
 
 
 class MCMCInferenceEngine(BaseInferenceEngine):
@@ -27,6 +33,8 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         Whether to use dense mass matrix for NUTS sampler.
     rng_key : Optional
         The random number generator key.
+    r_hat: Optional
+        The required r_hat for considering the chains to have converged.
 
     Attributes
     ----------
@@ -59,11 +67,16 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         num_chains=1,
         dense_mass=False,
         rng_key=None,
+        r_hat: float = 1.1,
     ):
         self.num_samples = num_samples
         self.num_warmup = num_warmup
         self.num_chains = num_chains
         self.dense_mass = dense_mass
+        self.r_hat = r_hat
+
+        self.summary_ = None
+
         super().__init__(rng_key)
 
     def _infer(self, **kwargs):
@@ -90,7 +103,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             num_warmup,
             num_chains,
             **kwargs
-        ) -> MCMC:
+        ) -> Tuple[Dict[str, jnp.ndarray], Dict[str, Dict[str, jnp.ndarray]]]:
             mcmc_ = MCMC(
                 NUTS(model, dense_mass=dense_mass, init_strategy=init_strategy),
                 num_samples=num_samples,
@@ -98,9 +111,31 @@ class MCMCInferenceEngine(BaseInferenceEngine):
                 num_chains=num_chains,
             )
             mcmc_.run(rng_key, **kwargs)
-            return mcmc_.get_samples()
 
-        self.posterior_samples_ = get_posterior_samples(
+            group_by_chain = True
+            samples = mcmc_.get_samples(group_by_chain=group_by_chain)
+
+            # NB: we fetch sample sites to avoid calculating convergence
+            # check on deterministic sites, basically same approach
+            # as in `mcmc.print_summary`.
+            sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
+
+            # NB: we keep it simple and only calculate a summary check whenever it
+            # satisfies the requirements of split_gelman_rubin. As it's not likely
+            # users will use less than four samples.
+            if num_samples >= 4:
+                filtered_samples = {k: v for k, v in samples.items() if k in sites}
+                summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
+            else:
+                summary_ = {}
+
+            flattened_samples = {
+                k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()
+            }
+
+            return flattened_samples, summary_
+
+        self.posterior_samples_, self.summary_ = get_posterior_samples(
             self._rng_key,
             self.model_,
             self.dense_mass,
@@ -110,6 +145,10 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             num_chains=self.num_chains,
             **kwargs
         )
+
+        if self.r_hat and self.summary_:
+            assert_mcmc_converged(self.summary_, self.r_hat)
+
         return self
 
     def _predict(self, **kwargs):

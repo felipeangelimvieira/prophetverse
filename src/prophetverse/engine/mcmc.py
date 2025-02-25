@@ -165,7 +165,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         Dict[str, np.ndarray]
             The predictive samples.
         """
-        num_samples = self.num_samples * self.num_chains
+        num_samples = int(self.num_samples * self.num_chains)
 
         predictive = Predictive(
             self.model_, self.posterior_samples_, num_samples=num_samples

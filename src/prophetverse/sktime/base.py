@@ -103,7 +103,6 @@ class BaseBayesianForecaster(BaseForecaster):
         dict
             Dictionary containing samples with trace names as key.
         """
-
         return self.inference_engine_.posterior_samples_
 
     # pragma: no cover

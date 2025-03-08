@@ -64,3 +64,10 @@ def test_rshift_operator(base_effects_bayesian_forecaster):
     )
 
     assert rshift_instance == expected_instance
+
+
+def test_samples_unset():
+    model = BaseProphetForecaster()
+
+    with pytest.raises(AttributeError):
+        samples = model.posterior_samples_

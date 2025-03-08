@@ -1091,7 +1091,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
     def _get_default_visual_block(self):
         """Make default visual block."""
-        from sktime.utils._estimator_html_repr import _VisualBlock, _get_visual_block
+        from sktime.utils._estimator_html_repr import _get_visual_block, _VisualBlock
 
         visual_blocks = []
         visual_block_names = []

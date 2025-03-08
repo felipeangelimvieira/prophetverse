@@ -94,6 +94,18 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         return False
 
+    @property
+    def posterior_samples_(self) -> Dict[str, np.ndarray]:
+        """Property returning the samples of the inference engine.
+
+        Returns
+        -------
+        dict
+            Dictionary containing samples with trace names as key.
+        """
+
+        return self.inference_engine_.posterior_samples_
+
     # pragma: no cover
     def _get_fit_data(
         self, y: pd.DataFrame, X: pd.DataFrame, fh: ForecastingHorizon
@@ -199,7 +211,6 @@ class BaseBayesianForecaster(BaseForecaster):
 
         self.inference_engine_ = self._inference_engine.clone()
         self.inference_engine_.infer(self.model, **data)
-        self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
         return self
 

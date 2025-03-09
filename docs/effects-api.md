@@ -232,7 +232,6 @@ class LiftExperimentLikelihood(BaseEffect):
         any necessary parameters or data structures, such as detecting the columns that
         match the regex pattern.
 
-        This method MUST set _input_feature_columns_names to a list of column names
 
         Parameters
         ----------

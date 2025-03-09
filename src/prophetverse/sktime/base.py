@@ -94,6 +94,17 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         return False
 
+    @property
+    def posterior_samples_(self) -> Dict[str, np.ndarray]:
+        """Property returning the samples of the inference engine.
+
+        Returns
+        -------
+        dict
+            Dictionary containing samples with trace names as key.
+        """
+        return self.inference_engine_.posterior_samples_
+
     # pragma: no cover
     def _get_fit_data(
         self, y: pd.DataFrame, X: pd.DataFrame, fh: ForecastingHorizon
@@ -199,7 +210,6 @@ class BaseBayesianForecaster(BaseForecaster):
 
         self.inference_engine_ = self._inference_engine.clone()
         self.inference_engine_.infer(self.model, **data)
-        self.posterior_samples_ = self.inference_engine_.posterior_samples_
 
         return self
 
@@ -1087,7 +1097,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
     def _get_default_visual_block(self):
         """Make default visual block."""
-        from sktime.utils._estimator_html_repr import _VisualBlock, _get_visual_block
+        from sktime.utils._estimator_html_repr import _get_visual_block, _VisualBlock
 
         visual_blocks = []
         visual_block_names = []

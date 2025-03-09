@@ -105,8 +105,7 @@ model
 # We plot the predictions on training set to see if the model performs well.
 # %%
 y_pred = model.predict(X=X_train, fh=y_train.index)
-plot_series(y_train,  y_pred, labels=["Train", "Pred"],
-            title="Target series")
+plot_series(y_train, y_pred, labels=["Train", "Pred"], title="Target series")
 plt.show()
 
 # %% [markdown]
@@ -129,7 +128,7 @@ ax.scatter(
     residual,
     c=components["seasonality"] < 0,
     cmap="Accent",
-    alpha=0.9
+    alpha=0.9,
 )
 # Create legend manually
 colors = plt.cm.get_cmap("Accent").colors
@@ -163,7 +162,7 @@ class WrapEffectAndScaleByAnother(BaseEffect):
     ----------
     effect : BaseEffect
         The effect to wrap.
-    
+
     """
 
     _tags = {"skip_predict_if_no_match": False, "supports_multivariate": False}
@@ -188,8 +187,6 @@ class WrapEffectAndScaleByAnother(BaseEffect):
         It receives the Exogenous variables DataFrame and should be used to initialize
         any necessary parameters or data structures, such as detecting the columns that
         match the regex pattern.
-
-        This method MUST set _input_feature_columns_names to a list of column names
 
         Parameters
         ----------
@@ -249,12 +246,10 @@ class WrapEffectAndScaleByAnother(BaseEffect):
         jnp.ndarray
             An array with shape (T,1) for univariate timeseries.
         """
-        out = self.effect.predict(
-            data=data,  predicted_effects=predicted_effects
-        )
+        out = self.effect.predict(data=data, predicted_effects=predicted_effects)
 
         base_effect = predicted_effects[self.base_effect_name]
-        return base_effect * out 
+        return base_effect * out
 
     @property
     def input_feature_column_names(self) -> List[str]:
@@ -271,8 +266,7 @@ import numpyro.distributions as dist
 from prophetverse.engine.optimizer import AdamOptimizer
 
 composite_effect_tuple = (
-    
-    "investment_seasonality", # The effect ID, can be what you want
+    "investment_seasonality",  # The effect ID, can be what you want
     # Now the effect object
     WrapEffectAndScaleByAnother(
         # The effect to wrap
@@ -298,9 +292,7 @@ y_pred_composite = model_composite.predict(X=X_train, fh=y_train.index)
 # We can see below how these oscilations are captured by the model correctly
 # when adding this joint effect.
 
-plot_series(
-    y_train,  y_pred_composite, labels=["Train", "Pred"], title="Target series"
-)
+plot_series(y_train, y_pred_composite, labels=["Train", "Pred"], title="Target series")
 
 # %% [markdown]
 # ### Evaluating the model on test set
@@ -312,9 +304,12 @@ y_pred_composite = model_composite.predict(X=X_test, fh=y_test.index)
 y_pred = model.predict(X=X_test, fh=y_test.index)
 
 plot_series(
-    y_test, y_pred, y_pred_composite,
+    y_test,
+    y_pred,
+    y_pred_composite,
     labels=["Test", "Pred", "Pred composite"],
-    title="Target series")
+    title="Target series",
+)
 
 plt.show()
 
@@ -325,7 +320,7 @@ plt.show()
 # %%
 components = model_composite.predict_components(fh=y_test.index, X=X_test)
 
-fig, ax = plt.subplots(figsize=(10,5))
+fig, ax = plt.subplots(figsize=(10, 5))
 components.plot.line(ax=ax)
 ax.set_title("Predicted Components")
 fig.show()

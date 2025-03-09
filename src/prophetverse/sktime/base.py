@@ -260,7 +260,9 @@ class BaseBayesianForecaster(BaseForecaster):
             return self._vectorize_predict_method("predict_components", X=X, fh=fh)
 
         fh_as_index = self.fh_to_index(fh)
-        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
+
+        X_inner = self._check_X(X=X)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X_inner)
 
         out = pd.DataFrame(
             data={
@@ -348,7 +350,8 @@ class BaseBayesianForecaster(BaseForecaster):
                 "predict_component_samples", X=X, fh=fh
             )
 
-        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
+        X_inner = self._check_X(X=X)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X_inner)
 
         fh_as_index = self.fh_to_index(fh)
         dfs = []
@@ -402,7 +405,8 @@ class BaseBayesianForecaster(BaseForecaster):
 
         fh_as_index = self.fh_to_index(fh)
 
-        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
+        X_inner = self._check_X(X=X)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X_inner)
 
         observation_site = predictive_samples_["obs"]
         n_samples = predictive_samples_["obs"].shape[0]

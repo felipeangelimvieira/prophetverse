@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -14,6 +15,9 @@ from prophetverse.sktime import HierarchicalProphet, Prophetverse
     ],
 )
 def test_simulate(model, do):
+    # NB: the new inference engine behaviour causes issues with convergence, so we fix by seeding for now, but
+    # we might need to override r_hat in `simulate` if the inference engine has that property for a more sustainable fix
+    np.random.seed(123)
 
     fh = pd.period_range(start="2022-01-01", periods=50, freq="M")
     X = pd.DataFrame(index=fh, data={"x1": list(range(len(fh)))})

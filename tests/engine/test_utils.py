@@ -17,7 +17,7 @@ def rng_key():
 
 @pytest.fixture
 def shape():
-    return 4, 500
+    return 4, 1_000
 
 
 @pytest.fixture

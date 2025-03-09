@@ -1,7 +1,7 @@
 # Prophetverse
 
 <p align="center">
-<img src="docs/static/logo-removebg.png" width="200">
+<img src="docs/static/logotext-removebg.png" width="150">
 
 </p>
 

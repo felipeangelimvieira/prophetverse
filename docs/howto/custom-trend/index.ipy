@@ -1,6 +1,6 @@
 # %% [markdown]
 # # Custom trend
-# This page shows how to customize the trend in Prophetverse. 
+# This page shows how to customize the trend in Prophetverse.
 # Sometimes, the piecewise linear or logistic behaviour will not fit
 # your needs, and you may need to define a custom trend
 # The trends are based on `Effects`, which are defined here as components of
@@ -52,8 +52,6 @@
 #     <p class="admonition-title">Note</p>
 #     <p>This dataset was obtained from https://github.com/emanuelef/daily-stars-explorer. </p>
 # </div>
-
-
 
 
 # %%
@@ -113,6 +111,7 @@ fig.show()
 
 
 import matplotlib.pyplot as plt
+
 # %%
 import numpy as np
 
@@ -277,20 +276,21 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
     Custom trend model based on the Generalized Logistic function.
     """
 
-    def __init__(self,
-                 logistic_capacity_dist=dist.HalfNormal(10),
-                 logistic_capacity2_dist=dist.HalfNormal(50_000),
-                 shape_dist=dist.Gamma(1, 1),
-                 logistic_rate_dist=GammaReparametrized(0.01, 0.01)
-                 ):
-        
-        self.logistic_capacity_dist=logistic_capacity_dist
-        self.logistic_capacity2_dist=logistic_capacity2_dist
-        self.shape_dist=shape_dist
-        self.logistic_rate_dist=logistic_rate_dist
-        
+    def __init__(
+        self,
+        logistic_capacity_dist=dist.HalfNormal(10),
+        logistic_capacity2_dist=dist.HalfNormal(50_000),
+        shape_dist=dist.Gamma(1, 1),
+        logistic_rate_dist=GammaReparametrized(0.01, 0.01),
+    ):
+
+        self.logistic_capacity_dist = logistic_capacity_dist
+        self.logistic_capacity2_dist = logistic_capacity2_dist
+        self.shape_dist = shape_dist
+        self.logistic_rate_dist = logistic_rate_dist
+
         super().__init__()
-        
+
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
         """Initialize the effect.
 
@@ -333,7 +333,7 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
         self.offset_prior_loc = len(fh)
         return t
 
-    def _predict(self, data, previous_effects):
+    def _predict(self, data, previous_effects, params):
         """
         Compute the trend based on the Generalized Logistic function.
 
@@ -352,9 +352,7 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
         """
         # Alias for clarity
         time = data
-        logistic_rate, logistic_capacity1, logistic_capacity2, shape, offset = (
-            self._sample_params()
-        )
+        logistic_rate, logistic_capacity1, logistic_capacity2, shape, offset = params
 
         trend = dgeneralized_logistic(
             time,
@@ -373,7 +371,7 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
 
         return trend.reshape((-1, 1))
 
-    def _sample_params(self):
+    def _sample_params(self, data, predicted_effects):
         """
         Sample parameters for the custom trend model.
 
@@ -432,12 +430,12 @@ model = Prophetverse(
             "seasonality",
             LinearFourierSeasonality(
                 sp_list=[7, 365.25],
-                fourier_terms_list=[3,8],
+                fourier_terms_list=[3, 8],
                 freq="D",
-                prior_scale=.1,
+                prior_scale=0.1,
                 effect_mode="multiplicative",
             ),
-            no_input_columns
+            no_input_columns,
         ),
     ],
     inference_engine=MCMCInferenceEngine(
@@ -447,7 +445,7 @@ model = Prophetverse(
     # Avoid normalization of the timeseries by setting
     # scale=1
     scale=1,
-    noise_scale=10
+    noise_scale=10,
 )
 
 model.fit(y_train)
@@ -468,7 +466,7 @@ interval.columns = interval.columns.droplevel([0, 1])
 interval.head()
 
 # %% [markdown]
- ## Plotting the results
+## Plotting the results
 
 # %%
 # Just the scatter of y, without lines
@@ -497,7 +495,7 @@ ax.fill_between(
     color="blue",
     alpha=0.2,
     zorder=-1,
-    label="90% Confidence Interval",
+    label="90% Credible Interval",
 )
 fig.legend()
 fig.tight_layout()

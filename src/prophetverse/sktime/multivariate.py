@@ -272,8 +272,10 @@ class HierarchicalProphet(BaseProphetForecaster):
 
         Parameters
         ----------
-            X (pd.DataFrame): Exogenous variables.
-            fh (ForecastingHorizon): Forecasting horizon.
+        X : pd.DataFrame, optional
+            Exogenous variables.
+        fh : ForecastingHorizon
+            Forecasting horizon.
 
         Returns
         -------

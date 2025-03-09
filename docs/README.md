@@ -35,7 +35,7 @@ Prophetverse leverages the theory behind the Prophet model for time series forec
 
     Learn how to customize timeseries components
 
-    [:octicons-arrow-right-24: How-to](howto)
+    [:octicons-arrow-right-24: How-to](howto/index.md)
 
 
 -   :material-book-open-page-variant:{ .lg .middle } __Reference__

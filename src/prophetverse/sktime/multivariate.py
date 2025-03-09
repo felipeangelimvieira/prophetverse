@@ -28,79 +28,24 @@ class HierarchicalProphet(BaseProphetForecaster):
 
     Parameters
     ----------
-    trend : Union[str, BaseEffect], optional, default="linear"
-        Type of trend to use. Can also be a custom effect object.
-
-    changepoint_interval : int, optional, default=25
-        Number of potential changepoints to sample in the history.
-
-    changepoint_range : Union[float, int], optional, default=0.8
-        Proportion of the history in which trend changepoints will be estimated.
-
-        * If float, must be between 0 and 1 (inclusive).
-          The range will be that proportion of the training history.
-
-        * If int, can be positive or negative.
-          Absolute value must be less than the number of training points.
-          The range will be that number of points.
-          A negative int indicates the number of points
-          counting from the end of the history, a positive int from the beginning.
-
-    changepoint_prior_scale : float, optional, default=0.001
-        Regularization parameter controlling the flexibility
-        of the automatic changepoint selection.
-
-    offset_prior_scale : float, optional, default=0.1
-        Scale parameter for the prior distribution of the offset.
-        The offset is the constant term in the piecewise trend equation.
-
-    capacity_prior_scale : float, optional, default=0.2
-        Scale parameter for the prior distribution of the capacity.
-
-    capacity_prior_loc : float, optional, default=1.1
-        Location parameter for the prior distribution of the capacity.
-
-    feature_transformer : BaseTransformer or None, optional, default=None
-        A transformer to preprocess the exogenous features.
-
-    exogenous_effects : list of AbstractEffect or None, optional, default=None
-        A list defining the exogenous effects to be used in the model.
-
-    default_effect : AbstractEffect or None, optional, default=None
-        The default effect to be used when no effect is specified for a variable.
-
-    shared_features : list, optional, default=[]
-        List of features shared across all series in the hierarchy.
-
-    mcmc_samples : int, optional, default=2000
-        Number of MCMC samples to draw.
-
-    mcmc_warmup : int, optional, default=200
-        Number of warmup steps for MCMC.
-
-    mcmc_chains : int, optional, default=4
-        Number of MCMC chains.
-
-    inference_method : str, optional, default='map'
-        Inference method to use. Either "map" or "mcmc".
-
-    optimizer_name : str, optional, default='Adam'
-        Name of the optimizer to use.
-
-    optimizer_kwargs : dict or None, optional, default={'step_size': 1e-4}
-        Additional keyword arguments for the optimizer.
-
-    optimizer_steps : int, optional, default=100_000
-        Number of optimization steps.
-
-    noise_scale : float, optional, default=0.05
-        Scale parameter for the noise.
-
-    correlation_matrix_concentration : float, optional, default=1.0
+    trend : Union[BaseEffect, str], default="linear"
+        Trend component of the model.
+    feature_transformer : BaseTransformer, default=None
+        Transformer for features preprocessing.
+    exogenous_effects : optional, default=None
+        Effects to model exogenous variables.
+    default_effect : optional, default=None
+        Default effect specification.
+    shared_features : optional, default=None
+        Features shared across time series.
+    noise_scale : float, default=0.05
+        Scale parameter for the noise distribution.
+    correlation_matrix_concentration : float, default=1.0
         Concentration parameter for the correlation matrix.
-
-    rng_key : jax.random.PRNGKey or None, optional, default=None
+    rng_key : optional, default=None
         Random number generator key.
+    inference_engine : optional, default=None
+        Engine used for inference.
 
     Examples
     --------

@@ -1,0 +1,78 @@
+# %% [markdown]
+# # Tuning Prophetverse with sktime
+#
+# This guide explains how to optimize Prophetverse model hyperparameters using sktime's tuning classes (e.g., GridSearchCV).
+#
+# ## Overview
+#
+# Prophetverse is compatible with sktime’s tuning framework. You can define a parameter grid for components (such as trend and seasonality) and then use cross-validation tools (e.g., GridSearchCV) to search for the best parameters.
+#
+# ## Example: Using GridSearchCV with Prophetverse
+#
+# 1. Import necessary modules and load your dataset.
+# 2. Define the hyperparameter grid for components (e.g., changepoint_interval and changepoint_prior_scale in the trend).
+# 3. Create a Prophetverse instance with initial settings.
+# 4. Wrap the model with sktime’s GridSearchCV and run the tuning process.
+#
+# %%
+import pandas as pd
+from sktime.forecasting.model_selection import ForecastingGridSearchCV
+from prophetverse.sktime import Prophetverse
+from prophetverse.effects.trend import PiecewiseLinearTrend
+from prophetverse.effects.fourier import LinearFourierSeasonality
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.utils import no_input_columns
+
+# Load example dataset (replace with your own data as needed)
+from prophetverse.datasets.loaders import load_peyton_manning
+
+y = load_peyton_manning()
+
+# Define the hyperparameter grid for the trend component.
+param_grid = {
+    "trend__changepoint_interval": [300, 700],
+    "trend__changepoint_prior_scale": [0.0001, 0.00001],
+    "seasonality__prior_scale": [0.1],
+}
+
+# Create the initial Prophetverse model.
+model = Prophetverse(
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=500,
+        changepoint_prior_scale=0.00001,
+        changepoint_range=-250,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                freq="D",
+                sp_list=[7, 365.25],
+                fourier_terms_list=[3, 10],
+                prior_scale=0.1,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(),
+)
+
+# Set up cv strategy
+from sktime.split import ExpandingWindowSplitter
+
+cv = ExpandingWindowSplitter(fh=[1, 2, 3], step_length=1000, initial_window=1000)
+
+# Set up GridSearchCV with 3-fold cross-validation.
+grid_search = ForecastingGridSearchCV(model, param_grid=param_grid, cv=cv)
+
+# Run the grid search.
+grid_search.fit(y=y, X=None)
+
+# Display the best parameters found.
+print("Best parameters:", grid_search.best_params_)
+
+
+# %%
+best_model = grid_search.best_forecaster_
+best_model

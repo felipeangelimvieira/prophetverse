@@ -37,6 +37,6 @@ def assert_mcmc_converged(summary: Dict[str, Dict[str, jnp.ndarray]], max_r_hat:
 
         # TODO: might be better to print entire
         #  summary instead of just which parameter didn't converge
-        raise ConvergenceError(f"Parameter '{name}' did not converge!")
+        raise ConvergenceError(f"Parameter '{name}' did not converge! R_hat: {r_hat}")
 
     return

@@ -52,11 +52,9 @@ exogenous_effects = [
         no_input_columns,  # The regex
     ),
     (
-        "channel1_investment_incremental", # The name of the effect
-        HillEffect(
-            effect_mode="additive"
-            ),
-        exact("channel1_investment"), # Column in dataframe
+        "channel1_investment_incremental",  # The name of the effect
+        HillEffect(effect_mode="additive"),
+        exact("channel1_investment"),  # Column in dataframe
     ),
 ]
 
@@ -132,7 +130,7 @@ class SquaredEffect(BaseEffect):
     def __init__(
         self,
         scale_prior: Optional[Distribution] = None,
-        offset_prior : Optional[Distribution] = None,
+        offset_prior: Optional[Distribution] = None,
     ):
         self.scale_prior = scale_prior or dist.Gamma(1, 1)
         self.offset_prior = offset_prior or dist.Normal(0, 1)
@@ -141,7 +139,8 @@ class SquaredEffect(BaseEffect):
     def _predict(  # type: ignore[override]
         self,
         data: jnp.ndarray,
-        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
+        predicted_effects: Optional[Dict[str, jnp.ndarray]],
+        params: Dict,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -165,6 +164,7 @@ class SquaredEffect(BaseEffect):
         effect = scale * (data - offset) ** 2
 
         return effect
+
 
 # %% [markdown]
 #
@@ -215,7 +215,7 @@ fig.show()
 
 # #### Creating the model
 
-# %% 
+# %%
 
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine import MAPInferenceEngine
@@ -226,9 +226,8 @@ model = (
     Prophetverse()
     >> PiecewiseLinearTrend(
         changepoint_interval=100,
-        changepoint_prior_scale=.1,
+        changepoint_prior_scale=0.1,
         changepoint_range=-100,
-        
     )
     >> MAPInferenceEngine()
 ) >> (
@@ -271,13 +270,21 @@ components.head()
 # predicted effect in the same plot.
 # %%
 fig, ax = plt.subplots()
-ax.scatter(X["exogenous"], 2 * (X["exogenous"] - 5) ** 2,
-           color="black", label="True effect")
-ax.scatter(X["exogenous"], components["exog_effect"],
-           marker="x", color="red",
-           s=10, label="Predicted effect")
-ax.set(xlabel="Exogenous variable",
-       ylabel="Effect",
-       title="True effect vs Predicted effect")
+ax.scatter(
+    X["exogenous"], 2 * (X["exogenous"] - 5) ** 2, color="black", label="True effect"
+)
+ax.scatter(
+    X["exogenous"],
+    components["exog_effect"],
+    marker="x",
+    color="red",
+    s=10,
+    label="Predicted effect",
+)
+ax.set(
+    xlabel="Exogenous variable",
+    ylabel="Effect",
+    title="True effect vs Predicted effect",
+)
 ax.legend()
 fig.show()

@@ -79,12 +79,6 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.init_loc_fn = init_loc_fn
         super().__init__(rng_key)
 
-        deprecation_warning(
-            "optimizer_factory",
-            "0.5.0",
-            "Please use the `optimizer` parameter instead.",
-        )
-
         if optimizer is None:
             optimizer = LBFGSSolver()
 

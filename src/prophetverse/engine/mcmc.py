@@ -67,7 +67,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         num_chains=1,
         dense_mass=False,
         rng_key=None,
-        r_hat: float = 1.1,
+        r_hat: float = None,
     ):
         self.num_samples = num_samples
         self.num_warmup = num_warmup

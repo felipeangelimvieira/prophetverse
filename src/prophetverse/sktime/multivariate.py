@@ -62,8 +62,8 @@ class HierarchicalProphet(BaseProphetForecaster):
     ... )
     >>> y = agg.fit_transform(y)
     >>> forecaster = HierarchicalProphet()
-    >>> forecaster.fit(y)
-    >>> forecaster.predict(fh=[1])
+    >>> forecaster = forecaster.fit(y)
+    >>> y_pred = forecaster.predict(fh=[1])
     """
 
     _tags = {

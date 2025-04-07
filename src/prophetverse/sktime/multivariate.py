@@ -64,6 +64,14 @@ class HierarchicalProphet(BaseProphetForecaster):
     >>> forecaster = HierarchicalProphet()
     >>> forecaster.fit(y)
     >>> forecaster.predict(fh=[1])
+    >>> y_pred = forecaster.predict(fh=[1])
+    >>> print(y_pred)
+                           passengers
+    l1_agg    timepoints
+    __total   1949-08     2415.207955
+    l1_node01 1949-08      125.763156
+    l1_node02 1949-08     1717.486170
+    l1_node03 1949-08      571.958629
     """
 
     _tags = {

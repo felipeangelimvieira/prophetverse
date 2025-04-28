@@ -1,17 +1,43 @@
 """Module that stores abstract class of effects."""
 
 from typing import Any, Dict, Literal, Optional
-
+import numpyro
 import jax.numpy as jnp
 import pandas as pd
 from skbase.base import BaseObject
-
+from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
 
 EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
+
+
+def return_cache_if_site_already_in_trace(func):
+    cache = None
+
+    def wrapper(name, *args, **kwargs):
+        nonlocal cache
+
+        if is_site_already_in_trace(name):
+            print("returning memory")
+            return cache
+        out = func(name, *args, **kwargs)
+        cache = out
+        return out
+
+    return wrapper
+
+
+def is_site_already_in_trace(name):
+
+    for handler in numpyro.primitives._PYRO_STACK:
+        if isinstance(handler, numpyro.handlers.trace):
+            trace = handler.trace
+            if name in trace:
+                return True
+    return False
 
 
 class BaseEffect(BaseObject):
@@ -271,6 +297,16 @@ class BaseEffect(BaseObject):
         Dict
             A dictionary containing the sampled parameters.
         """
+
+        deprecation_warning(
+            "sample_params",
+            "0.6.0",
+            "Sorry for the inconvenience, but this method will be deprecated. "
+            "It was introducted to avoid resampling the same site twice, but"
+            "a new, and better, interface is being implemented. "
+            "Please call the parameters directly from _predict using"
+            "self.sample as you would call numpyro.sample",
+        )
         if predicted_effects is None:
             predicted_effects = {}
 
@@ -417,3 +453,23 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
             base_effect = base_effect.reshape((-1, 1))
         x = x.reshape(base_effect.shape)
         return base_effect * x
+
+    @return_cache_if_site_already_in_trace
+    def sample(name, *args, **kwargs):
+        """Sample parameters from the prior distribution.
+
+        Parameters
+        ----------
+        name : str
+            The name of the effect to be sampled.
+
+        Returns
+        -------
+        Any
+            The sampled effect.
+        """
+        return numpyro.sample(
+            name,
+            *args,
+            **kwargs,
+        )

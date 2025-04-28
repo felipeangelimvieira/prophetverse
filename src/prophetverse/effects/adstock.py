@@ -91,9 +91,7 @@ class GeometricAdstockEffect(BaseEffect):
         Dict[str, jnp.ndarray]
             A dictionary containing the sampled parameters of the effect.
         """
-        return {
-            "decay": numpyro.sample("decay", self.decay_prior),
-        }
+        return {}
 
     def _predict(
         self,
@@ -118,7 +116,8 @@ class GeometricAdstockEffect(BaseEffect):
         jnp.ndarray
             An array with shape (T, 1) for univariate timeseries.
         """
-        decay = params["decay"]
+
+        decay = self.sample("decay", self.decay_prior)
 
         # Apply geometric adstock using jax.lax.scan for efficiency
         def adstock_step(carry, current):

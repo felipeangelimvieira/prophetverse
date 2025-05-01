@@ -134,7 +134,7 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
 
         mean = self._compute_mean(predicted_effects) * self.scale_
         mean = numpyro.deterministic("mean", mean)
-        noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(noise_scale))
+        noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(self.noise_scale))
 
         with numpyro.plate("data", len(mean), dim=-2):
             numpyro.sample(

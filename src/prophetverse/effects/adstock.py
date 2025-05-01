@@ -98,7 +98,7 @@ class GeometricAdstockEffect(BaseEffect):
             An array with shape (T, 1) for univariate timeseries.
         """
 
-        decay = self.sample("decay", self.decay_prior)
+        decay = numpyro.sample("decay", self.decay_prior)
 
         # Apply geometric adstock using jax.lax.scan for efficiency
         def adstock_step(carry, current):

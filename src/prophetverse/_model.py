@@ -38,7 +38,7 @@ def model(
     """
 
     predicted_effects: Dict[str, jnp.ndarray] = {}
-    with CacheMessenger():
+    with CacheMessenger() as cache_messenger:
         with numpyro.handlers.scope(prefix="trend"):
             trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
 

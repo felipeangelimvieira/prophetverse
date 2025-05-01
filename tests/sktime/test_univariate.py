@@ -171,7 +171,7 @@ def test_raise_error_when_passing_parameters(parameters):
 @pytest.mark.parametrize("likelihood", ["normal", "gamma", "negbinomial"])
 def test_prophetverse_likelihood_behaviour(likelihood):
     model = Prophetverse(likelihood=likelihood)
-    assert model.likelihood == _LIKELIHOOD_MODEL_MAP[likelihood]
+    assert isinstance(model._likelihood, _LIKELIHOOD_MODEL_MAP[likelihood])
 
     if likelihood in _DISCRETE_LIKELIHOODS:
         assert model._likelihood_is_discrete

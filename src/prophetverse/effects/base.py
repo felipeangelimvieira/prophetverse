@@ -280,7 +280,7 @@ class BaseEffect(BaseObject):
             "It was introducted to avoid resampling the same site twice, but"
             "a new, and better, interface is being implemented. "
             "Please call the parameters directly from _predict using"
-            "self.sample as you would call numpyro.sample",
+            "numpyro.sample as you would call numpyro.sample",
         )
         if predicted_effects is None:
             predicted_effects = {}
@@ -341,25 +341,6 @@ class BaseEffect(BaseObject):
     ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
-
-    def sample(self, name, *args, **kwargs):
-        """Sample parameters from the prior distribution.
-
-        Parameters
-        ----------
-        name : str
-            The name of the effect to be sampled.
-
-        Returns
-        -------
-        Any
-            The sampled effect.
-        """
-        return numpyro.sample(
-            name,
-            *args,
-            **kwargs,
-        )
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):

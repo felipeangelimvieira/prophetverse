@@ -183,12 +183,12 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         # alias for clarity
         changepoint_matrix = data
 
-        offset = self.sample(
+        offset = numpyro.sample(
             "offset",
             dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
         )
 
-        changepoint_coefficients = self.sample(
+        changepoint_coefficients = numpyro.sample(
             "changepoint_coefficients",
             dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
         )
@@ -554,7 +554,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             The computed trend.
         """
         with numpyro.plate("series", self.n_series, dim=-3):
-            capacity = self.sample("capacity", self.capacity_prior)
+            capacity = numpyro.sample("capacity", self.capacity_prior)
 
         trend = super()._predict(data=data, predicted_effects=predicted_effects)
 

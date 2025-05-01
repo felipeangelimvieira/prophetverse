@@ -175,7 +175,7 @@ class LiftExperimentLikelihood(BaseEffect):
 
             # Add :ignore so that the model removes this
             # sample when organizing the output dataframe
-            self.sample(
+            numpyro.sample(
                 "lift_experiment:ignore",
                 distribution,
                 obs=observed_lift,

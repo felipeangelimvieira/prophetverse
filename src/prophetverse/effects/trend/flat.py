@@ -76,7 +76,7 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
         # Alias for clarity
         constant_vector = data
 
-        coefficient = self.sample(
+        coefficient = numpyro.sample(
             "trend_flat_coefficient",
             dist.Gamma(
                 rate=self.changepoint_prior_loc / self.changepoint_prior_scale**2,

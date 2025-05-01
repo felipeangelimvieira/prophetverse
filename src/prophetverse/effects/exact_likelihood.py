@@ -127,7 +127,7 @@ class ExactLikelihood(BaseEffect):
         x = predicted_effects[self.effect_name]
 
         with numpyro.handlers.mask(mask=obs_mask):
-            self.sample(
+            numpyro.sample(
                 "exact_likelihood:ignore",
                 dist.Normal(x, self.prior_scale),
                 obs=observed_reference_value,

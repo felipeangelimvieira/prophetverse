@@ -54,17 +54,23 @@ def simulate(
         y = pd.DataFrame(index=fh, data=np.random.rand(len(fh)) * 10, columns=["dummy"])
 
     model.fit(X=X, y=y)
+    if False:
+        # Get predict data to call predictive model
+        predict_data = model._get_predict_data(X=X, fh=fh)
+        predict_data["y"] = None
+        from numpyro.infer import Predictive
 
-    # Get predict data to call predictive model
-    predict_data = model._get_predict_data(X=X, fh=fh)
-    predict_data["y"] = None
-    from numpyro.infer import Predictive
+        predictive_model = model_func
+        if do is not None:
+            predictive_model = numpyro.handlers.do(predictive_model, data=do)
 
-    predictive_model = model_func
+        # predictive_model = model.model
+        predictive_model = Predictive(model=predictive_model, num_samples=num_samples)
+        predictive_output = predictive_model(PRNGKey(0), **predict_data)
+
     if do is not None:
-        predictive_model = numpyro.handlers.do(predictive_model, data=do)
-
-    # predictive_model = model.model
-    predictive_model = Predictive(model=predictive_model, num_samples=num_samples)
-    predictive_output = predictive_model(PRNGKey(0), **predict_data)
-    return predictive_output
+        with numpyro.handlers.do(data=do):
+            _ = model.predict(X=X, fh=fh)
+            return model.posterior_samples_
+    model.predict(X=X, fh=fh)
+    return model.posterior_samples_

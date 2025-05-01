@@ -119,6 +119,8 @@ class Prophetverse(BaseProphetForecaster):
         """
         if isinstance(self.likelihood, BaseEffect):
             return self.likelihood
+        if not self.likelihood in _LIKELIHOOD_MODEL_MAP:
+            raise ValueError(f"Likelihood '{self.likelihood}' is not supported. ")
         likelihood = _LIKELIHOOD_MODEL_MAP[self.likelihood]().clone()
         if self.noise_scale is not None:
             deprecation_warning(

@@ -44,31 +44,12 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
 
         super().__init__(effect_mode=effect_mode)
 
-    def _sample_params(
-        self, data, predicted_effects: Dict[str, jnp.ndarray]
-    ) -> Dict[str, jnp.ndarray]:
-        """
-        Sample the parameters of the effect.
-
-        Parameters
-        ----------
-        data : Any
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-        """
-        return {}
-
     def _predict(
         self,
         data: Dict[str, jnp.ndarray],
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 

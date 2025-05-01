@@ -28,6 +28,7 @@ from prophetverse.engine import (
 )
 from prophetverse.engine.optimizer.optimizer import CosineScheduleAdamOptimizer
 from prophetverse.utils import get_multiindex_loc
+from prophetverse._model import model as model_func
 
 _VALID_TREND_STRINGS = ["linear", "logistic", "flat"]
 
@@ -151,33 +152,6 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
-    # pragma: no cover
-    def model(self, *args, **kwargs):
-        """
-        Numpyro model.
-
-        This method must be implemented by the subclass, or overriden as
-        a class attribute.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments.
-        **kwargs : dict
-            Keyword arguments.
-
-        Returns
-        -------
-        Any
-            Model output.
-
-        Raises
-        ------
-        NotImplementedError
-            If the method is not implemented by the subclass.
-        """
-        raise NotImplementedError("Must be implemented by subclass")
-
     def _fit(self, y, X, fh):
         """
         Fit the Bayesian forecaster to the training data.
@@ -209,7 +183,7 @@ class BaseBayesianForecaster(BaseForecaster):
             rng_key = jax.random.PRNGKey(24)
 
         self.inference_engine_ = self._inference_engine.clone()
-        self.inference_engine_.infer(self.model, **data)
+        self.inference_engine_.infer(model_func, **data)
 
         return self
 

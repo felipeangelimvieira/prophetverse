@@ -1,9 +1,8 @@
 """Definition of Chained Effects class."""
 
 from typing import Any, Dict, List
-
+import numpyro
 import jax.numpy as jnp
-from numpyro import handlers
 from skbase.base import BaseMetaEstimatorMixin
 
 from prophetverse.effects.base import BaseEffect
@@ -67,36 +66,12 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
         output = self.steps[0].transform(output, fh)
         return output
 
-    def _sample_params(
-        self, data: jnp.ndarray, predicted_effects: Dict[str, jnp.ndarray]
-    ) -> Dict[str, jnp.ndarray]:
-        """
-        Sample parameters for all chained effects.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters for all effects.
-        """
-        params = {}
-        for idx, effect in enumerate(self.steps):
-            with handlers.scope(prefix=f"{idx}"):
-                effect_params = effect.sample_params(data, predicted_effects)
-            params[f"effect_{idx}"] = effect_params
-        return params
-
     def _predict(
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, Dict[str, jnp.ndarray]],
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """
         Apply all chained effects sequentially.
@@ -116,9 +91,9 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
             The transformed data after applying all effects.
         """
         output = data
-        for idx, effect in enumerate(self.steps):
-            effect_params = params[f"effect_{idx}"]
-            output = effect._predict(output, predicted_effects, effect_params)
+        for i, effect in enumerate(self.steps):
+            with numpyro.handlers.scope(prefix=f"{i}"):
+                output = effect.predict(output, predicted_effects)
         return output
 
     def _coerce_to_named_object_tuples(self, objs, clone=False, make_unique=True):

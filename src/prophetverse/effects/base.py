@@ -3,6 +3,7 @@
 from typing import Any, Dict, Literal, Optional
 import numpyro
 import jax.numpy as jnp
+import numpyro.primitives
 import pandas as pd
 from skbase.base import BaseObject
 from prophetverse.utils.deprecation import deprecation_warning
@@ -12,32 +13,6 @@ __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
 
 EFFECT_APPLICATION_TYPE = Literal["additive", "multiplicative"]
-
-
-def return_cache_if_site_already_in_trace(func):
-    cache = None
-
-    def wrapper(name, *args, **kwargs):
-        nonlocal cache
-
-        if is_site_already_in_trace(name):
-            print("returning memory")
-            return cache
-        out = func(name, *args, **kwargs)
-        cache = out
-        return out
-
-    return wrapper
-
-
-def is_site_already_in_trace(name):
-
-    for handler in numpyro.primitives._PYRO_STACK:
-        if isinstance(handler, numpyro.handlers.trace):
-            trace = handler.trace
-            if name in trace:
-                return True
-    return False
 
 
 class BaseEffect(BaseObject):
@@ -337,7 +312,7 @@ class BaseEffect(BaseObject):
         return {}
 
     def _predict(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], params: Dict
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -366,6 +341,25 @@ class BaseEffect(BaseObject):
     ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
+
+    def sample(self, name, *args, **kwargs):
+        """Sample parameters from the prior distribution.
+
+        Parameters
+        ----------
+        name : str
+            The name of the effect to be sampled.
+
+        Returns
+        -------
+        Any
+            The sampled effect.
+        """
+        return numpyro.sample(
+            name,
+            *args,
+            **kwargs,
+        )
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
@@ -407,7 +401,8 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         self,
         data: Any,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
-        params: Optional[Dict[str, jnp.ndarray]] = None,
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -426,11 +421,13 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        if predicted_effects is None:
-            predicted_effects = {}
 
-        if params is None:
-            params = self.sample_params(data, predicted_effects)
+        x = super().predict(
+            data=data, predicted_effects=predicted_effects, *args, **kwargs
+        )
+
+        if self.effect_mode == "additive":
+            return x
 
         if (
             self.base_effect_name not in predicted_effects
@@ -441,35 +438,8 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
                 + " predicted_effects"
             )
 
-        x = super().predict(
-            data=data, predicted_effects=predicted_effects, params=params
-        )
-
-        if self.effect_mode == "additive":
-            return x
-
         base_effect = predicted_effects[self.base_effect_name]
         if base_effect.ndim == 1:
             base_effect = base_effect.reshape((-1, 1))
         x = x.reshape(base_effect.shape)
         return base_effect * x
-
-    @return_cache_if_site_already_in_trace
-    def sample(name, *args, **kwargs):
-        """Sample parameters from the prior distribution.
-
-        Parameters
-        ----------
-        name : str
-            The name of the effect to be sampled.
-
-        Returns
-        -------
-        Any
-            The sampled effect.
-        """
-        return numpyro.sample(
-            name,
-            *args,
-            **kwargs,
-        )

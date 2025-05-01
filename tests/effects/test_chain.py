@@ -21,13 +21,9 @@ class MockEffect(BaseEffect):
         self._transform_called = True
         return super()._transform(X, fh)
 
-    def _sample_params(self, data, predicted_effects):
-        return {
-            "param": numpyro.sample("param", numpyro.distributions.Delta(self.value))
-        }
-
     def _predict(self, data, predicted_effects, params):
-        return data * params["param"]
+        param = self.sample("param", numpyro.distributions.Delta(self.value))
+        return data * param
 
 
 @pytest.fixture
@@ -67,25 +63,6 @@ def test_chained_effects_transform(X, y):
     assert jnp.allclose(transformed, expected), "Chained transform output mismatch."
 
 
-def test_chained_effects_sample_params(X, y):
-    """Test the sample_params method of ChainedEffects."""
-    effects = [MockEffect(2), MockEffect(3)]
-    chained = ChainedEffects(steps=effects)
-    chained.fit(y=y, X=X, scale=1)
-    data = chained.transform(X, fh=X.index)
-
-    with handlers.trace() as trace:
-        params = chained.sample_params(data, {})
-
-    assert "effect_0" in params, "Missing effect_0 params."
-    assert "effect_1" in params, "Missing effect_1 params."
-    assert params["effect_0"]["param"] == 2, "Incorrect effect_0 param."
-    assert params["effect_1"]["param"] == 3, "Incorrect effect_1 param."
-
-    assert "0/param" in trace, "Missing effect_0 trace."
-    assert "1/param" in trace, "Missing effect_1 trace."
-
-
 def test_chained_effects_predict(X, y):
     """Test the predict method of ChainedEffects."""
     effects = [MockEffect(2), MockEffect(3)]
@@ -94,7 +71,8 @@ def test_chained_effects_predict(X, y):
     data = chained.transform(X, fh=X.index)
     predicted_effects = {}
 
-    predicted = chained.predict(data, predicted_effects)
+    with numpyro.handlers.trace() as exec_trace:
+        predicted = chained.predict(data, predicted_effects)
     expected = data * 2 * 3
     assert jnp.allclose(predicted, expected), "Chained predict output mismatch."
 

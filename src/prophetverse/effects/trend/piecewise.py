@@ -157,33 +157,12 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         idx = self._fh_to_index(fh)
         return self.get_changepoint_matrix(idx)
 
-    def _sample_params(self, data: Any, predicted_effects: Dict[str, jnp.ndarray]):
-
-        changepoint_matrix = data
-
-        offset = numpyro.sample(
-            "offset",
-            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
-        )
-        changepoint_coefficients = numpyro.sample(
-            "changepoint_coefficients",
-            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
-        )
-
-        if changepoint_matrix.ndim == 3:
-            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
-            offset = offset.reshape((-1, 1, 1))
-
-        return {
-            "changepoint_coefficients": changepoint_coefficients,
-            "offset": offset,
-        }
-
     def _predict(
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: dict,
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """
         Compute the trend based on the given changepoint matrix.
@@ -203,8 +182,20 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         """
         # alias for clarity
         changepoint_matrix = data
-        changepoint_coefficients = params["changepoint_coefficients"]
-        offset = params["offset"]
+
+        offset = self.sample(
+            "offset",
+            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
+        )
+
+        changepoint_coefficients = self.sample(
+            "changepoint_coefficients",
+            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
+        )
+
+        if changepoint_matrix.ndim == 3:
+            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
+            offset = offset.reshape((-1, 1, 1))
 
         trend = (changepoint_matrix) @ changepoint_coefficients + offset
 
@@ -546,38 +537,8 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
         return global_rates, offset
 
-    def _sample_params(self, data, predicted_effects):
-        """
-        Sample params for the effect.
-
-        Use super to sample the changepoint coefficients and offset, and then sample
-        the capacity using the capacity prior.
-
-        Parameters
-        ----------
-        data : Any
-            The input data.
-        predicted_effects : Dict[str, jnp.ndarray]
-            The predicted effects
-
-        Returns
-        -------
-        dict
-            The sampled parameters.
-        """
-        with numpyro.plate("series", self.n_series, dim=-3):
-            capacity = numpyro.sample("capacity", self.capacity_prior)
-
-        return {
-            "capacity": capacity,
-            **super()._sample_params(data=data, predicted_effects=predicted_effects),
-        }
-
     def _predict(  # type: ignore[override]
-        self,
-        data: Any,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Any, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """
         Compute the trend for the given changepoint matrix.
@@ -592,11 +553,11 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         jnp.ndarray
             The computed trend.
         """
-        trend = super()._predict(
-            data=data, predicted_effects=predicted_effects, params=params
-        )
+        with numpyro.plate("series", self.n_series, dim=-3):
+            capacity = self.sample("capacity", self.capacity_prior)
 
-        capacity = params["capacity"]
+        trend = super()._predict(data=data, predicted_effects=predicted_effects)
+
         if self.n_series == 1:
             capacity = capacity.squeeze()
 

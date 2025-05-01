@@ -28,17 +28,8 @@ class MySimpleEffectName(BaseEffect):
         self.param1 = param1
         self.param2 = param2
 
-    def _sample_params(self, data, predicted_effects):
-        # call numpyro.sample to sample the parameters of the effect
-        # return a dictionary with the sampled parameters, where
-        # key is the name of the parameter and value is the sampled value
-        return {}
-
     def _predict(
-        self,
-        data: Any,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Any, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -136,17 +127,12 @@ class MyEffectName(BaseEffect):
         array = series_to_tensor_or_array(X)
         return array
 
-    def _sample_params(self, data, predicted_effects):
-        # call numpyro.sample to sample the parameters of the effect
-        # return a dictionary with the sampled parameters, where
-        # key is the name of the parameter and value is the sampled value
-        return {}
-
     def _predict(
         self,
         data: Any,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 

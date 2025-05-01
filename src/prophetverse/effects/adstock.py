@@ -73,31 +73,12 @@ class GeometricAdstockEffect(BaseEffect):
                 )
         return super()._transform(X, fh)
 
-    def _sample_params(
-        self, data: jnp.ndarray, predicted_effects: Dict[str, jnp.ndarray]
-    ) -> Dict[str, jnp.ndarray]:
-        """
-        Sample the parameters of the effect.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-        """
-        return {}
-
     def _predict(
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs
     ) -> jnp.ndarray:
         """
         Apply and return the geometric adstock effect values.

@@ -9,6 +9,7 @@ import pandas as pd
 from jax.random import PRNGKey
 
 from prophetverse.sktime.base import BaseProphetForecaster
+from prophetverse._model import model as model_func
 
 
 def simulate(
@@ -59,7 +60,7 @@ def simulate(
     predict_data["y"] = None
     from numpyro.infer import Predictive
 
-    predictive_model = model.model
+    predictive_model = model_func
     if do is not None:
         predictive_model = numpyro.handlers.do(predictive_model, data=do)
 

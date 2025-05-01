@@ -8,7 +8,7 @@ import pandas as pd
 
 from prophetverse.distributions import GammaReparametrized
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
-
+from prophetverse.utils.numpyro import CacheMessenger
 from .base import BaseEffect
 
 __all__ = ["LiftExperimentLikelihood"]
@@ -124,33 +124,8 @@ class LiftExperimentLikelihood(BaseEffect):
 
         return data_dict
 
-    def _sample_params(self, data, predicted_effects):
-        """
-        Sample the parameters of the effect.
-
-        Calls the sample_params method of the inner effect.
-
-        Parameters
-        ----------
-        data : Any
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-        """
-        return self.effect_.sample_params(
-            data=data["inner_effect_data"], predicted_effects=predicted_effects
-        )
-
     def _predict(
-        self,
-        data: Dict,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -176,22 +151,21 @@ class LiftExperimentLikelihood(BaseEffect):
             k: v[obs_mask] for k, v in predicted_effects.items()
         }
 
-        # Call the effect a first time
-        x = self.effect_.predict(
-            data=data["inner_effect_data"],
-            predicted_effects=predicted_effects,
-            params=params,
-        )
+        with CacheMessenger():
+            # Call the effect a first time
+            x = self.effect_.predict(
+                data=data["inner_effect_data"],
+                predicted_effects=predicted_effects,
+            )
 
-        # Get the start and end values
-        y_start = self.effect_.predict(
-            data=x_start,
-            predicted_effects=predicted_effects_masked,
-            params=params,
-        )
-        y_end = self.effect_.predict(
-            data=x_end, predicted_effects=predicted_effects_masked, params=params
-        )
+            # Get the start and end values
+            y_start = self.effect_.predict(
+                data=x_start,
+                predicted_effects=predicted_effects_masked,
+            )
+            y_end = self.effect_.predict(
+                data=x_end, predicted_effects=predicted_effects_masked
+            )
 
         # Calculate the delta_y
         delta_y = jnp.abs(y_end - y_start)
@@ -201,7 +175,7 @@ class LiftExperimentLikelihood(BaseEffect):
 
             # Add :ignore so that the model removes this
             # sample when organizing the output dataframe
-            numpyro.sample(
+            self.sample(
                 "lift_experiment:ignore",
                 distribution,
                 obs=observed_lift,

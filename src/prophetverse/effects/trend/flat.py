@@ -58,34 +58,8 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
         idx = X.index
         return jnp.ones((len(idx), 1))
 
-    def _sample_params(self, data: Any, predicted_effects: Dict[str, jnp.ndarray]):
-        """Sample parameters from the prior distribution.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            A constant vector with the size of the series time indexes
-
-        Returns
-        -------
-        dict
-            dictionary containing the sampled parameters for the trend model
-        """
-        return {
-            "trend_flat_coefficient": numpyro.sample(
-                "trend_flat_coefficient",
-                dist.Gamma(
-                    rate=self.changepoint_prior_loc / self.changepoint_prior_scale**2,
-                    concentration=self.changepoint_prior_loc,
-                ),
-            ),
-        }
-
     def _predict(  # type: ignore[override]
-        self,
-        data: jnp.ndarray,
-        predicted_effects: dict,
-        params: dict,
+        self, data: jnp.ndarray, predicted_effects: dict, *args, **kwargs
     ) -> jnp.ndarray:
         """Apply the trend.
 
@@ -102,6 +76,12 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
         # Alias for clarity
         constant_vector = data
 
-        coefficient = params["trend_flat_coefficient"]
+        coefficient = self.sample(
+            "trend_flat_coefficient",
+            dist.Gamma(
+                rate=self.changepoint_prior_loc / self.changepoint_prior_scale**2,
+                concentration=self.changepoint_prior_loc,
+            ),
+        )
 
         return constant_vector * coefficient

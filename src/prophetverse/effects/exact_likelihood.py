@@ -104,10 +104,7 @@ class ExactLikelihood(BaseEffect):
         return data_dict
 
     def _predict(
-        self,
-        data: Dict,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -130,7 +127,7 @@ class ExactLikelihood(BaseEffect):
         x = predicted_effects[self.effect_name]
 
         with numpyro.handlers.mask(mask=obs_mask):
-            numpyro.sample(
+            self.sample(
                 "exact_likelihood:ignore",
                 dist.Normal(x, self.prior_scale),
                 obs=observed_reference_value,

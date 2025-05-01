@@ -50,8 +50,7 @@ lift_test1
 # %%
 import numpyro.distributions as dist
 
-from prophetverse.effects import (HillEffect, LinearEffect,
-                                  LinearFourierSeasonality)
+from prophetverse.effects import HillEffect, LinearEffect, LinearFourierSeasonality
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine import MAPInferenceEngine
 from prophetverse.engine.optimizer import LBFGSSolver
@@ -116,12 +115,10 @@ fig, axs = plt.subplots(figsize=(10, 10), nrows=2, sharex=True)
 
 ax = axs[0]
 
-ax.scatter(X["investment1"], 
-           components["investment1"],
-           label="Inferred effect")
-ax.scatter(X["investment1"], 
-           true_effect["investment1"],
-            label="True effect", color="black")
+ax.scatter(X["investment1"], components["investment1"], label="Inferred effect")
+ax.scatter(
+    X["investment1"], true_effect["investment1"], label="True effect", color="black"
+)
 ax.set_title("Investment1")
 ax.legend()
 
@@ -145,10 +142,10 @@ fig.show()
 from prophetverse.effects.lift_likelihood import LiftExperimentLikelihood
 
 lift_experiment_effect1 = LiftExperimentLikelihood(
-       effect=model.get_params()["investment1"],
-        lift_test_results=lift_test1,
-        prior_scale=1e-2,
-        likelihood_scale=1,
+    effect=model.get_params()["investment1"],
+    lift_test_results=lift_test1,
+    prior_scale=1e-2,
+    likelihood_scale=1,
 )
 
 lift_experiment_effect2 = LiftExperimentLikelihood(
@@ -184,28 +181,40 @@ fig, axs = plt.subplots(figsize=(10, 10), nrows=2, sharex=True)
 
 ax = axs[0]
 
-ax.scatter(X["investment1"], 
-           components["investment1"],
-           label="Previous inferred effect", alpha=0.5)
-ax.scatter(X["investment1"], 
-           new_components["investment1"],
-           label="New inferred effect", alpha=0.5)
-ax.scatter(X["investment1"], 
-           true_effect["investment1"],
-           label="True effect", color="black")
+ax.scatter(
+    X["investment1"],
+    components["investment1"],
+    label="Previous inferred effect",
+    alpha=0.5,
+)
+ax.scatter(
+    X["investment1"],
+    new_components["investment1"],
+    label="New inferred effect",
+    alpha=0.5,
+)
+ax.scatter(
+    X["investment1"], true_effect["investment1"], label="True effect", color="black"
+)
 ax.set_title("Investment1")
 ax.legend()
 
 ax = axs[1]
-ax.scatter(X["investment2"], 
-           components["investment2"],
-           label="Previous inferred effect", alpha=0.5)
-ax.scatter(X["investment2"], 
-           new_components["investment2"],
-           label="New inferred effect", alpha=0.5)
-ax.scatter(X["investment2"], 
-           true_effect["investment2"],
-           color="black", label="True effect")
+ax.scatter(
+    X["investment2"],
+    components["investment2"],
+    label="Previous inferred effect",
+    alpha=0.5,
+)
+ax.scatter(
+    X["investment2"],
+    new_components["investment2"],
+    label="New inferred effect",
+    alpha=0.5,
+)
+ax.scatter(
+    X["investment2"], true_effect["investment2"], color="black", label="True effect"
+)
 ax.set_title("Investment2")
 ax.legend()
 fig.show()

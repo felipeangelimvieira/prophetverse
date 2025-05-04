@@ -10,6 +10,7 @@ from prophetverse.engine import MAPInferenceEngine
 from prophetverse.experimental.simulate import simulate
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils.regex import exact, no_input_columns
+from prophetverse.effects.target.univariate import NegativeBinomialTargetLikelihood
 
 
 def get_index():
@@ -44,7 +45,7 @@ def get_X(index):
     X = pd.DataFrame(
         {
             "investment1": np.cumsum(rng.normal(0, 1, size=len(index))),
-            "investment2": np.cumsum(rng.normal(0, 1, size=len(index))),
+            # "investment2": np.cumsum(rng.normal(0, 1, size=len(index))),
         },
         index=index,
     )
@@ -53,7 +54,8 @@ def get_X(index):
     X += 0.05
 
     X["investment2"] = X["investment1"] + 0.1 + rng.normal(0, 0.01, size=len(index))
-    X.plot.line(alpha=0.9)
+    X["investment2"] = X["investment2"] ** 3.5
+    X *= 100_000
 
     return X
 
@@ -70,17 +72,42 @@ def get_groundtruth_model():
     model = Prophetverse(
         trend=PiecewiseLinearTrend(
             changepoint_interval=100,
-            changepoint_prior_scale=0.001,
+            changepoint_prior_scale=1000,
             changepoint_range=-100,
+            remove_seasonality_before_suggesting_initial_vals=False,
+            offset_prior_loc=10000,
+            global_rate_prior_loc=10000,
         ),
         exogenous_effects=[
             (
-                "seasonality",
+                "yearly_seasonality",
                 LinearFourierSeasonality(
                     freq="D",
                     sp_list=[365.25],
                     fourier_terms_list=[3],
-                    prior_scale=0.1,
+                    prior_scale=0.05,
+                    effect_mode="multiplicative",
+                ),
+                no_input_columns,
+            ),
+            (
+                "weekly_seasonality",
+                LinearFourierSeasonality(
+                    freq="D",
+                    sp_list=[7],
+                    fourier_terms_list=[3],
+                    prior_scale=0.01,
+                    effect_mode="multiplicative",
+                ),
+                no_input_columns,
+            ),
+            (
+                "weekly_seasonality",
+                LinearFourierSeasonality(
+                    freq="D",
+                    sp_list=[28],
+                    fourier_terms_list=[5],
+                    prior_scale=0.05,
                     effect_mode="multiplicative",
                 ),
                 no_input_columns,
@@ -88,23 +115,29 @@ def get_groundtruth_model():
             (
                 "investment1",
                 HillEffect(
-                    half_max_prior=dist.HalfNormal(0.2),
-                    slope_prior=dist.Gamma(2, 1),
-                    max_effect_prior=dist.HalfNormal(1.5),
+                    half_max_prior=dist.Normal(20_000, 1000),
+                    slope_prior=dist.Normal(3, 0.01),
+                    max_effect_prior=dist.Normal(1e6, 1e-8),
                     effect_mode="additive",
                 ),
                 exact("investment1"),
             ),
             (
                 "investment2",
-                LinearEffect(
-                    prior=dist.HalfNormal(0.5),
+                HillEffect(
+                    half_max_prior=dist.Normal(10_000, 1000),
+                    slope_prior=dist.Normal(1.5, 0.01),
+                    max_effect_prior=dist.Normal(1e5, 1e-8),
                     effect_mode="additive",
                 ),
                 exact("investment2"),
             ),
         ],
-        inference_engine=MAPInferenceEngine(num_steps=1),
+        inference_engine=MAPInferenceEngine(
+            num_steps=1, num_samples=1, progress_bar=True
+        ),
+        # likelihood=NegativeBinomialTargetLikelihood(noise_scale=0.05),
+        scale=1,
     )
 
     return model
@@ -126,12 +159,8 @@ def get_samples(model, X):
     dict
         Simulated samples from the model.
     """
-    samples = simulate(
-        model=model,
-        fh=X.index,
-        X=X,
-    )
-    return samples
+    samples, model = simulate(model=model, fh=X.index, X=X, return_model=True)
+    return samples, model
 
 
 def get_y(samples, index):
@@ -150,7 +179,7 @@ def get_y(samples, index):
     pd.DataFrame
         DataFrame containing observed sales data.
     """
-    return pd.DataFrame(data={"sales": samples["obs"][0].flatten()}, index=index)
+    return samples.loc[0, "obs"].to_frame("sales")
 
 
 def get_true_effect(samples, index):
@@ -169,13 +198,8 @@ def get_true_effect(samples, index):
     pd.DataFrame
         DataFrame containing true effects for the exogenous variables.
     """
-    true_effect = pd.DataFrame(
-        data={
-            "investment1": samples["investment1"][0].flatten(),
-            "investment2": samples["investment2"][0].flatten(),
-        },
-        index=index,
-    )
+
+    true_effect = samples.loc[0, ["investment1", "investment2"]]
     return true_effect
 
 
@@ -202,33 +226,19 @@ def get_simulated_lift_test(X, model, samples, true_effect, n=10):
         Lift test results for each exogenous variable.
     """
     rng = np.random.default_rng(1)
-
-    X_b = X.copy()
-
-    for col in ["investment1", "investment2"]:
-
-        X_b[col] = X_b[col] * rng.uniform(0.1, 0.9, size=X.shape[0])
-
-    samples_b = simulate(
-        model=model.clone().set_params(inference_engine__num_steps=1),
-        fh=X.index,
-        X=X_b,
-        do={k: v[0] for k, v in samples.items()},
-    )
-
-    true_effect_b = pd.DataFrame(
-        index=X_b.index,
-        data={
-            "investment1": samples_b["investment1"][0].flatten(),
-            "investment2": samples_b["investment2"][0].flatten(),
-        },
-    )
-
-    lift = np.abs(true_effect_b - true_effect)
-
     outs = []
-
     for col in ["investment1", "investment2"]:
+
+        X_b = X.copy()
+
+        X_b[col] = X_b[col] * rng.uniform(0.1, 2, size=X.shape[0])
+
+        samples_b = model.predict_component_samples(X=X_b, fh=X.index)
+
+        true_effect_b = samples_b.loc[0, [col]]
+
+        lift = true_effect_b / true_effect
+
         lift_test_dataframe = pd.DataFrame(
             index=X.index,
             data={
@@ -260,9 +270,9 @@ def get_dataset():
     index = get_index()
     X = get_X(index)
     model = get_groundtruth_model()
-    samples = get_samples(model, X)
+    samples, model = get_samples(model, X)
     y = get_y(samples, index)
     true_effect = get_true_effect(samples, index)
-    lift_test = get_simulated_lift_test(X, model, samples, true_effect, n=10)
+    lift_test = get_simulated_lift_test(X, model, samples, true_effect, n=15)
 
     return y, X, lift_test, true_effect, model

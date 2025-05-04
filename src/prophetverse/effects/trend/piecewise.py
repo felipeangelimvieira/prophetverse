@@ -5,7 +5,7 @@ This module contains the implementation of piecewise trend models (logistic and 
 """
 
 import itertools
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union, Optional
 
 import jax.numpy as jnp
 import numpy as np
@@ -51,6 +51,12 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
     remove_seasonality_before_suggesting_initial_vals : bool, optional
         If True, remove seasonality before suggesting initial values, using sktime's
         detrender. Default is True.
+    global_rate_prior_loc : float, optional
+        The prior location for the global rate. Default is suggested
+        empirically from data.
+    offset_prior_loc : float, optional
+        The prior location for the offset. Default is suggested
+        empirically from data.
 
 
     """
@@ -63,6 +69,8 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
+        global_rate_prior_loc: Optional[float] = None,
+        offset_prior_loc: Optional[float] = None,
         **kwargs,
     ):
         self.changepoint_interval = changepoint_interval
@@ -73,6 +81,8 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         self.remove_seasonality_before_suggesting_initial_vals = (
             remove_seasonality_before_suggesting_initial_vals
         )
+        self.global_rate_prior_loc = global_rate_prior_loc
+        self.offset_prior_loc = offset_prior_loc
         super().__init__()
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
@@ -433,6 +443,10 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         )
         offset_loc = y_array[:, 0].squeeze() - global_rate * t[0].squeeze()
 
+        if self.global_rate_prior_loc is not None:
+            global_rate = jnp.ones_like(global_rate) * self.global_rate_prior_loc
+        if self.offset_prior_loc is not None:
+            offset_loc = jnp.ones_like(offset_loc) * self.offset_prior_loc
         return global_rate, offset_loc
 
 

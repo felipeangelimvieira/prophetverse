@@ -37,8 +37,9 @@ def model(
         noise_scale (float): Noise scale.
     """
 
-    predicted_effects: Dict[str, jnp.ndarray] = {}
-    with CacheMessenger() as cache_messenger:
+    with CacheMessenger():
+        predicted_effects: Dict[str, jnp.ndarray] = {}
+
         with numpyro.handlers.scope(prefix="trend"):
             trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
 

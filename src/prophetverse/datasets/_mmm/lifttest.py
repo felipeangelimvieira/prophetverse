@@ -44,8 +44,8 @@ def get_X(index):
 
     X = pd.DataFrame(
         {
-            "investment1": np.cumsum(rng.normal(0, 1, size=len(index))),
-            # "investment2": np.cumsum(rng.normal(0, 1, size=len(index))),
+            "ad_spend_search": np.cumsum(rng.normal(0, 1, size=len(index))),
+            # "ad_spend_social_media": np.cumsum(rng.normal(0, 1, size=len(index))),
         },
         index=index,
     )
@@ -53,8 +53,10 @@ def get_X(index):
     X /= X.max()
     X += 0.05
 
-    X["investment2"] = X["investment1"] + 0.1 + rng.normal(0, 0.01, size=len(index))
-    X["investment2"] = X["investment2"] ** 3.5
+    X["ad_spend_social_media"] = (
+        X["ad_spend_search"] + 0.1 + rng.normal(0, 0.01, size=len(index))
+    )
+    X["ad_spend_social_media"] = X["ad_spend_social_media"] ** 3.5
     X *= 100_000
 
     return X
@@ -102,7 +104,7 @@ def get_groundtruth_model():
                 no_input_columns,
             ),
             (
-                "weekly_seasonality",
+                "monthly_seasonality",
                 LinearFourierSeasonality(
                     freq="D",
                     sp_list=[28],
@@ -113,24 +115,24 @@ def get_groundtruth_model():
                 no_input_columns,
             ),
             (
-                "investment1",
+                "ad_spend_search",
                 HillEffect(
                     half_max_prior=dist.Normal(20_000, 1000),
                     slope_prior=dist.Normal(3, 0.01),
                     max_effect_prior=dist.Normal(1e6, 1e-8),
                     effect_mode="additive",
                 ),
-                exact("investment1"),
+                exact("ad_spend_search"),
             ),
             (
-                "investment2",
+                "ad_spend_social_media",
                 HillEffect(
                     half_max_prior=dist.Normal(10_000, 1000),
                     slope_prior=dist.Normal(1.5, 0.01),
                     max_effect_prior=dist.Normal(1e5, 1e-8),
                     effect_mode="additive",
                 ),
-                exact("investment2"),
+                exact("ad_spend_social_media"),
             ),
         ],
         inference_engine=MAPInferenceEngine(
@@ -199,7 +201,7 @@ def get_true_effect(samples, index):
         DataFrame containing true effects for the exogenous variables.
     """
 
-    true_effect = samples.loc[0, ["investment1", "investment2"]]
+    true_effect = samples.loc[0]
     return true_effect
 
 
@@ -227,11 +229,11 @@ def get_simulated_lift_test(X, model, samples, true_effect, n=10):
     """
     rng = np.random.default_rng(1)
     outs = []
-    for col in ["investment1", "investment2"]:
+    for col in ["ad_spend_search", "ad_spend_social_media"]:
 
         X_b = X.copy()
 
-        X_b[col] = X_b[col] * rng.uniform(0.1, 2, size=X.shape[0])
+        X_b[col] = X_b[col] * rng.uniform(0.8, 1.5, size=X.shape[0])
 
         samples_b = model.predict_component_samples(X=X_b, fh=X.index)
 
@@ -242,11 +244,9 @@ def get_simulated_lift_test(X, model, samples, true_effect, n=10):
         lift_test_dataframe = pd.DataFrame(
             index=X.index,
             data={
-                "lift": lift[col],
+                "lift": (lift[col] * rng.normal(1, 0.05)).clip(0, None),
                 "x_start": X.loc[:, col],
                 "x_end": X_b.loc[:, col],
-                "y_start": true_effect.loc[:, col],
-                "y_end": true_effect_b.loc[:, col],
             },
         )
         outs.append(lift_test_dataframe.sample(n=n, replace=False))
@@ -273,6 +273,6 @@ def get_dataset():
     samples, model = get_samples(model, X)
     y = get_y(samples, index)
     true_effect = get_true_effect(samples, index)
-    lift_test = get_simulated_lift_test(X, model, samples, true_effect, n=15)
+    lift_test = get_simulated_lift_test(X, model, samples, true_effect, n=30)
 
-    return y, X, lift_test, true_effect, model
+    return y, X, lift_test, true_effect

@@ -144,9 +144,6 @@ class MyEffectName(BaseEffect):
         predicted_effects : Dict[str, jnp.ndarray], optional
             A dictionary containing the predicted effects, by default None.
 
-        params : Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-
         Returns
         -------
         jnp.ndarray

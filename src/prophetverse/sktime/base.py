@@ -347,6 +347,14 @@ class BaseBayesianForecaster(BaseForecaster):
             # Set samples_idx as level 0 of idx
             idx = pd.MultiIndex.from_tuples(tuples, names=["sample", *idxs.names])
 
+            flattened_data = data.flatten()
+
+            if flattened_data.shape[0] != len(idx):
+                warnings.warn(
+                    f"Data shape {flattened_data.shape} does not match index shape {len(idx)}"
+                    f"for site {site}. This site will not be returned."
+                )
+                continue
             dfs.append(
                 pd.DataFrame(
                     data={site: data.flatten()},
@@ -494,7 +502,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if self._likelihood_is_discrete:
             return y
 
-        if isinstance(self._scale, float):
+        if isinstance(self._scale, (float, int)):
             return y * self._scale
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
         return y * scale_for_each_obs

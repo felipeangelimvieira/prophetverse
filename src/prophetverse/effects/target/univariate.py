@@ -95,15 +95,17 @@ class TargetLikelihood(BaseTargetEffect):
 class NormalTargetLikelihood(TargetLikelihood):
     def __init__(
         self,
-        noise_scale=0.5,
+        noise_scale=0.05,
     ):
-        super().__init__(noise_scale, link_function=None, likelihood_func=dist.Normal)
+        super().__init__(
+            noise_scale, link_function=lambda x: x, likelihood_func=dist.Normal
+        )
 
 
 class GammaTargetLikelihood(TargetLikelihood):
     def __init__(
         self,
-        noise_scale=0.5,
+        noise_scale=0.05,
         epsilon=1e-5,
     ):
         self.epsilon = epsilon
@@ -118,7 +120,7 @@ class GammaTargetLikelihood(TargetLikelihood):
 class NegativeBinomialTargetLikelihood(TargetLikelihood):
     def __init__(
         self,
-        noise_scale=0.5,
+        noise_scale=0.05,
         epsilon=1e-5,
     ):
         self.epsilon = epsilon

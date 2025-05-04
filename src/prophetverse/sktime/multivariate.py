@@ -104,12 +104,14 @@ class HierarchicalProphet(BaseProphetForecaster):
         correlation_matrix_concentration=1.0,
         rng_key=None,
         inference_engine=None,
+        likelihood=None,
     ):
 
         self.noise_scale = noise_scale
         self.shared_features = shared_features
         self.feature_transformer = feature_transformer
         self.correlation_matrix_concentration = correlation_matrix_concentration
+        self.likelihood = likelihood
 
         super().__init__(
             # Trend
@@ -198,10 +200,14 @@ class HierarchicalProphet(BaseProphetForecaster):
         self.trend_model_ = self._trend.clone()
         self.trend_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
 
-        self.likelihood_model_ = MultivariateNormal(
-            noise_scale=self.noise_scale,
-            correlation_matrix_concentration=self.correlation_matrix_concentration,
-        )
+        if self.likelihood is not None:
+            self.likelihood_model_ = self.likelihood.clone()
+        else:
+            self.likelihood_model_ = MultivariateNormal(
+                noise_scale=self.noise_scale,
+                correlation_matrix_concentration=self.correlation_matrix_concentration,
+            )
+
         self.likelihood_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
 
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh)

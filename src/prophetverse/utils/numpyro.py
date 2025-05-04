@@ -1,4 +1,5 @@
 import numpyro
+from typing import Any
 
 
 class CacheMessenger(numpyro.primitives.Messenger):
@@ -13,20 +14,20 @@ class CacheMessenger(numpyro.primitives.Messenger):
 
     def process_message(self, msg):
         # only intercept actual sample sites
-        if not numpyro.primitives._PYRO_STACK:
-            return
+        # if not numpyro.primitives._PYRO_STACK:
+        #    return
         if msg["type"] == "sample" and msg["name"] in self._cache:
             # short‐circuit: return the cached value
-            msg["value"] = self._cache[msg["name"]]
+
+            for k, v in self._cache[msg["name"]].items():
+                msg[k] = v
+            # msg["name"] = msg["name"] + "_cached_" + str(id(msg))
             msg["stop"] = True  # skip all further handlers
 
     def postprocess_message(self, msg):
-        if not numpyro.primitives._PYRO_STACK:
-            return
+        # if not numpyro.primitives._PYRO_STACK:
+        #    return
         # after a real sample has been taken, cache it
         if msg["type"] == "sample":
             if msg["name"] not in self._cache:
-                self._cache[msg["name"]] = msg["value"]
-            else:
-                # if the sample site is already in cache, just return the cached value
-                msg["value"] = self._cache[msg["name"]]
+                self._cache[msg["name"]] = msg

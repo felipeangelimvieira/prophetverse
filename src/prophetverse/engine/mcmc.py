@@ -81,9 +81,9 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         super().__init__(rng_key)
 
-    def build_engine(self, model: Callable) -> MCMCKernel:
+    def build_kernel(self, model: Callable) -> MCMCKernel:
         """
-        Build the MCMC engine.
+        Builds the MCMC kernel.
 
         Parameters
         ----------
@@ -151,7 +151,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
             return flattened_samples, summary_
 
-        kernel_ = self.build_engine(self.model_)
+        kernel_ = self.build_kernel(self.model_)
         self.posterior_samples_, self.summary_ = get_posterior_samples(
             self._rng_key,
             kernel_,

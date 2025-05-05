@@ -83,7 +83,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
     def build_kernel(self, model: Callable) -> MCMCKernel:
         """
-        Builds the MCMC kernel.
+        Build the MCMC kernel.
 
         Parameters
         ----------

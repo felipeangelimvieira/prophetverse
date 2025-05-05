@@ -4,12 +4,14 @@ The classes in this module take a model, the data and perform inference using Nu
 """
 
 from operator import attrgetter
-from typing import Dict, Tuple
+from typing import Callable, Dict, List, Tuple, Union
 
 import jax.numpy as jnp
+from jax.random import PRNGKey
 from numpyro.diagnostics import summary
 from numpyro.infer import MCMC, NUTS, Predictive
 from numpyro.infer.initialization import init_to_mean
+from numpyro.infer.mcmc import MCMCKernel
 
 from prophetverse.engine.base import BaseInferenceEngine
 from prophetverse.engine.utils import assert_mcmc_converged
@@ -21,8 +23,6 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
     Parameters
     ----------
-    model : Callable
-        The model function to perform inference on.
     num_samples : int
         The number of MCMC samples to draw.
     num_warmup : int
@@ -35,6 +35,8 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         The random number generator key.
     r_hat: Optional
         The required r_hat for considering the chains to have converged.
+    progress_bar : bool
+        Whether to show a progress bar during MCMC sampling.
 
     Attributes
     ----------
@@ -46,14 +48,12 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         The number of MCMC chains to run in parallel.
     dense_mass : bool
         Whether to use dense mass matrix for NUTS sampler.
-    mcmc_ : MCMC
-        The MCMC object used for inference.
     posterior_samples_ : Dict[str, np.ndarray]
         The posterior samples obtained from MCMC.
     samples_predictive_ : Dict[str, np.ndarray]
         The predictive samples obtained from MCMC.
-    samples_ : Dict[str, np.ndarray]
-        The MCMC samples obtained from MCMC.
+    summary_ : Dict[str, Dict[str, np.ndarray]]
+        Summary of statistics for the posterior samples.
     """
 
     _tags = {
@@ -65,19 +65,41 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         num_samples=1000,
         num_warmup=200,
         num_chains=1,
-        dense_mass=False,
-        rng_key=None,
-        r_hat: float = None,
+        dense_mass: Union[bool, List[Tuple[str, ...]]] = False,
+        rng_key: PRNGKey = None,
+        r_hat: Union[float, None] = None,
+        progress_bar: bool = True,
     ):
         self.num_samples = num_samples
         self.num_warmup = num_warmup
         self.num_chains = num_chains
         self.dense_mass = dense_mass
         self.r_hat = r_hat
+        self.progress_bar = progress_bar
 
         self.summary_ = None
 
         super().__init__(rng_key)
+
+    def build_engine(self, model: Callable) -> MCMCKernel:
+        """
+        Build the MCMC engine.
+
+        Parameters
+        ----------
+        model : Callable
+            The model function to perform inference on.
+
+        Returns
+        -------
+        MCMCKernel
+            The MCMC kernel for the model.
+        """
+        return NUTS(
+            model,
+            init_strategy=init_to_mean,
+            dense_mass=self.dense_mass,
+        )
 
     def _infer(self, **kwargs):
         """
@@ -95,22 +117,16 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         """
 
         def get_posterior_samples(
-            rng_key,
-            model,
-            dense_mass,
-            init_strategy,
-            num_samples,
-            num_warmup,
-            num_chains,
-            **kwargs
+            rng_key, kernel, num_samples, num_warmup, num_chains, progress_bar, **kw
         ) -> Tuple[Dict[str, jnp.ndarray], Dict[str, Dict[str, jnp.ndarray]]]:
             mcmc_ = MCMC(
-                NUTS(model, dense_mass=dense_mass, init_strategy=init_strategy),
+                kernel,
                 num_samples=num_samples,
                 num_warmup=num_warmup,
                 num_chains=num_chains,
+                progress_bar=progress_bar,
             )
-            mcmc_.run(rng_key, **kwargs)
+            mcmc_.run(rng_key, **kw)
 
             group_by_chain = True
             samples = mcmc_.get_samples(group_by_chain=group_by_chain)
@@ -135,14 +151,14 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
             return flattened_samples, summary_
 
+        kernel_ = self.build_engine(self.model_)
         self.posterior_samples_, self.summary_ = get_posterior_samples(
             self._rng_key,
-            self.model_,
-            self.dense_mass,
-            init_strategy=init_to_mean,
+            kernel_,
             num_samples=self.num_samples,
             num_warmup=self.num_warmup,
             num_chains=self.num_chains,
+            progress_bar=self.progress_bar,
             **kwargs
         )
 

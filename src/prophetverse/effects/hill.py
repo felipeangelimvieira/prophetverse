@@ -69,7 +69,7 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         jnp.ndarray
             An array with shape (T,1) for univariate timeseries.
         """
-        half_max = numpyro.sample("half_max", self.half_max_prior) + self.input_scale
+        half_max = numpyro.sample("half_max", self.half_max_prior) * self.input_scale
         slope = numpyro.sample("slope", self.slope_prior) + self.offset_slope
         max_effect = numpyro.sample("max_effect", self.max_effect_prior)
 

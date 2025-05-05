@@ -11,6 +11,10 @@ from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects.target.base import BaseTargetEffect
 
 
+def _do_nothing(x):
+    return x
+
+
 class TargetLikelihood(BaseTargetEffect):
     """Base class for effects."""
 
@@ -98,7 +102,7 @@ class NormalTargetLikelihood(TargetLikelihood):
         noise_scale=0.05,
     ):
         super().__init__(
-            noise_scale, link_function=lambda x: x, likelihood_func=dist.Normal
+            noise_scale, link_function=_do_nothing, likelihood_func=dist.Normal
         )
 
 

@@ -43,13 +43,13 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         self.max_effect_prior = max_effect_prior
 
         self._half_max_prior = (
-            self._half_max_prior if half_max_prior is not None else dist.Gamma(1, 1)
+            self.half_max_prior if half_max_prior is not None else dist.Gamma(1, 1)
         )
         self._slope_prior = (
-            self._slope_prior if slope_prior is not None else dist.HalfNormal(10)
+            self.slope_prior if slope_prior is not None else dist.HalfNormal(10)
         )
         self._max_effect_prior = (
-            self._max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
+            self.max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
         )
 
         super().__init__(effect_mode=effect_mode)

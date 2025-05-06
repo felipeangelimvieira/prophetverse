@@ -27,8 +27,8 @@ def log_effect_additive():
 
 def test_initialization_defaults():
     log_effect = LogEffect()
-    assert isinstance(log_effect.scale_prior, dist.Gamma)
-    assert isinstance(log_effect.rate_prior, dist.Gamma)
+    assert isinstance(log_effect._scale_prior, dist.Gamma)
+    assert isinstance(log_effect._rate_prior, dist.Gamma)
     assert log_effect.effect_mode == "multiplicative"
 
 

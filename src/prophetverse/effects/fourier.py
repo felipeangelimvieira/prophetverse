@@ -56,6 +56,7 @@ class LinearFourierSeasonality(BaseEffect):
         self.prior_scale = prior_scale
         self.effect_mode = effect_mode
         self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
+        super().__init__()
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
@@ -148,3 +149,15 @@ class LinearFourierSeasonality(BaseEffect):
             data=data,
             predicted_effects=predicted_effects,
         )
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        return [
+            {
+                "sp_list": [7],
+                "fourier_terms_list": [1],
+                "freq": "D",
+                "prior_scale": 1.0,
+                "effect_mode": "additive",
+            }
+        ]

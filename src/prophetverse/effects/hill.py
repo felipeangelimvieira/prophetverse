@@ -40,11 +40,20 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         offset_slope: Optional[float] = 0.0,
         input_scale: Optional[float] = 1.0,
     ):
-        self.half_max_prior = half_max_prior or dist.Gamma(1, 1)
-        self.slope_prior = slope_prior or dist.HalfNormal(10)
-        self.max_effect_prior = max_effect_prior or dist.Gamma(1, 1)
-        self.offset_slope = offset_slope
-        self.input_scale = input_scale
+        self.half_max_prior = half_max_prior
+        self.slope_prior = slope_prior
+        self.max_effect_prior = max_effect_prior
+
+        self._half_max_prior = (
+            self.half_max_prior if half_max_prior is not None else dist.Gamma(1, 1)
+        )
+        self._slope_prior = (
+            self.slope_prior if slope_prior is not None else dist.HalfNormal(10)
+        )
+        self._max_effect_prior = (
+            self.max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
+        )
+
         super().__init__(effect_mode=effect_mode)
 
     def _predict(

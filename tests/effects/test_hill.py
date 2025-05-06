@@ -30,9 +30,9 @@ def hill_effect_additive():
 
 def test_initialization_defaults():
     hill_effect = HillEffect()
-    assert isinstance(hill_effect.half_max_prior, dist.Gamma)
-    assert isinstance(hill_effect.slope_prior, dist.HalfNormal)
-    assert isinstance(hill_effect.max_effect_prior, dist.Gamma)
+    assert isinstance(hill_effect._half_max_prior, dist.Gamma)
+    assert isinstance(hill_effect._slope_prior, dist.HalfNormal)
+    assert isinstance(hill_effect._max_effect_prior, dist.Gamma)
     assert hill_effect.effect_mode == "multiplicative"
 
 

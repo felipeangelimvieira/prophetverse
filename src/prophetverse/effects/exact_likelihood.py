@@ -134,3 +134,14 @@ class ExactLikelihood(BaseEffect):
             )
 
         return x
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+
+        return [
+            {
+                "effect_name": "linear",
+                "reference_df": pd.DataFrame({"y": [1, 2, 3]}),
+                "prior_scale": 0.1,
+            }
+        ]

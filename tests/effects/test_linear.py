@@ -19,9 +19,9 @@ def linear_effect_additive():
 
 def test_initialization_defaults():
     linear_effect = LinearEffect()
-    assert isinstance(linear_effect.prior, dist.Normal)
-    assert linear_effect.prior.loc == 0
-    assert linear_effect.prior.scale == 0.1
+    assert isinstance(linear_effect._prior, dist.Normal)
+    assert linear_effect._prior.loc == 0
+    assert linear_effect._prior.scale == 0.1
     assert linear_effect.effect_mode == "multiplicative"
 
 

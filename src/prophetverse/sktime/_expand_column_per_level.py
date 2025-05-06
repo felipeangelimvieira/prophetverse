@@ -151,3 +151,10 @@ class ExpandColumnPerLevel(BaseTransformer):
                 ].fillna(0)
 
         return X.drop(columns=matched_columns)
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+
+        return [
+            {"columns_regex": ["*"]},
+        ]

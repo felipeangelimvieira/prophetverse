@@ -66,7 +66,7 @@ class GeometricAdstockEffect(BaseEffect):
         if self._min_date is None:
             self._min_date = X.index.min()
         else:
-            if self._min_date != X.index.min() and self.raise_errror_if_fh_changes:
+            if self._min_date != X.index.min() and self.raise_error_if_fh_changes:
                 raise ValueError(
                     "The X dataframe and forecat horizon"
                     "must be start at the same"

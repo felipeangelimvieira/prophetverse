@@ -38,13 +38,12 @@ class TargetLikelihood(BaseTargetEffect):
     ):
         self.link_function = link_function
         self.noise_scale = noise_scale
-        self.likelihood_distribution = likelihood_func
+        self.likelihood_func = likelihood_func
+        super().__init__()
 
     def _fit(self, y, X, scale=1):
         self.likelihood_distribution_ = (
-            dist.Normal
-            if self.likelihood_distribution is None
-            else self.likelihood_distribution
+            dist.Normal if self.likelihood_func is None else self.likelihood_func
         )
         self.scale_ = scale
 

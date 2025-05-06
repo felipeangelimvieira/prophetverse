@@ -21,7 +21,7 @@ class MockEffect(BaseEffect):
         self._transform_called = True
         return super()._transform(X, fh)
 
-    def _predict(self, data, predicted_effects, params):
+    def _predict(self, data, predicted_effects, *args, **kwargs):
         param = numpyro.sample("param", numpyro.distributions.Delta(self.value))
         return data * param
 

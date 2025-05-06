@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 import jax.numpy as jnp
 from skbase.base import BaseMetaEstimatorMixin
-
+import numpyro
 from prophetverse.effects.base import BaseEffect
 
 __all__ = ["ChainedEffects"]
@@ -106,8 +106,9 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
             The transformed data after applying all effects.
         """
         output = data
-        for _, effect in self.named_steps_:
-            output = effect._predict(output, predicted_effects)
+        for name, effect in self.named_steps_:
+            with numpyro.handlers.scope(prefix=name):
+                output = effect._predict(output, predicted_effects)
         return output
 
     @classmethod

@@ -30,6 +30,7 @@ class MultivariateNormal(BaseTargetEffect):
 
         self.noise_scale = noise_scale
         self.correlation_matrix_concentration = correlation_matrix_concentration
+        super().__init__()
 
     def _predict(
         self,

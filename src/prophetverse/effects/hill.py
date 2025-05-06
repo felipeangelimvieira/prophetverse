@@ -53,6 +53,8 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         self._max_effect_prior = (
             self.max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
         )
+        self.offset_slope = offset_slope
+        self.input_scale = input_scale
 
         super().__init__(effect_mode=effect_mode)
 

@@ -273,15 +273,6 @@ class BaseEffect(BaseObject):
             A dictionary containing the sampled parameters.
         """
 
-        deprecation_warning(
-            "sample_params",
-            "0.6.0",
-            "Sorry for the inconvenience, but this method will be deprecated. "
-            "It was introducted to avoid resampling the same site twice, but"
-            "a new, and better, interface is being implemented. "
-            "Please call the parameters directly from _predict using"
-            "numpyro.sample as you would call numpyro.sample",
-        )
         if predicted_effects is None:
             predicted_effects = {}
 
@@ -341,6 +332,20 @@ class BaseEffect(BaseObject):
     ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
+
+    # TODO: Remove in version 0.8.0
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if getattr(cls, "_sample_params") is not getattr(BaseEffect, "_sample_params"):
+            deprecation_warning(
+                "sample_params",
+                "0.7.0",
+                "Sorry for the inconvenience, but this method will be deprecated. "
+                "It was introducted to avoid resampling the same site twice, but"
+                "a new, and better, interface is being implemented. "
+                "Please call the parameters directly from _predict using"
+                "numpyro.sample as you would call numpyro.sample",
+            )
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):

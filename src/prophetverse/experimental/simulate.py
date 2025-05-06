@@ -31,18 +31,6 @@ class IgnoreObservedSites(Messenger):
             msg["obs"] = None
 
 
-class _DoNothingTargetEffect(BaseTargetEffect):
-    def _predict(self, data, predicted_effects, *args, **kwargs):
-        mean = 0
-        for _, effect in predicted_effects.items():
-            mean += effect
-
-        numpyro.deterministic(
-            "obs",
-            mean,
-        )
-
-
 def simulate(
     model: BaseProphetForecaster,
     fh: pd.Index,
@@ -92,7 +80,6 @@ def simulate(
         if do is not None:
             with numpyro.handlers.do(data=do):
                 components = model.predict_component_samples(X=X, fh=fh)
-
         else:
             components = model.predict_component_samples(X=X, fh=fh)
     if return_model:

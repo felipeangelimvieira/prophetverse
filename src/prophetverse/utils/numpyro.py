@@ -14,19 +14,15 @@ class CacheMessenger(numpyro.primitives.Messenger):
 
     def process_message(self, msg):
         # only intercept actual sample sites
-        # if not numpyro.primitives._PYRO_STACK:
-        #    return
         if msg["type"] == "sample" and msg["name"] in self._cache:
             # short‐circuit: return the cached value
 
             for k, v in self._cache[msg["name"]].items():
                 msg[k] = v
-            # msg["name"] = msg["name"] + "_cached_" + str(id(msg))
-            msg["stop"] = True  # skip all further handlers
+            # Avoid errors in tracers above due to duplicated names
+            msg["name"] = msg["name"] + "_cached_" + str(id(msg))
 
     def postprocess_message(self, msg):
-        # if not numpyro.primitives._PYRO_STACK:
-        #    return
         # after a real sample has been taken, cache it
         if msg["type"] == "sample":
             if msg["name"] not in self._cache:

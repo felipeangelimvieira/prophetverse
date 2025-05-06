@@ -150,22 +150,21 @@ class LiftExperimentLikelihood(BaseEffect):
             k: v[obs_mask] for k, v in predicted_effects.items()
         }
 
-        #        with numpyro.handlers.trace() as trace:
-        # Call the effect a first time
-        x = self.effect_.predict(
-            data=data["inner_effect_data"],
-            predicted_effects=predicted_effects,
-        )
+        with CacheMessenger():
+            # Call the effect a first time
+            x = self.effect_.predict(
+                data=data["inner_effect_data"],
+                predicted_effects=predicted_effects,
+            )
 
-        #        with numpyro.handlers.replay(trace=trace):
-        # Get the start and end values
-        y_start = self.effect_.predict(
-            data=x_start,
-            predicted_effects=predicted_effects_masked,
-        )
-        y_end = self.effect_.predict(
-            data=x_end, predicted_effects=predicted_effects_masked
-        )
+            # Get the start and end values
+            y_start = self.effect_.predict(
+                data=x_start,
+                predicted_effects=predicted_effects_masked,
+            )
+            y_end = self.effect_.predict(
+                data=x_end, predicted_effects=predicted_effects_masked
+            )
 
         # Calculate the delta_y
         delta_y = y_end / y_start

@@ -48,62 +48,47 @@ def X(index):
     )
 
 
-def test_chained_effects_fit(X, y):
+def test_chained_effects_fit_transform(X, y):
     """Test the fit method of ChainedEffects."""
-    effects = [MockEffect(2), MockEffect(3)]
+    effects = [("effect1", MockEffect(2)), ("effect2", MockEffect(3))]
     chained = ChainedEffects(steps=effects)
 
     scale = 1
     chained.fit(y=y, X=X, scale=scale)
     # Ensure no exceptions occur in fit
 
-
-def test_chained_effects_transform(X, y):
-    """Test the transform method of ChainedEffects."""
-    effects = [MockEffect(2), MockEffect(3)]
-    chained = ChainedEffects(steps=effects)
+    # Test transform
     transformed = chained.transform(X, fh=X.index)
     expected = MockEffect(2).transform(X, fh=X.index)
     assert jnp.allclose(transformed, expected), "Chained transform output mismatch."
 
 
-def test_chained_effects_sample_params(X, y):
-    """Test the sample_params method of ChainedEffects."""
-    effects = [MockEffect(2), MockEffect(3)]
-    chained = ChainedEffects(steps=effects)
-    chained.fit(y=y, X=X, scale=1)
-    data = chained.transform(X, fh=X.index)
-
-    with handlers.trace() as trace:
-        params = chained.sample_params(data, {})
-
-    assert "effect_0" in params, "Missing effect_0 params."
-    assert "effect_1" in params, "Missing effect_1 params."
-    assert params["effect_0"]["param"] == 2, "Incorrect effect_0 param."
-    assert params["effect_1"]["param"] == 3, "Incorrect effect_1 param."
-
-    assert "0/param" in trace, "Missing effect_0 trace."
-    assert "1/param" in trace, "Missing effect_1 trace."
-
-
 def test_chained_effects_predict(X, y):
     """Test the predict method of ChainedEffects."""
-    effects = [MockEffect(2), MockEffect(3)]
+    effects = [("effect1", MockEffect(2)), ("effect2", MockEffect(3))]
     chained = ChainedEffects(steps=effects)
     chained.fit(y=y, X=X, scale=1)
     data = chained.transform(X, fh=X.index)
     predicted_effects = {}
+    with handlers.trace() as trace:
+        predicted = chained.predict(data, predicted_effects)
 
-    predicted = chained.predict(data, predicted_effects)
+    # Check predict outputs
     expected = data * 2 * 3
     assert jnp.allclose(predicted, expected), "Chained predict output mismatch."
 
+    assert "effect1/param" in trace, "Missing effect_0 trace."
+    assert "effect2/param" in trace, "Missing effect_1 trace."
+
+    assert trace["effect1/param"]["value"] == 2, "Incorrect effect_0 trace value."
+    assert trace["effect2/param"]["value"] == 3, "Incorrect effect_1 trace value."
+
 
 def test_get_params():
-    effects = [MockEffect(2), MockEffect(3)]
+    effects = [("effect1", MockEffect(2)), ("effect2", MockEffect(3))]
     chained = ChainedEffects(steps=effects)
 
     params = chained.get_params()
 
-    assert params["effect_0__value"] == 2, "Incorrect effect_0 param."
-    assert params["effect_1__value"] == 3, "Incorrect effect_1 param."
+    assert params["effect1__value"] == 2, "Incorrect effect_0 param."
+    assert params["effect2__value"] == 3, "Incorrect effect_1 param."

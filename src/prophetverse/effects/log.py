@@ -34,13 +34,20 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
         scale_prior: Optional[Distribution] = None,
         rate_prior: Optional[Distribution] = None,
     ):
-        self.scale_prior = scale_prior or dist.Gamma(1, 1)
-        self.rate_prior = rate_prior or dist.Gamma(1, 1)
+        self.scale_prior = scale_prior
+        self.rate_prior = rate_prior
         super().__init__(effect_mode=effect_mode)
 
+        self._scale_prior = (
+            self.scale_prior if scale_prior is not None else dist.Gamma(1, 1)
+        )
+        self._rate_prior = (
+            self.rate_prior if rate_prior is not None else dist.Gamma(1, 1)
+        )
+
     def _sample_params(self, data, predicted_effects):
-        scale = numpyro.sample("log_scale", self.scale_prior)
-        rate = numpyro.sample("log_rate", self.rate_prior)
+        scale = numpyro.sample("log_scale", self._scale_prior)
+        rate = numpyro.sample("log_rate", self._rate_prior)
         return {
             "scale": scale,
             "rate": rate,

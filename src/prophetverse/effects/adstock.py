@@ -34,13 +34,14 @@ class GeometricAdstockEffect(BaseEffect):
         decay_prior: dist.Distribution = None,
         raise_error_if_fh_changes: bool = True,
     ):
-        self.decay_prior = decay_prior or dist.Beta(
-            2, 2
-        )  # Default Beta distribution for decay rate.
-        self.raise_errror_if_fh_changes = raise_error_if_fh_changes
+        self.decay_prior = decay_prior  # Default Beta distribution for decay rate.
+        self.raise_error_if_fh_changes = raise_error_if_fh_changes
         super().__init__()
 
         self._min_date = None
+        self._decay_prior = self.decay_prior
+        if self._decay_prior is None:
+            self._decay_prior = dist.Beta(2, 2)
 
     def _transform(self, X, fh):
         """Transform the dataframe and horizon to array.
@@ -92,7 +93,7 @@ class GeometricAdstockEffect(BaseEffect):
             A dictionary containing the sampled parameters of the effect.
         """
         return {
-            "decay": numpyro.sample("decay", self.decay_prior),
+            "decay": numpyro.sample("decay", self._decay_prior),
         }
 
     def _predict(

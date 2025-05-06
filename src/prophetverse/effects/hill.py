@@ -38,9 +38,19 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         slope_prior: Optional[Distribution] = None,
         max_effect_prior: Optional[Distribution] = None,
     ):
-        self.half_max_prior = half_max_prior or dist.Gamma(1, 1)
-        self.slope_prior = slope_prior or dist.HalfNormal(10)
-        self.max_effect_prior = max_effect_prior or dist.Gamma(1, 1)
+        self.half_max_prior = half_max_prior
+        self.slope_prior = slope_prior
+        self.max_effect_prior = max_effect_prior
+
+        self._half_max_prior = (
+            self._half_max_prior if half_max_prior is not None else dist.Gamma(1, 1)
+        )
+        self._slope_prior = (
+            self._slope_prior if slope_prior is not None else dist.HalfNormal(10)
+        )
+        self._max_effect_prior = (
+            self._max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
+        )
 
         super().__init__(effect_mode=effect_mode)
 
@@ -63,9 +73,9 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
             A dictionary containing the sampled parameters of the effect.
         """
         return {
-            "half_max": numpyro.sample("half_max", self.half_max_prior),
-            "slope": numpyro.sample("slope", self.slope_prior),
-            "max_effect": numpyro.sample("max_effect", self.max_effect_prior),
+            "half_max": numpyro.sample("half_max", self._half_max_prior),
+            "slope": numpyro.sample("slope", self._slope_prior),
+            "max_effect": numpyro.sample("max_effect", self._max_effect_prior),
         }
 
     def _predict(

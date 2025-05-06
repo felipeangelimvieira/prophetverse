@@ -208,3 +208,21 @@ class LiftExperimentLikelihood(BaseEffect):
             )
 
         return x
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        from prophetverse.effects.linear import LinearEffect
+
+        return [
+            {
+                "effect": LinearEffect(),
+                "lift_test_results": pd.DataFrame(
+                    {
+                        "x_start": [1, 2, 3],
+                        "x_end": [4, 5, 6],
+                        "lift": [0.1, 0.2, 0.3],
+                    }
+                ),
+                "prior_scale": 0.1,
+            }
+        ]

@@ -63,7 +63,6 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
-        **kwargs,
     ):
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
@@ -488,15 +487,9 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         changepoint_prior_scale: float = 0.001,
         offset_prior_scale=10,
         capacity_prior: dist.Distribution = None,
-        **kwargs,
+        squeeze_if_single_series: bool = True,
+        remove_seasonality_before_suggesting_initial_vals: bool = True,
     ):
-        if capacity_prior is None:
-            capacity_prior = dist.TransformedDistribution(
-                dist.HalfNormal(
-                    0.2,
-                ),
-                dist.transforms.AffineTransform(loc=1.1, scale=1),
-            )
 
         self.capacity_prior = capacity_prior
 
@@ -505,8 +498,18 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             changepoint_range,
             changepoint_prior_scale,
             offset_prior_scale=offset_prior_scale,
-            **kwargs,
+            squeeze_if_single_series=squeeze_if_single_series,
+            remove_seasonality_before_suggesting_initial_vals=remove_seasonality_before_suggesting_initial_vals,
         )
+
+        if capacity_prior is None:
+            capacity_prior = dist.TransformedDistribution(
+                dist.HalfNormal(
+                    0.2,
+                ),
+                dist.transforms.AffineTransform(loc=1.1, scale=1),
+            )
+        self._capacity_prior = capacity_prior
 
     def _suggest_global_trend_and_offset(
         self, y: pd.DataFrame
@@ -533,8 +536,8 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         )
         y_arrays = series_to_tensor(y)
 
-        if hasattr(self.capacity_prior, "loc"):
-            capacity_prior_loc = self.capacity_prior.loc
+        if hasattr(self._capacity_prior, "loc"):
+            capacity_prior_loc = self._capacity_prior.loc
         else:
             capacity_prior_loc = y_arrays.max() * 1.05
 
@@ -566,7 +569,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             The sampled parameters.
         """
         with numpyro.plate("series", self.n_series, dim=-3):
-            capacity = numpyro.sample("capacity", self.capacity_prior)
+            capacity = numpyro.sample("capacity", self._capacity_prior)
 
         return {
             "capacity": capacity,

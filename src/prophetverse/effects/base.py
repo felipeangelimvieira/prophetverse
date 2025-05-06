@@ -84,6 +84,7 @@ class BaseEffect(BaseObject):
 
     def __init__(self):
         self._is_fitted: bool = False
+        super().__init__()
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.

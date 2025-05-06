@@ -36,7 +36,8 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         prior: Optional[Distribution] = None,
     ):
-        self.prior = prior or dist.Normal(0, 0.1)
+        self.prior = prior
+        self._prior = self.prior if prior is not None else dist.Normal(0, 0.1)
 
         super().__init__(effect_mode=effect_mode)
 
@@ -45,7 +46,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         n_features = data.shape[-1]
 
         with numpyro.plate("features_plate", n_features, dim=-1):
-            coefficients = numpyro.sample("coefs", self.prior)
+            coefficients = numpyro.sample("coefs", self._prior)
 
         return {
             "coefficients": coefficients,

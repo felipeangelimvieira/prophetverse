@@ -29,13 +29,15 @@
 
 
 # %%
-
+import numpyro
 import numpyro.distributions as dist
 from matplotlib import pyplot as plt
 from sktime.split import temporal_train_test_split
 from sktime.utils.plotting import plot_series
 
 from prophetverse.datasets.synthetic import load_composite_effect_example
+
+numpyro.enable_x64()
 
 y, X = load_composite_effect_example()
 
@@ -68,6 +70,7 @@ from prophetverse.effects import LinearEffect
 from prophetverse.effects.fourier import LinearFourierSeasonality
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.optimizer import LBFGSSolver
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils.regex import exact, no_input_columns
 
@@ -95,7 +98,10 @@ model = Prophetverse(
             exact("investment"),
         ),
     ],
-    inference_engine=MAPInferenceEngine(),
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+        progress_bar=True,
+    ),
 )
 
 model.fit(y=y_train, X=X_train)
@@ -229,7 +235,7 @@ class WrapEffectAndScaleByAnother(BaseEffect):
         return self.effect.transform(X=X, fh=fh)
 
     def _predict(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], params: Dict
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -250,11 +256,6 @@ class WrapEffectAndScaleByAnother(BaseEffect):
 
         base_effect = predicted_effects[self.base_effect_name]
         return base_effect * out
-
-    @property
-    def input_feature_column_names(self) -> List[str]:
-        """Return the input feature columns names."""
-        return self.effect.input_feature_column_names
 
 
 # %% [markdown]
@@ -324,3 +325,5 @@ fig, ax = plt.subplots(figsize=(10, 5))
 components.plot.line(ax=ax)
 ax.set_title("Predicted Components")
 fig.show()
+
+# %%

@@ -8,7 +8,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from sktime.transformations.base import BaseTransformer
 from sktime.transformations.hierarchical.aggregate import Aggregator
 
-from prophetverse.models import multivariate_model
+from prophetverse.effects.target.multivariate import MultivariateNormal
 from prophetverse.sktime.base import BaseEffect, BaseProphetForecaster
 from prophetverse.utils import loc_bottom_series, reindex_time_series, series_to_tensor
 
@@ -104,12 +104,14 @@ class HierarchicalProphet(BaseProphetForecaster):
         correlation_matrix_concentration=1.0,
         rng_key=None,
         inference_engine=None,
+        likelihood=None,
     ):
 
         self.noise_scale = noise_scale
         self.shared_features = shared_features
         self.feature_transformer = feature_transformer
         self.correlation_matrix_concentration = correlation_matrix_concentration
+        self.likelihood = likelihood
 
         super().__init__(
             # Trend
@@ -122,7 +124,6 @@ class HierarchicalProphet(BaseProphetForecaster):
             inference_engine=inference_engine,
         )
 
-        self.model = multivariate_model  # type: ignore[method-assign]
         self._validate_hyperparams()
 
     def _validate_hyperparams(self):
@@ -198,23 +199,35 @@ class HierarchicalProphet(BaseProphetForecaster):
         # Trend model
         self.trend_model_ = self._trend.clone()
         self.trend_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
+
+        if self.likelihood is not None:
+            self.likelihood_model_ = self.likelihood.clone()
+        else:
+            self.likelihood_model_ = MultivariateNormal(
+                noise_scale=self.noise_scale,
+                correlation_matrix_concentration=self.correlation_matrix_concentration,
+            )
+
+        self.likelihood_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
+
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh)
+        target_data = self.likelihood_model_.transform(X=X_bottom, fh=fh)
+        target_data["y"] = y_bottom_arrays
 
         self._fit_effects(X_bottom, y_bottom)
         exogenous_data = self._transform_effects(X_bottom, fh=fh)
 
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,
+            "target_model": self.likelihood_model_,
             "exogenous_effects": self.non_skipped_exogenous_effect,
-            "correlation_matrix_concentration": self.correlation_matrix_concentration,
-            "noise_scale": self.noise_scale,
-            "is_single_series": self.n_series == 1,
         }
 
         return dict(
             y=y_bottom_arrays,
             data=exogenous_data,
             trend_data=trend_data,
+            target_data=target_data,
             **self.fit_and_predict_data_,
         )
 
@@ -256,12 +269,16 @@ class HierarchicalProphet(BaseProphetForecaster):
             X_bottom = self.expand_columns_transformer_.transform(X_bottom)
 
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh_as_index)
+        target_data = self.likelihood_model_.transform(X=X_bottom, fh=fh_as_index)
+        target_data["y"] = None
+
         exogenous_data = self._transform_effects(X=X_bottom, fh=fh_as_index)
 
         return dict(
             y=None,
             data=exogenous_data,
             trend_data=trend_data,
+            target_data=target_data,
             **self.fit_and_predict_data_,
         )
 

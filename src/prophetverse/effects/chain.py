@@ -3,9 +3,8 @@
 from typing import Any, Dict, List, Tuple
 
 import jax.numpy as jnp
-from numpyro import handlers
 from skbase.base import BaseMetaEstimatorMixin
-
+import numpyro
 from prophetverse.effects.base import BaseEffect
 
 __all__ = ["ChainedEffects"]
@@ -82,36 +81,12 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
         output = self.named_steps_[0][1].transform(output, fh)
         return output
 
-    def _sample_params(
-        self, data: jnp.ndarray, predicted_effects: Dict[str, jnp.ndarray]
-    ) -> Dict[str, jnp.ndarray]:
-        """
-        Sample parameters for all chained effects.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters for all effects.
-        """
-        params = {}
-        for name, effect in self.named_steps_:
-            with handlers.scope(prefix=name):
-                effect_params = effect.sample_params(data, predicted_effects)
-            params[f"effect_{name}"] = effect_params
-        return params
-
     def _predict(
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, Dict[str, jnp.ndarray]],
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """
         Apply all chained effects sequentially.
@@ -132,8 +107,8 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
         """
         output = data
         for name, effect in self.named_steps_:
-            effect_params = params[f"effect_{name}"]
-            output = effect._predict(output, predicted_effects, effect_params)
+            with numpyro.handlers.scope(prefix=name):
+                output = effect.predict(output, predicted_effects)
         return output
 
     @classmethod

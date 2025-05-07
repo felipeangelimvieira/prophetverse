@@ -21,13 +21,9 @@ class MockEffect(BaseEffect):
         self._transform_called = True
         return super()._transform(X, fh)
 
-    def _sample_params(self, data, predicted_effects):
-        return {
-            "param": numpyro.sample("param", numpyro.distributions.Delta(self.value))
-        }
-
-    def _predict(self, data, predicted_effects, params):
-        return data * params["param"]
+    def _predict(self, data, predicted_effects, *args, **kwargs):
+        param = numpyro.sample("param", numpyro.distributions.Delta(self.value))
+        return data * param
 
 
 @pytest.fixture
@@ -73,7 +69,8 @@ def test_chained_effects_predict(X, y):
     with handlers.trace() as trace:
         predicted = chained.predict(data, predicted_effects)
 
-    # Check predict outputs
+    with numpyro.handlers.trace() as exec_trace:
+        predicted = chained.predict(data, predicted_effects)
     expected = data * 2 * 3
     assert jnp.allclose(predicted, expected), "Chained predict output mismatch."
 

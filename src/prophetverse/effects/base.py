@@ -1,11 +1,12 @@
 """Module that stores abstract class of effects."""
 
 from typing import Any, Dict, Literal, Optional
-
+import numpyro
 import jax.numpy as jnp
+import numpyro.primitives
 import pandas as pd
 from skbase.base import BaseObject
-
+from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
@@ -272,6 +273,7 @@ class BaseEffect(BaseObject):
         Dict
             A dictionary containing the sampled parameters.
         """
+
         if predicted_effects is None:
             predicted_effects = {}
 
@@ -302,7 +304,7 @@ class BaseEffect(BaseObject):
         return {}
 
     def _predict(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], params: Dict
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -331,6 +333,20 @@ class BaseEffect(BaseObject):
     ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
+
+    # TODO: Remove in version 0.8.0
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if getattr(cls, "_sample_params") is not getattr(BaseEffect, "_sample_params"):
+            deprecation_warning(
+                "sample_params",
+                "0.7.0",
+                "Sorry for the inconvenience, but this method will be deprecated. "
+                "It was introducted to avoid resampling the same site twice, but"
+                "a new, and better, interface is being implemented. "
+                "Please call the parameters directly from _predict using"
+                "numpyro.sample as you would call numpyro.sample",
+            )
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
@@ -372,7 +388,8 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         self,
         data: Any,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
-        params: Optional[Dict[str, jnp.ndarray]] = None,
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -391,11 +408,13 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        if predicted_effects is None:
-            predicted_effects = {}
 
-        if params is None:
-            params = self.sample_params(data, predicted_effects)
+        x = super().predict(
+            data=data, predicted_effects=predicted_effects, *args, **kwargs
+        )
+
+        if self.effect_mode == "additive":
+            return x
 
         if (
             self.base_effect_name not in predicted_effects
@@ -405,13 +424,6 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
                 "BaseAdditiveOrMultiplicativeEffect requires trend in"
                 + " predicted_effects"
             )
-
-        x = super().predict(
-            data=data, predicted_effects=predicted_effects, params=params
-        )
-
-        if self.effect_mode == "additive":
-            return x
 
         base_effect = predicted_effects[self.base_effect_name]
         if base_effect.ndim == 1:

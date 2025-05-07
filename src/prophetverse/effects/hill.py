@@ -1,6 +1,6 @@
 """Definition of Hill Effect class."""
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 import jax.numpy as jnp
 import numpyro
@@ -37,6 +37,8 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         half_max_prior: Optional[Distribution] = None,
         slope_prior: Optional[Distribution] = None,
         max_effect_prior: Optional[Distribution] = None,
+        offset_slope: Optional[float] = 0.0,
+        input_scale: Optional[float] = 1.0,
     ):
         self.half_max_prior = half_max_prior
         self.slope_prior = slope_prior
@@ -51,38 +53,17 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         self._max_effect_prior = (
             self.max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
         )
+        self.offset_slope = offset_slope
+        self.input_scale = input_scale
 
         super().__init__(effect_mode=effect_mode)
 
-    def _sample_params(
-        self, data, predicted_effects: Dict[str, jnp.ndarray]
-    ) -> Dict[str, jnp.ndarray]:
-        """
-        Sample the parameters of the effect.
-
-        Parameters
-        ----------
-        data : Any
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-        """
-        return {
-            "half_max": numpyro.sample("half_max", self._half_max_prior),
-            "slope": numpyro.sample("slope", self._slope_prior),
-            "max_effect": numpyro.sample("max_effect", self._max_effect_prior),
-        }
-
     def _predict(
         self,
-        data: Dict[str, jnp.ndarray],
+        data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -99,9 +80,9 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         jnp.ndarray
             An array with shape (T,1) for univariate timeseries.
         """
-        half_max = params["half_max"]
-        slope = params["slope"]
-        max_effect = params["max_effect"]
+        half_max = numpyro.sample("half_max", self._half_max_prior) * self.input_scale
+        slope = numpyro.sample("slope", self._slope_prior) + self.offset_slope
+        max_effect = numpyro.sample("max_effect", self._max_effect_prior)
 
         data = jnp.clip(data, 1e-9, None)
         x = _exponent_safe(data / half_max, -slope)

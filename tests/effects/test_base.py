@@ -57,3 +57,22 @@ def test_not_fitted():
 
     with pytest.raises(ValueError):
         EffectMustFit().transform(pd.DataFrame(), fh=pd.Index([]))
+
+
+def test_sample_params_warning():
+    import warnings
+
+    warnings.simplefilter("default", FutureWarning)
+    with warnings.catch_warnings(record=True) as caught:
+
+        class EffectWithSampleParams(BaseEffect):
+
+            def _sample_params(self, data, predicted_effects):
+                return {}
+
+            def _predict(self, data, predicted_effects, params):
+                return 0
+
+    assert len(caught) == 1, "Expected exactly one warning"
+    w = caught[0]
+    assert issubclass(w.category, FutureWarning)

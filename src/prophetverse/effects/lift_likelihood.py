@@ -4,11 +4,12 @@ from typing import Any, Dict
 
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pandas as pd
 
 from prophetverse.distributions import GammaReparametrized
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
-
+from prophetverse.utils.numpyro import CacheMessenger
 from .base import BaseEffect
 
 __all__ = ["LiftExperimentLikelihood"]
@@ -115,42 +116,15 @@ class LiftExperimentLikelihood(BaseEffect):
             )
         X_lift = self.lift_test_results.reindex(fh, fill_value=jnp.nan)
 
-        data_dict["observed_lift"] = (
-            series_to_tensor_or_array(X_lift["lift"].dropna()) / self.timeseries_scale
-        )
+        data_dict["observed_lift"] = series_to_tensor_or_array(X_lift["lift"].dropna())
         data_dict["x_start"] = series_to_tensor_or_array(X_lift["x_start"].dropna())
         data_dict["x_end"] = series_to_tensor_or_array(X_lift["x_end"].dropna())
         data_dict["obs_mask"] = ~jnp.isnan(series_to_tensor_or_array(X_lift["lift"]))
 
         return data_dict
 
-    def _sample_params(self, data, predicted_effects):
-        """
-        Sample the parameters of the effect.
-
-        Calls the sample_params method of the inner effect.
-
-        Parameters
-        ----------
-        data : Any
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-        """
-        return self.effect_.sample_params(
-            data=data["inner_effect_data"], predicted_effects=predicted_effects
-        )
-
     def _predict(
-        self,
-        data: Dict,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -176,25 +150,24 @@ class LiftExperimentLikelihood(BaseEffect):
             k: v[obs_mask] for k, v in predicted_effects.items()
         }
 
-        # Call the effect a first time
-        x = self.effect_.predict(
-            data=data["inner_effect_data"],
-            predicted_effects=predicted_effects,
-            params=params,
-        )
+        with CacheMessenger():
+            # Call the effect a first time
+            x = self.effect_.predict(
+                data=data["inner_effect_data"],
+                predicted_effects=predicted_effects,
+            )
 
-        # Get the start and end values
-        y_start = self.effect_.predict(
-            data=x_start,
-            predicted_effects=predicted_effects_masked,
-            params=params,
-        )
-        y_end = self.effect_.predict(
-            data=x_end, predicted_effects=predicted_effects_masked, params=params
-        )
+            # Get the start and end values
+            y_start = self.effect_.predict(
+                data=x_start,
+                predicted_effects=predicted_effects_masked,
+            )
+            y_end = self.effect_.predict(
+                data=x_end, predicted_effects=predicted_effects_masked
+            )
 
         # Calculate the delta_y
-        delta_y = jnp.abs(y_end - y_start)
+        delta_y = y_end / y_start
 
         with numpyro.handlers.scale(scale=self.likelihood_scale):
             distribution = GammaReparametrized(delta_y, self.prior_scale)

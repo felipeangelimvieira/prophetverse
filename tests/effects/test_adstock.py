@@ -3,29 +3,10 @@
 import jax.numpy as jnp
 import pandas as pd
 import pytest
-from numpyro import handlers
+import numpyro
 from numpyro.distributions import Beta
 
 from prophetverse.effects.adstock import GeometricAdstockEffect
-
-
-def test_geometric_adstock_sampling():
-    """Test parameter sampling using numpyro.handlers.trace."""
-    effect = GeometricAdstockEffect(decay_prior=Beta(2, 2))
-    data = jnp.ones((10, 1))  # Dummy data
-    predicted_effects = {}
-
-    with handlers.trace() as trace, handlers.seed(rng_seed=0):
-        effect._sample_params(data, predicted_effects)
-
-    # Verify trace contains decay site
-    assert "decay" in trace, "Decay parameter not found in trace."
-
-    # Verify decay is sampled from the correct prior
-    assert trace["decay"]["type"] == "sample", "Decay parameter not sampled."
-    assert isinstance(
-        trace["decay"]["fn"], Beta
-    ), "Decay parameter not sampled from Beta distribution."
 
 
 def test_geometric_adstock_predict():
@@ -38,7 +19,10 @@ def test_geometric_adstock_predict():
     predicted_effects = {}
 
     # Call _predict
-    result = effect._predict(data, predicted_effects, params)
+    with numpyro.handlers.seed(rng_seed=0), numpyro.handlers.do(data=params):
+        with numpyro.handlers.trace() as exec_trace:
+
+            result = effect.predict(data, predicted_effects, params)
 
     # Expected adstock output
     expected = jnp.array(

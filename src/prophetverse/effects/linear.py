@@ -68,7 +68,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         n_features = data.shape[-1]
 
         with numpyro.plate("features_plate", n_features, dim=-1):
-            coefficients = numpyro.sample("coefs", self.prior)
+            coefficients = numpyro.sample("coefs", self._prior)
 
         if coefficients.ndim == 1:
             coefficients = jnp.expand_dims(coefficients, axis=-1)

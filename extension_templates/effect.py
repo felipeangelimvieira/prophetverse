@@ -66,7 +66,7 @@ class MyEffectName(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,

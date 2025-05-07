@@ -17,7 +17,7 @@ class MultivariateNormal(BaseTargetEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": True,
+        "capability:panel": True,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": False,
@@ -60,7 +60,7 @@ class MultivariateNormal(BaseTargetEffect):
             number of series.
         """
 
-        y = data["y"]
+        y = data
 
         mean = 0
         for _, effect in predicted_effects.items():

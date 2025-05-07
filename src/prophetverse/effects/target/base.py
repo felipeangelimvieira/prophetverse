@@ -7,7 +7,7 @@ class BaseTargetEffect(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": False,
@@ -17,4 +17,6 @@ class BaseTargetEffect(BaseEffect):
     }
 
     def _transform(self, X, fh):
-        return {"y": None}
+        if X is not None:
+            return super()._transform(X, fh)
+        return None

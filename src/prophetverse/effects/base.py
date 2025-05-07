@@ -191,8 +191,10 @@ class BaseEffect(BaseObject):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
-        if len(X.columns) > 1 and not self.get_tag(
-            "capability:multivariate_input", False
+        if (
+            X is not None
+            and len(X.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
         ):
             return self._broadcast_transform(X, fh)
         return self._transform(X, fh)

@@ -197,8 +197,13 @@ class HierarchicalProphet(BaseProphetForecaster):
 
         # Trend model
         self.trend_model_ = self._trend.clone()
-        self.trend_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
-        trend_data = self.trend_model_.transform(X=X_bottom, fh=fh)
+
+        _X_trend = pd.DataFrame(
+            index=y_bottom.index,
+        )
+
+        self.trend_model_.fit(X=_X_trend, y=y_bottom, scale=self._scale)
+        trend_data = self.trend_model_.transform(X=_X_trend, fh=fh)
 
         self._fit_effects(X_bottom, y_bottom)
         exogenous_data = self._transform_effects(X_bottom, fh=fh)
@@ -255,7 +260,10 @@ class HierarchicalProphet(BaseProphetForecaster):
                 X_bottom = self.feature_transformer.transform(X_bottom)
             X_bottom = self.expand_columns_transformer_.transform(X_bottom)
 
-        trend_data = self.trend_model_.transform(X=X_bottom, fh=fh_as_index)
+        _X_trend = pd.DataFrame(
+            index=X_bottom.index,
+        )
+        trend_data = self.trend_model_.transform(X=_X_trend, fh=fh_as_index)
         exogenous_data = self._transform_effects(X=X_bottom, fh=fh_as_index)
 
         return dict(

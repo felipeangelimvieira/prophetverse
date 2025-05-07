@@ -108,7 +108,7 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
         output = data
         for name, effect in self.named_steps_:
             with numpyro.handlers.scope(prefix=name):
-                output = effect._predict(output, predicted_effects)
+                output = effect.predict(output, predicted_effects)
         return output
 
     @classmethod

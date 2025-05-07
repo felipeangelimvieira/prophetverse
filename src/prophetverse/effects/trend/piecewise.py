@@ -575,7 +575,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             The computed trend.
         """
         with numpyro.plate("series", self.n_series, dim=-3):
-            capacity = numpyro.sample("capacity", self.capacity_prior)
+            capacity = numpyro.sample("capacity", self._capacity_prior)
 
         trend = super()._predict(data=data, predicted_effects=predicted_effects)
 

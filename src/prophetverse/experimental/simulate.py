@@ -9,6 +9,26 @@ import pandas as pd
 from jax.random import PRNGKey
 
 from prophetverse.sktime.base import BaseProphetForecaster
+from prophetverse._model import model as model_func
+from prophetverse.effects.target.base import BaseTargetEffect
+
+from numpyro.primitives import Messenger
+
+
+class IgnoreObservedSites(Messenger):
+    def __init__(self):
+        """
+        obs_map: a dict mapping site names -> values
+        """
+        super().__init__(fn=None)
+
+    def process_message(self, msg):
+        # only intercept real sample sites that have no value yet
+
+        if msg["type"] == "sample":
+            # ...but tell NumPyro it's NOT an observed site
+            msg["is_observed"] = False
+            msg["obs"] = None
 
 
 def simulate(
@@ -17,7 +37,7 @@ def simulate(
     X: Optional[pd.DataFrame] = None,
     y: Optional[pd.DataFrame] = None,
     do: Optional[Dict[str, Union[jnp.ndarray, float]]] = None,
-    num_samples: int = 10,
+    return_model=False,
 ):
     """
     Simulate data from a model.
@@ -42,7 +62,8 @@ def simulate(
         A dictionary with the variables to intervene and their values.
     num_samples : int, optional
         The number of samples to generate. Defaults to 10.
-
+    return_model : bool, optional
+        If True, the fitted model will be returned. Defaults to False.
     Returns
     -------
     Dict
@@ -52,18 +73,15 @@ def simulate(
     if y is None:
         y = pd.DataFrame(index=fh, data=np.random.rand(len(fh)) * 10, columns=["dummy"])
 
+    model = model.clone()
     model.fit(X=X, y=y)
 
-    # Get predict data to call predictive model
-    predict_data = model._get_predict_data(X=X, fh=fh)
-    predict_data["y"] = None
-    from numpyro.infer import Predictive
-
-    predictive_model = model.model
-    if do is not None:
-        predictive_model = numpyro.handlers.do(predictive_model, data=do)
-
-    # predictive_model = model.model
-    predictive_model = Predictive(model=predictive_model, num_samples=num_samples)
-    predictive_output = predictive_model(PRNGKey(0), **predict_data)
-    return predictive_output
+    with IgnoreObservedSites():
+        if do is not None:
+            with numpyro.handlers.do(data=do):
+                components = model.predict_component_samples(X=X, fh=fh)
+        else:
+            components = model.predict_component_samples(X=X, fh=fh)
+    if return_model:
+        return components, model
+    return components

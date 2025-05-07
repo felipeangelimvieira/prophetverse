@@ -104,10 +104,7 @@ class ExactLikelihood(BaseEffect):
         return data_dict
 
     def _predict(
-        self,
-        data: Dict,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 

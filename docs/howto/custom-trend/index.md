@@ -412,40 +412,7 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
         """
         # Alias for clarity
         time = data
-        logistic_rate, logistic_capacity1, logistic_capacity2, shape, offset = (
-            self._sample_params()
-        )
 
-        trend = dgeneralized_logistic(
-            time,
-            K1=logistic_capacity1,
-            K2=logistic_capacity2,
-            A=logistic_rate,
-            v=shape,
-            M=offset,
-        )
-
-        numpyro.deterministic("__trend", trend)
-
-        numpyro.deterministic(
-            "capacity", logistic_capacity1 * (time - offset) + logistic_capacity2
-        )
-
-        return trend.reshape((-1, 1))
-
-    def _sample_params(self):
-        """
-        Sample parameters for the custom trend model.
-
-        Returns
-        -------
-        Tuple: A tuple containing the sampled parameters:
-            - logistic_rate (float): The rate parameter for the logistic distribution.
-            - logistic_capacity1 (float): The capacity parameter for the first logistic distribution.
-            - logistic_capacity2 (float): The capacity parameter for the second logistic distribution.
-            - shape (float): The shape parameter for the logistic distribution.
-            - offset (float): The offset parameter for the normal distribution.
-        """
         logistic_rate = numpyro.sample("logistic_rate", self.logistic_rate_dist)
 
         logistic_capacity1 = numpyro.sample(
@@ -465,7 +432,22 @@ class GenLogisticTrend(TrendEffectMixin, BaseEffect):
             dist.Normal(loc=self.offset_prior_loc, scale=365 * 2),
         )
 
-        return logistic_rate, logistic_capacity1, logistic_capacity2, shape, offset
+        trend = dgeneralized_logistic(
+            time,
+            K1=logistic_capacity1,
+            K2=logistic_capacity2,
+            A=logistic_rate,
+            v=shape,
+            M=offset,
+        )
+
+        numpyro.deterministic("__trend", trend)
+
+        numpyro.deterministic(
+            "capacity", logistic_capacity1 * (time - offset) + logistic_capacity2
+        )
+
+        return trend.reshape((-1, 1))
 
 
 

@@ -4,26 +4,28 @@ This module implements the Univariate Prophet model, similar to the one implemen
 the `prophet` library.
 """
 
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 
+import numpyro
 import jax.numpy as jnp
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from prophetverse.effects import BaseEffect
-from prophetverse.models import (
-    univariate_gamma_model,
-    univariate_model,
-    univariate_negbinomial_model,
-)
 from prophetverse.sktime.base import BaseProphetForecaster
+from prophetverse.effects.target.univariate import (
+    NormalTargetLikelihood,
+    NegativeBinomialTargetLikelihood,
+    GammaTargetLikelihood,
+)
+from prophetverse.utils.deprecation import deprecation_warning
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
 _LIKELIHOOD_MODEL_MAP = {
-    "normal": univariate_model,
-    "gamma": univariate_gamma_model,
-    "negbinomial": univariate_negbinomial_model,
+    "normal": NormalTargetLikelihood,
+    "gamma": GammaTargetLikelihood,
+    "negbinomial": NegativeBinomialTargetLikelihood,
 }
 
 _DISCRETE_LIKELIHOODS = ["negbinomial"]
@@ -84,7 +86,7 @@ class Prophetverse(BaseProphetForecaster):
         exogenous_effects: Optional[List[BaseEffect]] = None,
         default_effect: Optional[BaseEffect] = None,
         feature_transformer=None,
-        noise_scale=0.05,
+        noise_scale=None,
         likelihood="normal",
         scale=None,
         rng_key=None,
@@ -107,7 +109,7 @@ class Prophetverse(BaseProphetForecaster):
         self._validate_hyperparams()
 
     @property
-    def model(self):
+    def _likelihood(self):
         """Return the appropriate model function based on the likelihood.
 
         Returns
@@ -115,7 +117,20 @@ class Prophetverse(BaseProphetForecaster):
         Callable
             The model function to be used with Numpyro samplers.
         """
-        return _LIKELIHOOD_MODEL_MAP[self.likelihood]
+        if isinstance(self.likelihood, BaseEffect):
+            return self.likelihood
+        if not self.likelihood in _LIKELIHOOD_MODEL_MAP:
+            raise ValueError(f"Likelihood '{self.likelihood}' is not supported. ")
+        likelihood = _LIKELIHOOD_MODEL_MAP[self.likelihood]().clone()
+        if self.noise_scale is not None:
+            deprecation_warning(
+                "noise_scale",
+                current_version="0.6.0",
+                extra_message="Use the noise_scale parameter in the likelihood instead."
+                " You can import the likelihood from prophetverse.effects import NormalTargetLikelihood",
+            )
+            likelihood.set_params(noise_scale=self.noise_scale)
+        return likelihood
 
     @property
     def _likelihood_is_discrete(self) -> bool:
@@ -126,7 +141,9 @@ class Prophetverse(BaseProphetForecaster):
         bool
             True if the likelihood is discrete; False otherwise.
         """
-        return self.likelihood in _DISCRETE_LIKELIHOODS
+        return self._likelihood in _DISCRETE_LIKELIHOODS or isinstance(
+            self._likelihood, NegativeBinomialTargetLikelihood
+        )
 
     def _validate_hyperparams(self):
         """Validate hyperparameters for the model.
@@ -138,12 +155,17 @@ class Prophetverse(BaseProphetForecaster):
         """
         super()._validate_hyperparams()
 
-        if self.noise_scale <= 0:
+        if self.noise_scale is not None and self.noise_scale <= 0:
             raise ValueError("noise_scale must be greater than 0.")
 
-        if self.likelihood not in _LIKELIHOOD_MODEL_MAP:
+        valid_likelihood = isinstance(self._likelihood, BaseEffect) or (
+            isinstance(self._likelihood, str)
+            and self._likelihood in _LIKELIHOOD_MODEL_MAP
+        )
+        if not valid_likelihood:
             raise ValueError(
-                f"likelihood must be one of {list(_LIKELIHOOD_MODEL_MAP.keys())}. Got {self.likelihood}."
+                f"likelihood must be one of {list(_LIKELIHOOD_MODEL_MAP.keys())}"
+                f"or a base effect instance. Got '{self.likelihood}'."
             )
 
     def _get_fit_data(self, y, X, fh):
@@ -166,12 +188,15 @@ class Prophetverse(BaseProphetForecaster):
         fh = y.index.get_level_values(-1).unique()
 
         self.trend_model_ = self._trend.clone()
+        self.likelihood_model_ = self._likelihood.clone()
 
         if self._likelihood_is_discrete:
             # Scale the data for discrete likelihoods to avoid non-integer values.
             self.trend_model_.fit(X=X, y=y / self._scale)
+            self.likelihood_model_.fit(X=X, y=y / self._scale)
         else:
             self.trend_model_.fit(X=X, y=y)
+            self.likelihood_model_.fit(X=X, y=y)
 
         # Handle exogenous features.
         if X is None:
@@ -184,17 +209,17 @@ class Prophetverse(BaseProphetForecaster):
         X = X.loc[y.index]
 
         trend_data = self.trend_model_.transform(X=X, fh=fh)
+        target_data = self.likelihood_model_.transform(X=X, fh=fh)
 
         self._fit_effects(X, y)
         exogenous_data = self._transform_effects(X, fh=fh)
 
         y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
-
+        target_data["y"] = y_array
         # Data used in both fitting and prediction.
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,
-            "noise_scale": self.noise_scale,
-            "scale": self._scale,
+            "target_model": self.likelihood_model_,
             "exogenous_effects": self.non_skipped_exogenous_effect,
         }
 
@@ -202,6 +227,7 @@ class Prophetverse(BaseProphetForecaster):
             "y": y_array,
             "data": exogenous_data,
             "trend_data": trend_data,
+            "target_data": target_data,
             **self.fit_and_predict_data_,
         }
 
@@ -234,6 +260,8 @@ class Prophetverse(BaseProphetForecaster):
             X = self.feature_transformer.transform(X)
 
         trend_data = self.trend_model_.transform(X=X, fh=fh_as_index)
+        target_data = self.likelihood_model_.transform(X=X, fh=fh_as_index)
+        target_data["y"] = None
 
         exogenous_data = self._transform_effects(X, fh_as_index)
 
@@ -241,6 +269,7 @@ class Prophetverse(BaseProphetForecaster):
             y=None,
             data=exogenous_data,
             trend_data=trend_data,
+            target_data=target_data,
             **self.fit_and_predict_data_,
         )
 

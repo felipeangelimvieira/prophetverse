@@ -24,7 +24,7 @@ class GeometricAdstockEffect(BaseEffect):
     """
 
     _tags = {
-        "supports_multivariate": False,
+        "capability:panel": False,
         "skip_predict_if_no_match": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
     }

@@ -5,7 +5,7 @@ from typing import Any, Dict, Literal, Optional
 import jax.numpy as jnp
 import pandas as pd
 from skbase.base import BaseObject
-
+import numpyro
 from prophetverse.utils import series_to_tensor_or_array
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
@@ -71,7 +71,10 @@ class BaseEffect(BaseObject):
     """
 
     _tags = {
-        "supports_multivariate": False,
+        # Can handle panel data?
+        "capability:panel": False,
+        # Can handle multiple input feature columns?
+        "capability:multivariate_input": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,
@@ -85,6 +88,7 @@ class BaseEffect(BaseObject):
     def __init__(self):
         self._is_fitted: bool = False
         super().__init__()
+        self.broadcasted_ = False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -116,7 +120,7 @@ class BaseEffect(BaseObject):
             If the effect does not support multivariate data and the DataFrame has more
             than one level of index.
         """
-        if not self.get_tag("supports_multivariate", False):
+        if not self.get_tag("capability:panel", False):
             if X is not None and X.index.nlevels > 1:
                 raise ValueError(
                     f"The effect {self.__class__.__name__} does not "
@@ -185,8 +189,19 @@ class BaseEffect(BaseObject):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
-
+        if len(X.columns) > 1 and not self.get_tag(
+            "capability:multivariate_input", False
+        ):
+            return self._broadcast_transform(X, fh)
         return self._transform(X, fh)
+
+    def _broadcast_transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+
+        outputs = []
+        for column in X.columns:
+            xt = self._transform(X[[column]], fh)
+            outputs.append(xt)
+        return outputs
 
     def _transform(
         self,
@@ -247,8 +262,13 @@ class BaseEffect(BaseObject):
         if params is None:
             params = self.sample_params(data, predicted_effects)
 
-        x = self._predict(data, predicted_effects, params)
-
+        if isinstance(data, list):
+            x = 0
+            for i, _data in enumerate(data):
+                with numpyro.handlers.scope(prefix=f"dim{i}"):
+                    x += self._predict(_data, predicted_effects, params)
+        else:
+            x = self._predict(data, predicted_effects, params)
         return x
 
     def sample_params(

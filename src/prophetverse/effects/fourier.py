@@ -36,7 +36,7 @@ class LinearFourierSeasonality(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": True,
+        "capability:panel": True,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": False,

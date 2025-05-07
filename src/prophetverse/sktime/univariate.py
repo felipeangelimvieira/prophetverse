@@ -167,12 +167,11 @@ class Prophetverse(BaseProphetForecaster):
 
         self.trend_model_ = self._trend.clone()
 
-        _X_trend = pd.DataFrame(index=X.index)
         if self._likelihood_is_discrete:
             # Scale the data for discrete likelihoods to avoid non-integer values.
-            self.trend_model_.fit(X=_X_trend, y=y / self._scale)
+            self.trend_model_.fit(X=X, y=y / self._scale)
         else:
-            self.trend_model_.fit(X=_X_trend, y=y)
+            self.trend_model_.fit(X=X, y=y)
 
         # Handle exogenous features.
         if X is None:

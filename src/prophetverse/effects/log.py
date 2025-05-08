@@ -34,23 +34,23 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
         scale_prior: Optional[Distribution] = None,
         rate_prior: Optional[Distribution] = None,
     ):
-        self.scale_prior = scale_prior or dist.Gamma(1, 1)
-        self.rate_prior = rate_prior or dist.Gamma(1, 1)
+        self.scale_prior = scale_prior
+        self.rate_prior = rate_prior
         super().__init__(effect_mode=effect_mode)
 
-    def _sample_params(self, data, predicted_effects):
-        scale = numpyro.sample("log_scale", self.scale_prior)
-        rate = numpyro.sample("log_rate", self.rate_prior)
-        return {
-            "scale": scale,
-            "rate": rate,
-        }
+        self._scale_prior = (
+            self.scale_prior if scale_prior is not None else dist.Gamma(1, 1)
+        )
+        self._rate_prior = (
+            self.rate_prior if rate_prior is not None else dist.Gamma(1, 1)
+        )
 
     def _predict(  # type: ignore[override]
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -69,8 +69,8 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        scale = params["scale"]
-        rate = params["rate"]
+        scale = numpyro.sample("log_scale", self.scale_prior)
+        rate = numpyro.sample("log_rate", self.rate_prior)
 
         effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))
 

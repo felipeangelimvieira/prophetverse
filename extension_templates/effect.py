@@ -15,7 +15,7 @@ class MySimpleEffectName(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,
@@ -28,17 +28,8 @@ class MySimpleEffectName(BaseEffect):
         self.param1 = param1
         self.param2 = param2
 
-    def _sample_params(self, data, predicted_effects):
-        # call numpyro.sample to sample the parameters of the effect
-        # return a dictionary with the sampled parameters, where
-        # key is the name of the parameter and value is the sampled value
-        return {}
-
     def _predict(
-        self,
-        data: Any,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Any, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -66,7 +57,7 @@ class MySimpleEffectName(BaseEffect):
         # series
 
         # Here you use the params to compute the effect.
-        raise NotImplementedError("Subclasses must implement _predict()")
+        rcapability: panelror("Subclasses must implement _predict()")
 
 
 class MyEffectName(BaseEffect):
@@ -75,7 +66,7 @@ class MyEffectName(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,
@@ -136,17 +127,12 @@ class MyEffectName(BaseEffect):
         array = series_to_tensor_or_array(X)
         return array
 
-    def _sample_params(self, data, predicted_effects):
-        # call numpyro.sample to sample the parameters of the effect
-        # return a dictionary with the sampled parameters, where
-        # key is the name of the parameter and value is the sampled value
-        return {}
-
     def _predict(
         self,
         data: Any,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -157,9 +143,6 @@ class MyEffectName(BaseEffect):
 
         predicted_effects : Dict[str, jnp.ndarray], optional
             A dictionary containing the predicted effects, by default None.
-
-        params : Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
 
         Returns
         -------

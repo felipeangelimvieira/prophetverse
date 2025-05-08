@@ -5,7 +5,7 @@ This module contains the implementation of piecewise trend models (logistic and 
 """
 
 import itertools
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union, Optional
 
 import jax.numpy as jnp
 import numpy as np
@@ -51,6 +51,12 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
     remove_seasonality_before_suggesting_initial_vals : bool, optional
         If True, remove seasonality before suggesting initial values, using sktime's
         detrender. Default is True.
+    global_rate_prior_loc : float, optional
+        The prior location for the global rate. Default is suggested
+        empirically from data.
+    offset_prior_loc : float, optional
+        The prior location for the offset. Default is suggested
+        empirically from data.
 
 
     """
@@ -63,7 +69,8 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
-        **kwargs,
+        global_rate_prior_loc: Optional[float] = None,
+        offset_prior_loc: Optional[float] = None,
     ):
         self.changepoint_interval = changepoint_interval
         self.changepoint_range = changepoint_range
@@ -73,6 +80,8 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         self.remove_seasonality_before_suggesting_initial_vals = (
             remove_seasonality_before_suggesting_initial_vals
         )
+        self.global_rate_prior_loc = global_rate_prior_loc
+        self.offset_prior_loc = offset_prior_loc
         super().__init__()
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
@@ -157,33 +166,12 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         idx = self._fh_to_index(fh)
         return self.get_changepoint_matrix(idx)
 
-    def _sample_params(self, data: Any, predicted_effects: Dict[str, jnp.ndarray]):
-
-        changepoint_matrix = data
-
-        offset = numpyro.sample(
-            "offset",
-            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
-        )
-        changepoint_coefficients = numpyro.sample(
-            "changepoint_coefficients",
-            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
-        )
-
-        if changepoint_matrix.ndim == 3:
-            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
-            offset = offset.reshape((-1, 1, 1))
-
-        return {
-            "changepoint_coefficients": changepoint_coefficients,
-            "offset": offset,
-        }
-
     def _predict(
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: dict,
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """
         Compute the trend based on the given changepoint matrix.
@@ -203,8 +191,20 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         """
         # alias for clarity
         changepoint_matrix = data
-        changepoint_coefficients = params["changepoint_coefficients"]
-        offset = params["offset"]
+
+        offset = numpyro.sample(
+            "offset",
+            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
+        )
+
+        changepoint_coefficients = numpyro.sample(
+            "changepoint_coefficients",
+            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
+        )
+
+        if changepoint_matrix.ndim == 3:
+            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
+            offset = offset.reshape((-1, 1, 1))
 
         trend = (changepoint_matrix) @ changepoint_coefficients + offset
 
@@ -442,6 +442,10 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         )
         offset_loc = y_array[:, 0].squeeze() - global_rate * t[0].squeeze()
 
+        if self.global_rate_prior_loc is not None:
+            global_rate = jnp.ones_like(global_rate) * self.global_rate_prior_loc
+        if self.offset_prior_loc is not None:
+            offset_loc = jnp.ones_like(offset_loc) * self.offset_prior_loc
         return global_rate, offset_loc
 
 
@@ -488,15 +492,11 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         changepoint_prior_scale: float = 0.001,
         offset_prior_scale=10,
         capacity_prior: dist.Distribution = None,
-        **kwargs,
+        squeeze_if_single_series: bool = True,
+        remove_seasonality_before_suggesting_initial_vals: bool = True,
+        global_rate_prior_loc: Optional[float] = None,
+        offset_prior_loc: Optional[float] = None,
     ):
-        if capacity_prior is None:
-            capacity_prior = dist.TransformedDistribution(
-                dist.HalfNormal(
-                    0.2,
-                ),
-                dist.transforms.AffineTransform(loc=1.1, scale=1),
-            )
 
         self.capacity_prior = capacity_prior
 
@@ -505,8 +505,20 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             changepoint_range,
             changepoint_prior_scale,
             offset_prior_scale=offset_prior_scale,
-            **kwargs,
+            squeeze_if_single_series=squeeze_if_single_series,
+            remove_seasonality_before_suggesting_initial_vals=remove_seasonality_before_suggesting_initial_vals,
+            global_rate_prior_loc=global_rate_prior_loc,
+            offset_prior_loc=offset_prior_loc,
         )
+
+        if capacity_prior is None:
+            capacity_prior = dist.TransformedDistribution(
+                dist.HalfNormal(
+                    0.2,
+                ),
+                dist.transforms.AffineTransform(loc=1.1, scale=1),
+            )
+        self._capacity_prior = capacity_prior
 
     def _suggest_global_trend_and_offset(
         self, y: pd.DataFrame
@@ -533,8 +545,8 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         )
         y_arrays = series_to_tensor(y)
 
-        if hasattr(self.capacity_prior, "loc"):
-            capacity_prior_loc = self.capacity_prior.loc
+        if hasattr(self._capacity_prior, "loc"):
+            capacity_prior_loc = self._capacity_prior.loc
         else:
             capacity_prior_loc = y_arrays.max() * 1.05
 
@@ -546,38 +558,8 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
 
         return global_rates, offset
 
-    def _sample_params(self, data, predicted_effects):
-        """
-        Sample params for the effect.
-
-        Use super to sample the changepoint coefficients and offset, and then sample
-        the capacity using the capacity prior.
-
-        Parameters
-        ----------
-        data : Any
-            The input data.
-        predicted_effects : Dict[str, jnp.ndarray]
-            The predicted effects
-
-        Returns
-        -------
-        dict
-            The sampled parameters.
-        """
-        with numpyro.plate("series", self.n_series, dim=-3):
-            capacity = numpyro.sample("capacity", self.capacity_prior)
-
-        return {
-            "capacity": capacity,
-            **super()._sample_params(data=data, predicted_effects=predicted_effects),
-        }
-
     def _predict(  # type: ignore[override]
-        self,
-        data: Any,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Any, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """
         Compute the trend for the given changepoint matrix.
@@ -592,11 +574,11 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         jnp.ndarray
             The computed trend.
         """
-        trend = super()._predict(
-            data=data, predicted_effects=predicted_effects, params=params
-        )
+        with numpyro.plate("series", self.n_series, dim=-3):
+            capacity = numpyro.sample("capacity", self._capacity_prior)
 
-        capacity = params["capacity"]
+        trend = super()._predict(data=data, predicted_effects=predicted_effects)
+
         if self.n_series == 1:
             capacity = capacity.squeeze()
 

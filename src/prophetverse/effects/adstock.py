@@ -24,7 +24,7 @@ class GeometricAdstockEffect(BaseEffect):
     """
 
     _tags = {
-        "supports_multivariate": False,
+        "capability:panel": False,
         "skip_predict_if_no_match": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
     }
@@ -34,13 +34,14 @@ class GeometricAdstockEffect(BaseEffect):
         decay_prior: dist.Distribution = None,
         raise_error_if_fh_changes: bool = True,
     ):
-        self.decay_prior = decay_prior or dist.Beta(
-            2, 2
-        )  # Default Beta distribution for decay rate.
-        self.raise_errror_if_fh_changes = raise_error_if_fh_changes
+        self.decay_prior = decay_prior  # Default Beta distribution for decay rate.
+        self.raise_error_if_fh_changes = raise_error_if_fh_changes
         super().__init__()
 
         self._min_date = None
+        self._decay_prior = self.decay_prior
+        if self._decay_prior is None:
+            self._decay_prior = dist.Beta(2, 2)
 
     def _transform(self, X, fh):
         """Transform the dataframe and horizon to array.
@@ -65,7 +66,7 @@ class GeometricAdstockEffect(BaseEffect):
         if self._min_date is None:
             self._min_date = X.index.min()
         else:
-            if self._min_date != X.index.min() and self.raise_errror_if_fh_changes:
+            if self._min_date != X.index.min() and self.raise_error_if_fh_changes:
                 raise ValueError(
                     "The X dataframe and forecat horizon"
                     "must be start at the same"
@@ -73,33 +74,12 @@ class GeometricAdstockEffect(BaseEffect):
                 )
         return super()._transform(X, fh)
 
-    def _sample_params(
-        self, data: jnp.ndarray, predicted_effects: Dict[str, jnp.ndarray]
-    ) -> Dict[str, jnp.ndarray]:
-        """
-        Sample the parameters of the effect.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            Data obtained from the transformed method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
-
-        Returns
-        -------
-        Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-        """
-        return {
-            "decay": numpyro.sample("decay", self.decay_prior),
-        }
-
     def _predict(
         self,
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs
     ) -> jnp.ndarray:
         """
         Apply and return the geometric adstock effect values.
@@ -118,7 +98,8 @@ class GeometricAdstockEffect(BaseEffect):
         jnp.ndarray
             An array with shape (T, 1) for univariate timeseries.
         """
-        decay = params["decay"]
+
+        decay = numpyro.sample("decay", self._decay_prior)
 
         # Apply geometric adstock using jax.lax.scan for efficiency
         def adstock_step(carry, current):

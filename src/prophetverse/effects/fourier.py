@@ -36,7 +36,7 @@ class LinearFourierSeasonality(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": True,
+        "capability:panel": True,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": False,
@@ -56,6 +56,7 @@ class LinearFourierSeasonality(BaseEffect):
         self.prior_scale = prior_scale
         self.effect_mode = effect_mode
         self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
+        super().__init__()
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
@@ -124,26 +125,8 @@ class LinearFourierSeasonality(BaseEffect):
 
         return array
 
-    def _sample_params(self, data, predicted_effects=None):
-        """Sample parameters from the prior distribution.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            The data to be used for sampling the parameters.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the sampled parameters.
-        """
-        return self.linear_effect_.sample_params(data, predicted_effects)
-
     def _predict(
-        self,
-        data: Dict,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -165,5 +148,16 @@ class LinearFourierSeasonality(BaseEffect):
         return self.linear_effect_.predict(
             data=data,
             predicted_effects=predicted_effects,
-            params=params,
         )
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        return [
+            {
+                "sp_list": [7],
+                "fourier_terms_list": [1],
+                "freq": "D",
+                "prior_scale": 1.0,
+                "effect_mode": "additive",
+            }
+        ]

@@ -31,7 +31,7 @@ class ExactLikelihood(BaseEffect):
         The scale of the prior distribution for the likelihood.
     """
 
-    _tags = {"skip_predict_if_no_match": False, "supports_multivariate": False}
+    _tags = {"skip_predict_if_no_match": False, "capability:panel": False}
 
     def __init__(
         self,
@@ -104,10 +104,7 @@ class ExactLikelihood(BaseEffect):
         return data_dict
 
     def _predict(
-        self,
-        data: Dict,
-        predicted_effects: Dict[str, jnp.ndarray],
-        params: Dict[str, jnp.ndarray],
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -137,3 +134,14 @@ class ExactLikelihood(BaseEffect):
             )
 
         return x
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+
+        return [
+            {
+                "effect_name": "linear",
+                "reference_df": pd.DataFrame({"y": [1, 2, 3]}),
+                "prior_scale": 0.1,
+            }
+        ]

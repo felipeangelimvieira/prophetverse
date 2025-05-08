@@ -46,7 +46,7 @@ display(y.head())
 # %% [markdown]
 # The full dataset looks like this:
 # %%
-y.plot.line(figsize=(12,6))
+y.plot.line(figsize=(12, 6))
 plt.show()
 
 
@@ -143,7 +143,7 @@ ax.scatter(y.index, y, marker="o", color="k", s=2, alpha=0.5)
 #  The `predict_quantiles` method returns the quantiles of the predictive distribution
 # in a `pd.DataFrame`
 # %%
-quantiles = model.predict_quantiles(fh=forecast_horizon, alpha=[0.1, .9])
+quantiles = model.predict_quantiles(fh=forecast_horizon, alpha=[0.1, 0.9])
 quantiles.head()
 
 # %% [markdown]
@@ -187,9 +187,11 @@ for column in sites.columns:
 # %%
 from prophetverse.engine import MCMCInferenceEngine
 
-model.set_params(
-    inference_engine=MCMCInferenceEngine()
-)
+model.set_params(inference_engine=MCMCInferenceEngine())
+
+import numpyro
+
+numpyro.enable_x64()  # To avoid computational issues with MCMC
 
 model.fit(y=y)
 
@@ -220,23 +222,23 @@ samples
 # %%
 
 trend = PiecewiseLinearTrend(
-        changepoint_interval=300,
-        changepoint_prior_scale=0.0001,
-        changepoint_range=0.8,
-    )
+    changepoint_interval=300,
+    changepoint_prior_scale=0.0001,
+    changepoint_range=0.8,
+)
 exogenous_effects = [
-        (
-            "seasonality",
-            LinearFourierSeasonality(
-                freq="D",
-                sp_list=[7, 365.25],
-                fourier_terms_list=[3, 10],
-                prior_scale=0.1,
-                effect_mode="multiplicative",
-            ),
-            no_input_columns,
+    (
+        "seasonality",
+        LinearFourierSeasonality(
+            freq="D",
+            sp_list=[7, 365.25],
+            fourier_terms_list=[3, 10],
+            prior_scale=0.1,
+            effect_mode="multiplicative",
         ),
-    ]
+        no_input_columns,
+    ),
+]
 inference_engine = MAPInferenceEngine()
 
 model = Prophetverse() >> trend >> exogenous_effects >> inference_engine

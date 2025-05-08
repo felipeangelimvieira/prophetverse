@@ -1,11 +1,13 @@
 """Module that stores abstract class of effects."""
 
 from typing import Any, Dict, Literal, Optional
-
+import numpyro
 import jax.numpy as jnp
+import numpyro.primitives
 import pandas as pd
 from skbase.base import BaseObject
-
+import numpyro
+from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
@@ -71,7 +73,10 @@ class BaseEffect(BaseObject):
     """
 
     _tags = {
-        "supports_multivariate": False,
+        # Can handle panel data?
+        "capability:panel": False,
+        # Can handle multiple input feature columns?
+        "capability:multivariate_input": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,
@@ -84,6 +89,8 @@ class BaseEffect(BaseObject):
 
     def __init__(self):
         self._is_fitted: bool = False
+        super().__init__()
+        self.broadcasted_ = False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -115,7 +122,7 @@ class BaseEffect(BaseObject):
             If the effect does not support multivariate data and the DataFrame has more
             than one level of index.
         """
-        if not self.get_tag("supports_multivariate", False):
+        if not self.get_tag("capability:panel", False):
             if X is not None and X.index.nlevels > 1:
                 raise ValueError(
                     f"The effect {self.__class__.__name__} does not "
@@ -184,8 +191,21 @@ class BaseEffect(BaseObject):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
-
+        if (
+            X is not None
+            and len(X.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
+        ):
+            return self._broadcast_transform(X, fh)
         return self._transform(X, fh)
+
+    def _broadcast_transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+
+        outputs = []
+        for column in X.columns:
+            xt = self._transform(X[[column]], fh)
+            outputs.append(xt)
+        return outputs
 
     def _transform(
         self,
@@ -246,8 +266,13 @@ class BaseEffect(BaseObject):
         if params is None:
             params = self.sample_params(data, predicted_effects)
 
-        x = self._predict(data, predicted_effects, params)
-
+        if isinstance(data, list):
+            x = 0
+            for i, _data in enumerate(data):
+                with numpyro.handlers.scope(prefix=f"dim{i}"):
+                    x += self._predict(_data, predicted_effects, params)
+        else:
+            x = self._predict(data, predicted_effects, params)
         return x
 
     def sample_params(
@@ -271,6 +296,7 @@ class BaseEffect(BaseObject):
         Dict
             A dictionary containing the sampled parameters.
         """
+
         if predicted_effects is None:
             predicted_effects = {}
 
@@ -301,7 +327,7 @@ class BaseEffect(BaseObject):
         return {}
 
     def _predict(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], params: Dict
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -330,6 +356,20 @@ class BaseEffect(BaseObject):
     ) -> jnp.ndarray:
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
+
+    # TODO: Remove in version 0.8.0
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if getattr(cls, "_sample_params") is not getattr(BaseEffect, "_sample_params"):
+            deprecation_warning(
+                "sample_params",
+                "0.7.0",
+                "Sorry for the inconvenience, but this method will be deprecated. "
+                "It was introducted to avoid resampling the same site twice, but"
+                "a new, and better, interface is being implemented. "
+                "Please call the parameters directly from _predict using"
+                "numpyro.sample as you would call numpyro.sample",
+            )
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
@@ -371,7 +411,8 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         self,
         data: Any,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
-        params: Optional[Dict[str, jnp.ndarray]] = None,
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -390,11 +431,13 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        if predicted_effects is None:
-            predicted_effects = {}
 
-        if params is None:
-            params = self.sample_params(data, predicted_effects)
+        x = super().predict(
+            data=data, predicted_effects=predicted_effects, *args, **kwargs
+        )
+
+        if self.effect_mode == "additive":
+            return x
 
         if (
             self.base_effect_name not in predicted_effects
@@ -404,13 +447,6 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
                 "BaseAdditiveOrMultiplicativeEffect requires trend in"
                 + " predicted_effects"
             )
-
-        x = super().predict(
-            data=data, predicted_effects=predicted_effects, params=params
-        )
-
-        if self.effect_mode == "additive":
-            return x
 
         base_effect = predicted_effects[self.base_effect_name]
         if base_effect.ndim == 1:

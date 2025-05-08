@@ -21,7 +21,7 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
     """
 
     _tags = {
-        "supports_multivariate": True,
+        "capability:panel": True,
         "skip_predict_if_no_match": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
         "named_object_parameters": "named_steps",

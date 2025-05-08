@@ -211,8 +211,7 @@ class HierarchicalProphet(BaseProphetForecaster):
         self.likelihood_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
 
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh)
-        target_data = self.likelihood_model_.transform(X=X_bottom, fh=fh)
-        target_data["y"] = y_bottom_arrays
+        target_data = self.likelihood_model_.transform(X=y_bottom, fh=fh)
 
         self._fit_effects(X_bottom, y_bottom)
         exogenous_data = self._transform_effects(X_bottom, fh=fh)
@@ -269,8 +268,7 @@ class HierarchicalProphet(BaseProphetForecaster):
             X_bottom = self.expand_columns_transformer_.transform(X_bottom)
 
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh_as_index)
-        target_data = self.likelihood_model_.transform(X=X_bottom, fh=fh_as_index)
-        target_data["y"] = None
+        target_data = self.likelihood_model_.transform(X=None, fh=fh_as_index)
 
         exogenous_data = self._transform_effects(X=X_bottom, fh=fh_as_index)
 

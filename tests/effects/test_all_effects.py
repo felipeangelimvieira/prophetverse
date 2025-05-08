@@ -6,7 +6,8 @@ class TestAllEffects(TestAllObjects):
 
     package_name = "prophetverse.effects"
     valid_tags = [
-        "supports_multivariate",
+        "capability:panel",
+        "capability:multivariate_input",
         "skip_predict_if_no_match",
         "filter_indexes_with_forecating_horizon_at_transform",
         "requires_fit_before_transform",

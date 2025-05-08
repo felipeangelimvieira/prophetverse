@@ -28,7 +28,8 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
     """
 
     _tags = {
-        "supports_multivariate": True,
+        "capability:panel": True,
+        "capability:multivariate_input": True,
     }
 
     def __init__(

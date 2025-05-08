@@ -21,7 +21,7 @@ class TargetLikelihood(BaseTargetEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": False,
@@ -83,7 +83,7 @@ class TargetLikelihood(BaseTargetEffect):
             numpyro.sample(
                 "obs",
                 self.likelihood_distribution_(mean.reshape((-1, 1)), noise_scale),
-                obs=data["y"],
+                obs=data,
             )
 
     def _compute_mean(self, predicted_effects: Dict[str, jnp.ndarray]) -> jnp.ndarray:
@@ -135,7 +135,7 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
         )
 
     def _predict(self, data, predicted_effects, *args, **kwargs):
-        y = data["y"]
+        y = data
 
         mean = self._compute_mean(predicted_effects) * self.scale_
         mean = numpyro.deterministic("mean", mean)

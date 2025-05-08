@@ -15,7 +15,7 @@ class MySimpleEffectName(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,
@@ -57,7 +57,7 @@ class MySimpleEffectName(BaseEffect):
         # series
 
         # Here you use the params to compute the effect.
-        raise NotImplementedError("Subclasses must implement _predict()")
+        rcapability: panelror("Subclasses must implement _predict()")
 
 
 class MyEffectName(BaseEffect):
@@ -66,7 +66,7 @@ class MyEffectName(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "supports_multivariate": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "skip_predict_if_no_match": True,

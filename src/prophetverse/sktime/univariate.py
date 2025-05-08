@@ -209,13 +209,13 @@ class Prophetverse(BaseProphetForecaster):
         X = X.loc[y.index]
 
         trend_data = self.trend_model_.transform(X=X, fh=fh)
-        target_data = self.likelihood_model_.transform(X=X, fh=fh)
+        target_data = self.likelihood_model_.transform(X=y, fh=fh)
 
         self._fit_effects(X, y)
         exogenous_data = self._transform_effects(X, fh=fh)
 
         y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
-        target_data["y"] = y_array
+
         # Data used in both fitting and prediction.
         self.fit_and_predict_data_ = {
             "trend_model": self.trend_model_,
@@ -260,8 +260,7 @@ class Prophetverse(BaseProphetForecaster):
             X = self.feature_transformer.transform(X)
 
         trend_data = self.trend_model_.transform(X=X, fh=fh_as_index)
-        target_data = self.likelihood_model_.transform(X=X, fh=fh_as_index)
-        target_data["y"] = None
+        target_data = self.likelihood_model_.transform(X=None, fh=fh_as_index)
 
         exogenous_data = self._transform_effects(X, fh_as_index)
 

@@ -21,7 +21,11 @@ class TrendEffectMixin:
         The number of series in the time series data.
     """
 
-    _tags = {"skip_predict_if_no_match": False, "supports_multivariate": True}
+    _tags = {
+        "skip_predict_if_no_match": False,
+        "capability:panel": True,
+        "capability:multivariate_input": True,
+    }
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1) -> None:
         """Initialize the effect.

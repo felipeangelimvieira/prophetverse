@@ -1,7 +1,8 @@
 import jax.numpy as jnp
 import pandas as pd
 import pytest
-
+import numpyro
+import numpyro.distributions as dist
 from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect, BaseEffect
 
 
@@ -59,6 +60,40 @@ def test_not_fitted():
         EffectMustFit().transform(pd.DataFrame(), fh=pd.Index([]))
 
 
+def test_broadcasting():
+
+    class SimpleEffect(BaseEffect):
+
+        _tags = {
+            "capability:panel": False,
+            "capability:multivariate_input": False,
+        }
+
+        def _predict(self, data, predicted_effects, params):
+            factor = numpyro.sample("factor", dist.Normal(0, 1))
+            return data * factor
+
+    effect = SimpleEffect()
+    X = pd.DataFrame(
+        data={"exog": [10, 20, 30, 40, 50, 60], "exog2": [1, 2, 3, 4, 5, 6]},
+        index=pd.date_range("2021-01-01", periods=6),
+    )
+    Xt = effect.transform(X, fh=X.index)
+    assert isinstance(Xt, list)
+    assert len(Xt) == 2
+
+    with numpyro.handlers.trace() as trace, numpyro.handlers.seed(rng_seed=0):
+        out = effect.predict(data=Xt)
+
+    factor0 = trace["dim0/factor"]["value"]
+    factor1 = trace["dim1/factor"]["value"]
+
+    assert factor0 != factor1
+    expected = (X["exog"].values * factor0 + X["exog2"].values * factor1).reshape(
+        (-1, 1)
+    )
+    assert jnp.allclose(out, expected), "Broadcasting effect prediction failed."
+
 def test_sample_params_warning():
     import warnings
 
@@ -76,3 +111,4 @@ def test_sample_params_warning():
     assert len(caught) == 1, "Expected exactly one warning"
     w = caught[0]
     assert issubclass(w.category, FutureWarning)
+

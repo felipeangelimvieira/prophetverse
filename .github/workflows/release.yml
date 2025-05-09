@@ -16,8 +16,8 @@ jobs:
         with:
           python-version: 3.x
 
-      - name: Install Poetry
-        run: pip install poetry
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Extract tag version
         run: echo "TAG_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
@@ -31,7 +31,7 @@ jobs:
 
       - name: Get current package version
         run: |
-          PACKAGE_VERSION=$(poetry version --short)
+          PACKAGE_VERSION=$(uv version --short)
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
       - name: Verify versions match
@@ -44,11 +44,12 @@ jobs:
       - name: Set version to match the release tag
         run: |
           echo "Setting package version to $TAG_VERSION"
-          poetry version "$TAG_VERSION"
+          uv version $TAG_VERSION
+          
+      - name: Build package
+        run: uv build --no-sources
 
       - name: Publish to PyPI
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          poetry build
-          poetry publish
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish --token $UV_PUBLISH_TOKEN

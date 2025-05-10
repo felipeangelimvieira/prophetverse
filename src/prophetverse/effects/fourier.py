@@ -39,7 +39,7 @@ class LinearFourierSeasonality(BaseEffect):
         "capability:panel": True,
         # If no columns are found, should
         # _predict be skipped?
-        "skip_predict_if_no_match": False,
+        "requires_X": False,
     }
 
     def __init__(

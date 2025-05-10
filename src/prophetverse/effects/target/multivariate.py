@@ -20,7 +20,7 @@ class MultivariateNormal(BaseTargetEffect):
         "capability:panel": True,
         # If no columns are found, should
         # _predict be skipped?
-        "skip_predict_if_no_match": False,
+        "requires_X": False,
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,

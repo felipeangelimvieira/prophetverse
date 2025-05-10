@@ -25,7 +25,7 @@ class GeometricAdstockEffect(BaseEffect):
 
     _tags = {
         "capability:panel": False,
-        "skip_predict_if_no_match": True,
+        "requires_X": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
     }
 

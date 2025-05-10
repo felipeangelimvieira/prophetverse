@@ -134,6 +134,12 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
+    def get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon):
+        if not isinstance(fh, ForecastingHorizon):
+            fh = self._check_fh(fh)
+        X = self._check_X(X=X)
+        return self._get_predict_data(X=X, fh=fh)
+
     # pragma: no cover
     def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon):
         """Generate samples from the posterior predictive distribution.
@@ -287,10 +293,8 @@ class BaseBayesianForecaster(BaseForecaster):
             data. The keys are the names of the time series, and the values are NumPy
             arrays representing the predictive samples.
         """
-        if not isinstance(fh, ForecastingHorizon):
-            fh = self._check_fh(fh)
 
-        predict_data = self._get_predict_data(X=X, fh=fh)
+        predict_data = self.get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
@@ -324,8 +328,7 @@ class BaseBayesianForecaster(BaseForecaster):
                 "predict_component_samples", X=X, fh=fh
             )
 
-        X_inner = self._check_X(X=X)
-        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X_inner)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
         fh_as_index = self.fh_to_index(fh)
         dfs = []
@@ -931,7 +934,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
             if columns is None or len(columns) == 0:
-                if effect.get_tag("skip_predict_if_no_match"):
+                if effect.get_tag("requires_X"):
                     continue
 
             data: Dict[str, jnp.ndarray] = effect.transform(X[columns], fh=fh)
@@ -952,7 +955,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         return {
             effect_name: effect
             for effect_name, effect, columns in self.exogenous_effects_
-            if len(columns) > 0 or not effect.get_tag("skip_predict_if_no_match")
+            if len(columns) > 0 or not effect.get_tag("requires_X")
         }
 
     def _get_trend_model(self):

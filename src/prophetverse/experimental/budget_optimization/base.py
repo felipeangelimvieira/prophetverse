@@ -1,27 +1,98 @@
+"""Base classes for budget optimization"""
+
 from skbase.base import BaseObject
+import pandas as pd
+import jax.numpy as jnp
 
 
 class BaseOptimizationObjective(BaseObject):
+    """
+    Defines the optimization objective function.
+
+    The __call__ method should be implemented to return the objective function
+    that will be optimized.
+    """
 
     _tags = {"backend": None, "name": None}
 
-    def __call__(self, model, X, horizon, columns):
+    def _objective(self, x: jnp.ndarray, budget_optimizer):
+
         raise NotImplementedError(
             "Utility function must be callable with model, X, period and columns"
         )
 
+    def __call__(self, model, X, horizon, columns):
+        """
+        Get optimization objective function
+
+
+        Parameters
+        ----------
+        model : Prophetverse
+            Prophetverse model
+        X : pd.DataFrame
+            Input data
+        horizon : pd.Index
+            Forecast horizon
+        columns : list
+            List of columns to optimize
+
+        Returns
+        -------
+        objective : callable
+            Objective function
+        """
+
+        return self._objective
+
 
 class BaseConstraint(BaseObject):
+    """
+    Base constraint class.
+    Defines the constraint function that will be used in the optimization.
+    The __call__ method should be implemented to return a dictionary
+    that will be passed to scipy.minimize contraint argument.
+    """
 
     _tags = {"backend": None, "name": None}
 
     def __call__(self, model, X, horizon, columns):
+        """
+        Callable constraint function.
+        It is expected to be overridden in subclasses.
+        Parameters
+        ---------
+        model : Prophetverse
+            Prophetverse model
+        X : pd.DataFrame
+            Input data
+        horizon : pd.Index
+            Forecast horizon
+        columns : list
+            List of columns to optimize
+
+        Returns
+        -------
+        constraint : dict
+            Dictionary with the constraint function and its jacobian, and type.
+        """
+
         raise NotImplementedError(
             "Constraint function must be callable with model, X, period and columns"
         )
 
 
-class BaseDecisionVariableTransform(BaseObject):
+class BaseParametrizationTransformation(BaseObject):
+    """
+    Decision variable transformation class.
+
+    Decision variable transforms change the parametrization of the decision
+    variable. The default parametrization is a flatten array with the inputs
+    for all the columns. The transform is used to change the initial guess
+    passed to scipy.minimize and to inverse_transform this guess to the original
+    space so that the constraints and objective function can be evaluated.
+
+    """
 
     def fit(self, X, horizon, columns):
         """Fit the decision variable to the data"""
@@ -37,14 +108,15 @@ class BaseDecisionVariableTransform(BaseObject):
         """Return the initial guess for the decision variable"""
         return self._inverse_transform(xt)
 
-    def _fit(self, X, horizon, columns):
+    def _fit(self, X: pd.DataFrame, horizon: pd.Index, columns: pd.Index):
+        """Default private fit"""
         pass
 
-    def _transform(self, x):
+    def _transform(self, x: jnp.ndarray):
         """Transform the decision variable to the original space"""
         raise NotImplementedError("Decision variable must implement transform method")
 
-    def _inverse_transform(self, xt):
+    def _inverse_transform(self, xt: jnp.ndarray):
         """Return the initial guess for the decision variable"""
         raise NotImplementedError(
             "Decision variable must implement initial_guess method"
@@ -77,112 +149,12 @@ class BaseBudgetOptimizer(BaseObject):
     ):
         self.constraints = constraints
         self.objective = objective
-
-        self._validade_init_args()
         super().__init__()
 
-    def optimize(self, model, X, horizon, columns):
+    def optimize(self, model, X: pd.DataFrame, horizon: pd.Index, columns: pd.Index):
         return self._optimize(
             model=model,
             X=X,
             horizon=horizon,
             columns=columns,
         )
-
-    def _validade_init_args(self):
-
-        for constraint in self.constraints:
-            if constraint.get_tag("backend") != self.get_tag("backend"):
-                raise ValueError(
-                    f"Constraint {constraint} has a different backend than the optimizer {self}"
-                )
-
-        if self.objective.get_tag("backend") != self.get_tag("backend"):
-            raise ValueError(
-                f"Objective {self.objective} has a different backend than the optimizer {self}"
-            )
-
-
-# Helper function to get all subclasses (direct and indirect)
-def get_all_subclasses(cls):
-    """
-    Recursively retrieves all subclasses of a given class.
-
-    Args:
-        cls (type): The class for which to find subclasses.
-
-    Returns:
-        list: A list of all subclasses (descendants) of cls.
-    """
-    all_subclasses = set()
-    # Get direct subclasses
-    direct_subclasses = cls.__subclasses__()
-    for subclass in direct_subclasses:
-        all_subclasses.add(subclass)
-        # Recursively add subclasses of these direct subclasses
-        all_subclasses.update(get_all_subclasses(subclass))
-    return list(all_subclasses)
-
-
-# Main function to find the class by tags
-def find_class_by_tags(
-    name_tag_value,
-    backend_tag_value,
-    base_classes_to_search=(BaseOptimizationObjective, BaseConstraint),
-):
-    """
-    Finds a child class that has the specified 'name' and 'backend' tags.
-
-    The search is performed among the descendants of the classes provided in
-    `base_classes_to_search`.
-
-    Args:
-        name_tag_value (str): The value for the 'name' tag to search for.
-        backend_tag_value (str): The value for the 'backend' tag to search for.
-        base_classes_to_search (type or tuple/list of types, optional):
-            A single base class or an iterable (tuple or list) of base classes
-            whose children will be searched. Defaults to (BaseUtility, BaseConstraint).
-
-    Returns:
-        type: The first child class found that matches the specified tags.
-              Returns None if no such class is found.
-    """
-    search_targets = []
-    if isinstance(base_classes_to_search, type):  # A single class was passed
-        search_targets = [base_classes_to_search]
-    elif isinstance(base_classes_to_search, (list, tuple)):
-        search_targets = base_classes_to_search
-    else:
-        # This case should ideally raise an error or be handled more strictly,
-        # but for flexibility, we'll try to iterate if possible.
-        # However, it's best to pass a type or a list/tuple of types.
-        try:
-            search_targets = list(base_classes_to_search)
-        except TypeError:
-            raise TypeError(
-                "base_classes_to_search must be a class or an iterable of classes."
-            )
-
-    for base_class in search_targets:
-        if not isinstance(base_class, type):
-            print(
-                f"Warning: Item '{base_class}' in base_classes_to_search is not a class type. Skipping."
-            )
-            continue
-
-        # Get all subclasses (direct and indirect) of the current base_class
-        candidate_classes = get_all_subclasses(base_class)
-
-        for child_class in candidate_classes:
-            # Check if the class has a _tags attribute and it's a dictionary
-            if hasattr(child_class, "_tags") and isinstance(
-                getattr(child_class, "_tags"), dict
-            ):
-                tags = getattr(child_class, "_tags")
-                # Check if the name and backend tags match
-                if (
-                    tags.get("name") == name_tag_value
-                    and tags.get("backend") == backend_tag_value
-                ):
-                    return child_class  # Return the first matching class
-    return None  # No matching class found

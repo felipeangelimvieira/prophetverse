@@ -3,7 +3,6 @@
 from typing import Any, Dict, Literal, Optional
 import numpyro
 import jax.numpy as jnp
-import numpyro.primitives
 import pandas as pd
 from skbase.base import BaseObject
 import numpyro

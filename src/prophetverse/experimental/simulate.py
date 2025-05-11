@@ -66,8 +66,9 @@ def simulate(
         If True, the fitted model will be returned. Defaults to False.
     Returns
     -------
-    Dict
-        A dictionary with the simulated data.
+    Union[Dict, Tuple]
+        If return_model=False, a dictionary with the simulated data. Otherwise,
+        a tuple (simulated_data, model).
     """
     # Fit model, creating a dummy y if it is not provided
     if y is None:

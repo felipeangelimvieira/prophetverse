@@ -1,3 +1,5 @@
+"""Constraints for Budget Optimizer"""
+
 import numpy as np
 from prophetverse.experimental.budget_optimization.base import (
     BaseConstraint,
@@ -13,10 +15,18 @@ __all__ = [
 
 
 class SharedBudgetConstraint(BaseConstraint):
-    _tags = {
-        "name": "ShareBudget",
-        "backend": "scipy",
-    }
+    """Shared budget constraint.
+
+    This constraint ensures that the sum of the budgets for the specified
+    channels is equal to the total budget.
+
+    Parameters
+    ----------
+    channels : list, optional
+        List of channels to be constrained. If None, all channels are used.
+    total : float, optional
+        Total budget. If None, the total budget is computed from the input data.
+    """
 
     def __init__(self, channels=None, total=None):
         self.channels = channels
@@ -24,7 +34,10 @@ class SharedBudgetConstraint(BaseConstraint):
         self.constraint_type = "eq"
         super().__init__()
 
-    def __call__(self, X, horizon, columns):
+    def __call__(self, X: pd.DataFrame, horizon: pd.Index, columns: list):
+        """
+        Return optimization constraint definition.
+        """
 
         channels = self.channels
         if channels is None:
@@ -36,8 +49,11 @@ class SharedBudgetConstraint(BaseConstraint):
 
         channel_idx = [columns.index(ch) for ch in channels]
 
-        def func(x_array, *args):
-            x_array = x_array.reshape(-1, len(self.channels))
+        def func(x_array: jnp.ndarray, *args):
+            """
+            Return >=0 if the sum of the budgets for the specified channels.
+            """
+            x_array = x_array.reshape(-1, len(channels))
             channels_budget = x_array[:, channel_idx]
             val = total - np.sum(channels_budget)
             return val
@@ -46,12 +62,20 @@ class SharedBudgetConstraint(BaseConstraint):
 
 
 class MinimumTargetResponse(BaseConstraint):
-    _tags = {
-        "name": "MinimumTargetResponse",
-        "backend": "scipy",
-    }
+    """Minimum target response constraint.
 
-    def __init__(self, target_response):
+    This constraint ensures that the target response is greater than or equal
+    to a specified value. This imposes a restriction on the **output** of the
+    model, instead of the input.
+
+    Parameters
+    ----------
+    target_response : float
+        Target response value. The model output must be greater than or equal
+        to this value.
+    """
+
+    def __init__(self, target_response: float):
         self.target_response = target_response
         super().__init__()
 
@@ -64,6 +88,10 @@ class MinimumTargetResponse(BaseConstraint):
         horizon_idx = jnp.array([fh.get_loc(h) for h in horizon])
 
         def func(x_array, budget_optimizer, *args):
+            """
+            Return >=0 if the target response is greater than or equal to the
+            specified value.
+            """
             obs = budget_optimizer.predictive_(x_array)
             out = obs.mean(axis=0)[horizon_idx].sum()
             return out - self.target_response

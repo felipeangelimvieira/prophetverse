@@ -1,10 +1,16 @@
 from prophetverse.experimental.budget_optimization.base import (
-    BaseDecisionVariableTransform,
+    BaseParametrizationTransformation,
 )
 import jax.numpy as jnp
 
 
-class IdentityDecisionVariableTransform(BaseDecisionVariableTransform):
+__all__ = [
+    "IdentityTransform",
+    "InvestmentPerChannelTransform",
+]
+
+
+class IdentityTransform(BaseParametrizationTransformation):
     """Identity decision variable transform.
 
     This transform does not change the decision variables. It is used when
@@ -23,7 +29,14 @@ class IdentityDecisionVariableTransform(BaseDecisionVariableTransform):
         return xt
 
 
-class OptimizeChannelShare(BaseDecisionVariableTransform):
+class InvestmentPerChannelTransform(BaseParametrizationTransformation):
+    """
+    Change parametrization to be the share of each channel.
+
+    Instead of parametrizing every time x channel investment, this transform
+    parametrize to optimize per channel investment, while keeping the initial
+    guess temporal share of the investment.
+    """
 
     def _fit(self, X, horizon, columns):
         X = X.loc[horizon, columns]
@@ -48,35 +61,4 @@ class OptimizeChannelShare(BaseDecisionVariableTransform):
 
         xt = xt * self.daily_share_
         xt = xt.flatten()
-        return xt
-
-
-class OptimizeObservationShare(BaseDecisionVariableTransform):
-    """Optimize data share.
-
-    This transform is used to optimize the share of data used for
-    forecasting. It is used when the decision variables are in the form of
-    data share.
-    """
-
-    _tags = {
-        "name": "optimize_data_share",
-        "backend": "scipy",
-    }
-
-    def _fit(self, X, horizon, columns):
-        X = X.loc[horizon, columns]
-
-        x_array = jnp.array(X.values)
-
-        # get daily share
-        self.total_budget_ = x_array.sum()
-
-    def _transform(self, x):
-        x = x / x.sum()
-        return x
-
-    def _inverse_transform(self, xt):
-        xt = jnp.exp(xt) / jnp.exp(xt).sum()
-        xt = xt * self.total_budget_
         return xt

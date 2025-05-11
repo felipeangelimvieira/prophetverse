@@ -9,7 +9,7 @@ from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect, BaseEf
 class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
     """Most simple class to test abstracteffect methods."""
 
-    _tags = {"skip_predict_if_no_match": False}
+    _tags = {"requires_X": False}
 
     def _predict(self, data, predicted_effects, params) -> jnp.ndarray:
         """Calculate simple effect."""
@@ -94,6 +94,7 @@ def test_broadcasting():
     )
     assert jnp.allclose(out, expected), "Broadcasting effect prediction failed."
 
+
 def test_sample_params_warning():
     import warnings
 
@@ -111,4 +112,3 @@ def test_sample_params_warning():
     assert len(caught) == 1, "Expected exactly one warning"
     w = caught[0]
     assert issubclass(w.category, FutureWarning)
-

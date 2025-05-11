@@ -8,7 +8,7 @@ class TestAllEffects(TestAllObjects):
     valid_tags = [
         "capability:panel",
         "capability:multivariate_input",
-        "skip_predict_if_no_match",
+        "requires_X",
         "filter_indexes_with_forecating_horizon_at_transform",
         "requires_fit_before_transform",
         "fitted_named_object_parameters",

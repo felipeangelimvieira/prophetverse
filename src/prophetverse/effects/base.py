@@ -128,6 +128,10 @@ class BaseEffect(BaseObject):
                     + "support multivariate data"
                 )
 
+        self.columns_ = None
+        if X is not None:
+            self.columns_ = X.columns.tolist()
+
         self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
 
@@ -293,8 +297,11 @@ class BaseEffect(BaseObject):
         if isinstance(data, list):
             x = 0
             for i, _data in enumerate(data):
-                with numpyro.handlers.scope(prefix=f"dim{i}"):
-                    x += self._predict(_data, predicted_effects, params)
+                with numpyro.handlers.scope(prefix=self.columns_[i]):
+                    out = self._predict(_data, predicted_effects, params)
+                out = numpyro.deterministic(self.columns_[i], out)
+                x += out
+
         else:
             x = self._predict(data, predicted_effects, params)
         return x
@@ -459,6 +466,11 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
 
         super().__init__()
 
+        if not isinstance(self.base_effect_name, list):
+            self._base_effect_name = [self.base_effect_name]
+        else:
+            self._base_effect_name = self.base_effect_name
+
     def predict(
         self,
         data: Any,
@@ -491,16 +503,16 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         if self.effect_mode == "additive":
             return x
 
-        if (
-            self.base_effect_name not in predicted_effects
-            and self.effect_mode == "multiplicative"
-        ):
-            raise ValueError(
-                "BaseAdditiveOrMultiplicativeEffect requires trend in"
-                + " predicted_effects"
-            )
+        base_effect = 0
+        for base_effect_name in self._base_effect_name:
+            if base_effect_name not in predicted_effects:
+                raise ValueError(
+                    f"BaseAdditiveOrMultiplicativeEffect requires {base_effect_name} in"
+                    + " predicted_effects"
+                )
 
-        base_effect = predicted_effects[self.base_effect_name]
+            base_effect += predicted_effects[base_effect_name]
+
         if base_effect.ndim == 1:
             base_effect = base_effect.reshape((-1, 1))
         x = x.reshape(base_effect.shape)

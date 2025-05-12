@@ -315,4 +315,23 @@ for row_id, row_data in results_investment.iterrows():
     axs[row_id].set_title(f"MAPE: {row_data['test_MeanAbsolutePercentageError']:.2%}")
     axs[row_id].legend()
 
+
 # %%
+
+y_pred_components = model_with_investment.predict_components(X=X, fh=X.index)
+
+# %%
+plt.figure()
+for channel in ["channelA", "channelB", "channelC", "channelD"]:
+    plt.scatter(
+        X[channel],
+        y_pred_components["channels/" + channel]
+        / (
+            y_pred_components["trend"]
+            + y_pred_components["yearly_seasonality"]
+            + y_pred_components["holidays"]
+        ),
+        label=channel,
+    )
+plt.legend()
+plt.show()

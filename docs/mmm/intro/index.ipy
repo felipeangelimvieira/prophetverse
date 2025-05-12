@@ -1,0 +1,318 @@
+# %%
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+y_components = pd.read_csv(
+    "https://raw.githubusercontent.com/felipeangelimvieira/mmm_datasets/refs/heads/main/dataset1/components.csv",
+)
+X = pd.read_csv(
+    "https://raw.githubusercontent.com/felipeangelimvieira/mmm_datasets/refs/heads/main/dataset1/X.csv",
+)
+
+# %%
+X["date"] = pd.to_datetime(X["date"]).dt.to_period("D")
+y_components["date"] = pd.to_datetime(y_components["date"]).dt.to_period("D")
+
+X = X.set_index("date")
+y_components = y_components.set_index("date")
+
+X = X.drop("Unnamed: 0", axis=1)
+y_components = y_components.drop("Unnamed: 0", axis=1)
+
+X
+# %%
+y = y_components["obs"]
+
+y.plot.line(figsize=(12, 4))
+
+
+# %%
+
+X.filter(regex="channel*", axis=1).plot.line(figsize=(12, 4))
+
+# %%
+
+X_holidays = X.filter(regex="holiday*", axis=1)
+# %%
+from prophetverse.effects import (
+    ChainedEffects,
+    GeometricAdstockEffect,
+    LinearEffect,
+    LinearFourierSeasonality,
+    PiecewiseLinearTrend,
+    FlatTrend,
+    HillEffect,
+)
+from prophetverse.sktime import Prophetverse
+from prophetverse.engine import MAPInferenceEngine, optimizer
+from numpyro import distributions as dist
+import numpyro
+
+numpyro.enable_x64()
+
+model = Prophetverse(
+    inference_engine=MAPInferenceEngine(
+        num_steps=1000,
+    ),
+    trend=PiecewiseLinearTrend(changepoint_interval=600),
+    exogenous_effects=[
+        (
+            "yearly_seasonality",
+            LinearFourierSeasonality(
+                sp_list=[365.25],
+                fourier_terms_list=[10],
+                prior_scale=0.1,
+                effect_mode="multiplicative",
+                freq="D",
+            ),
+            None,
+        ),
+        (
+            "monthly_seasonality",
+            LinearFourierSeasonality(
+                sp_list=[30.5],
+                fourier_terms_list=[3],
+                prior_scale=0.1,
+                effect_mode="multiplicative",
+                freq="D",
+            ),
+            None,
+        ),
+        (
+            "weekly_seasonality",
+            LinearFourierSeasonality(
+                sp_list=[7],
+                fourier_terms_list=[3],
+                prior_scale=0.1,
+                effect_mode="multiplicative",
+                freq="D",
+            ),
+            None,
+        ),
+        (
+            "holidays",
+            LinearEffect(effect_mode="multiplicative", prior=dist.Laplace(0, 0.1)),
+            "holidays*",
+        ),
+    ],
+)
+
+model.fit(y=y, X=X_holidays)
+y_pred_insample = model.predict(X=X_holidays, fh=X.index)
+
+
+y.plot.line(
+    figsize=(12, 4),
+    label="Observed",
+)
+y_pred_insample.plot.line(
+    figsize=(12, 4),
+    label="In-sample prediction",
+)
+plt.legend()
+plt.title("In-sample prediction")
+plt.show()
+# %%
+from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
+
+metric = MeanAbsolutePercentageError()
+mape = metric(y, y_pred_insample)
+print(f"MAPE: {mape:.2%}")
+
+
+# %%
+
+y_pred_components = model.predict_components(X=X, fh=X.index)
+
+components = ["trend", "yearly_seasonality", "holidays"]
+
+
+fig, ax = plt.subplots(nrows=len(components), figsize=(12, 4 * len(components)))
+for i, component in enumerate(components):
+    prefix = "channels/" if "channel" in component else ""
+    y_pred_components[prefix + component].plot.line(
+        ax=ax[i],
+        label="In-sample prediction",
+    )
+    y_components[component].plot.line(
+        ax=ax[i],
+        label="Observed",
+    )
+    ax[i].set_title(component)
+    ax[i].legend()
+
+
+# %% [markdown]
+## Cross-validation
+# %%
+
+
+from sktime.forecasting.model_selection import ExpandingWindowSplitter
+from sktime.forecasting.model_evaluation import evaluate
+
+
+results = evaluate(
+    forecaster=model,
+    y=y,
+    X=X_holidays,
+    cv=ExpandingWindowSplitter(
+        initial_window=365 * 5, step_length=250, fh=list(range(1, 90 + 1))
+    ),
+    scoring=MeanAbsolutePercentageError(),
+    return_data=True,
+)
+results
+
+# %%
+
+fig, axs = plt.subplots(
+    nrows=results.shape[0],
+    ncols=1,
+    figsize=(12, 6 * results.shape[0]),
+)
+for row_id, row_data in results.iterrows():
+
+    _y = pd.concat([row_data["y_train"].iloc[-100:], row_data["y_test"]])
+    _y.plot.line(ax=axs[row_id], label="Observed", color="black")
+    row_data["y_pred"].plot.line(
+        ax=axs[row_id],
+        label="Prediction",
+    )
+    axs[row_id].axvspan(
+        row_data["y_train"].index[0],
+        row_data["y_train"].index[-1],
+        color="lightblue",
+        alpha=0.2,
+    )
+
+    axs[row_id].set_title(f"MAPE: {row_data['test_MeanAbsolutePercentageError']:.2%}")
+    axs[row_id].legend()
+
+
+# %%
+
+channel_effects = (
+    "channels",
+    ChainedEffects(
+        steps=[
+            ("adstock", GeometricAdstockEffect(raise_error_if_fh_changes=False)),
+            (
+                "saturation",
+                HillEffect(
+                    half_max_prior=dist.InverseGamma(3, 2),
+                    slope_prior=dist.InverseGamma(3, 2),
+                    max_effect_prior=dist.InverseGamma(3, 2),
+                    effect_mode="multiplicative",
+                    input_scale=0.1,
+                    base_effect_name=[
+                        "trend",
+                        "yearly_seasonality",
+                        "holidays",
+                    ],
+                ),
+            ),
+        ],
+    ),
+    "channel*",
+)
+
+model_with_investment = model.clone()
+model_with_investment.set_params(
+    exogenous_effects=model.get_params()["exogenous_effects"] + [channel_effects]
+)
+
+# %%
+model_with_investment.fit(y=y, X=X)
+y_pred_insample_investment = model_with_investment.predict(X=X, fh=X.index)
+
+# %%
+
+y.plot.line(
+    figsize=(12, 4),
+    label="Observed",
+)
+y_pred_insample.plot.line(
+    figsize=(12, 4),
+    label="In-sample prediction",
+)
+plt.legend()
+plt.title("In-sample prediction")
+plt.show()
+
+# %%
+y_pred_components = model_with_investment.predict_components(X=X, fh=X.index)
+
+components = [
+    "trend",
+    "yearly_seasonality",
+    "holidays",
+    "channelA",
+    "channelB",
+    "channelC",
+    "channelD",
+]
+
+
+fig, ax = plt.subplots(nrows=len(components), figsize=(12, 4 * len(components)))
+for i, component in enumerate(components):
+    prefix = "channels/" if "channel" in component else ""
+    y_pred_components[prefix + component].plot.line(
+        ax=ax[i],
+        label="In-sample prediction",
+    )
+    y_components[component].plot.line(
+        ax=ax[i],
+        label="Observed",
+    )
+    error = metric(y_components[component], y_pred_components[prefix + component])
+    ax[i].set_title(component + f" - MAPE: {error:.2%}")
+    ax[i].legend()
+
+fig.tight_layout()
+
+
+# %% [markdown]
+
+## Cross-validation with investment
+
+
+# %%
+
+results_investment = evaluate(
+    forecaster=model_with_investment,
+    y=y,
+    X=X,
+    cv=ExpandingWindowSplitter(
+        initial_window=365 * 5, step_length=250, fh=list(range(1, 90 + 1))
+    ),
+    scoring=MeanAbsolutePercentageError(),
+    return_data=True,
+)
+
+# %%
+
+fig, axs = plt.subplots(
+    nrows=results_investment.shape[0],
+    ncols=1,
+    figsize=(12, 6 * results_investment.shape[0]),
+)
+for row_id, row_data in results_investment.iterrows():
+
+    _y = pd.concat([row_data["y_train"].iloc[-100:], row_data["y_test"]])
+    _y.plot.line(ax=axs[row_id], label="Observed", color="black")
+    row_data["y_pred"].plot.line(
+        ax=axs[row_id],
+        label="Prediction",
+    )
+    axs[row_id].axvspan(
+        row_data["y_train"].index[0],
+        row_data["y_train"].index[-1],
+        color="lightblue",
+        alpha=0.2,
+    )
+
+    axs[row_id].set_title(f"MAPE: {row_data['test_MeanAbsolutePercentageError']:.2%}")
+    axs[row_id].legend()
+
+# %%

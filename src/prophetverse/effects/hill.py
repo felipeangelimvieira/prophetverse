@@ -39,6 +39,7 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         max_effect_prior: Optional[Distribution] = None,
         offset_slope: Optional[float] = 0.0,
         input_scale: Optional[float] = 1.0,
+        base_effect_name="trend",
     ):
         self.half_max_prior = half_max_prior
         self.slope_prior = slope_prior
@@ -56,7 +57,7 @@ class HillEffect(BaseAdditiveOrMultiplicativeEffect):
         self.offset_slope = offset_slope
         self.input_scale = input_scale
 
-        super().__init__(effect_mode=effect_mode)
+        super().__init__(effect_mode=effect_mode, base_effect_name=base_effect_name)
 
     def _predict(
         self,

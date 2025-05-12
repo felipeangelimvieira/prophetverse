@@ -148,17 +148,21 @@ for i, component in enumerate(components):
 # %%
 
 
-from sktime.forecasting.model_selection import ExpandingWindowSplitter
+from sktime.split import ExpandingWindowSplitter, TestPlusTrainSplitter
 from sktime.forecasting.model_evaluation import evaluate
 
+
+cv_y = ExpandingWindowSplitter(
+    initial_window=365 * 5, step_length=250, fh=list(range(1, 90 + 1))
+)
+cv_X = TestPlusTrainSplitter(cv_y)
 
 results = evaluate(
     forecaster=model,
     y=y,
     X=X_holidays,
-    cv=ExpandingWindowSplitter(
-        initial_window=365 * 5, step_length=250, fh=list(range(1, 90 + 1))
-    ),
+    cv=cv_y,
+    cv_X=cv_X,
     scoring=MeanAbsolutePercentageError(),
     return_data=True,
 )
@@ -283,9 +287,8 @@ results_investment = evaluate(
     forecaster=model_with_investment,
     y=y,
     X=X,
-    cv=ExpandingWindowSplitter(
-        initial_window=365 * 5, step_length=250, fh=list(range(1, 90 + 1))
-    ),
+    cv=cv_y,
+    cv_X=cv_X,
     scoring=MeanAbsolutePercentageError(),
     return_data=True,
 )

@@ -3,7 +3,6 @@
 from typing import Any, Dict, Literal, Optional
 import numpyro
 import jax.numpy as jnp
-import numpyro.primitives
 import pandas as pd
 from skbase.base import BaseObject
 import numpyro
@@ -55,7 +54,7 @@ class BaseEffect(BaseObject):
         The id of the effect, by default "". Used to identify the effect in the model.
     regex : Optional[str], optional
         A regex pattern to match the columns of the exogenous variables dataframe,
-        by default None. If None, and _tags["skip_predict_if_no_match"] is True, the
+        by default None. If None, and _tags["requires_X"] is True, the
         effect will be skipped if no columns are found.
     effect_mode : EFFECT_APPLICATION_TYPE, optional
         The mode of the effect, either "additive" or "multiplicative", by default
@@ -67,7 +66,7 @@ class BaseEffect(BaseObject):
     ----------
     should_skip_predict : bool
         If True, the effect should be skipped during prediction. This is determined by
-        the `skip_predict_if_no_match` tag and the presence of input feature columns
+        the `requires_X` tag and the presence of input feature columns
         names. If the tag is True and there are no input feature columns names, the
         effect should be skipped during prediction.
     """
@@ -79,7 +78,7 @@ class BaseEffect(BaseObject):
         "capability:multivariate_input": False,
         # If no columns are found, should
         # _predict be skipped?
-        "skip_predict_if_no_match": True,
+        "requires_X": True,
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
@@ -163,6 +162,15 @@ class BaseEffect(BaseObject):
         the data needed for the effect. Those data will be passed to the `predict`
         method as `data` argument.
 
+        The private methods `_transform` should always return one of the
+        following:
+
+        * a `jnp.ndarray`, with an array or tensor with the data
+          from the exogenous variables
+        * a tuple, where the first element is a `jnp.ndarray` with the data
+            from the exogenous variables, and the rest of the elements are
+        * a dict, where one of the keys must be "data" and the value
+
         Parameters
         ----------
         X : pd.DataFrame
@@ -200,6 +208,22 @@ class BaseEffect(BaseObject):
         return self._transform(X, fh)
 
     def _broadcast_transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+        """
+        Broadcasts the transform method to handle multiple columns
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input DataFrame containing the exogenous variables for the training
+            time indexes, if passed during fit, or for the forecasting time indexes, if
+            passed during predict.
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
+
+        Returns
+        -------
+        jnp.ndarray
+        """
 
         outputs = []
         for column in X.columns:
@@ -357,6 +381,34 @@ class BaseEffect(BaseObject):
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
 
+    def _update_data(self, data: jnp.ndarray, arr: jnp.ndarray):
+        """
+        Update the data obtained from .transform with a new array.
+
+        This method is used during optimization to update the transformed
+        data, given an array with new information.
+
+        If
+        """
+
+        if isinstance(data, jnp.ndarray):
+            return arr
+        if isinstance(data, tuple):
+            return (arr, *data[1:])
+        if isinstance(data, dict):
+            data = data.copy()
+            data["data"] = arr
+            return data
+        if isinstance(data, list):
+            out = []
+            for i, d in enumerate(data):
+                out.append(self._update_data(d, arr[:, i].reshape((-1, 1))))
+            return out
+        raise ValueError(
+            f"Unexpected data type {type(data)}. "
+            "Expected jnp.ndarray, tuple, dict or list."
+        )
+
     # TODO: Remove in version 0.8.0
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -388,7 +440,7 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         The id of the effect, by default "".
     regex : Optional[str], optional
         A regex pattern to match the columns of the exogenous variables dataframe,
-        by default None. If None, and _tags["skip_predict_if_no_match"] is True, the
+        by default None. If None, and _tags["requires_X"] is True, the
         effect will be skipped if no columns are found.
     effect_mode : EFFECT_APPLICATION_TYPE, optional. Can be "additive"
         or "multiplicative".

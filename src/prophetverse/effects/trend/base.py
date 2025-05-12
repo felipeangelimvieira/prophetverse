@@ -22,7 +22,7 @@ class TrendEffectMixin:
     """
 
     _tags = {
-        "skip_predict_if_no_match": False,
+        "requires_X": False,
         "capability:panel": True,
         "capability:multivariate_input": True,
     }

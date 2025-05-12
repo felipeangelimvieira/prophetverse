@@ -9,7 +9,7 @@ from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect, BaseEf
 class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
     """Most simple class to test abstracteffect methods."""
 
-    _tags = {"skip_predict_if_no_match": False}
+    _tags = {"requires_X": False}
 
     def _predict(self, data, predicted_effects, params) -> jnp.ndarray:
         """Calculate simple effect."""
@@ -94,6 +94,7 @@ def test_broadcasting():
     )
     assert jnp.allclose(out, expected), "Broadcasting effect prediction failed."
 
+
 def test_sample_params_warning():
     import warnings
 
@@ -112,3 +113,29 @@ def test_sample_params_warning():
     w = caught[0]
     assert issubclass(w.category, FutureWarning)
 
+
+def test_update_data():
+
+    effect = BaseEffect()
+
+    # Array
+    data_in = jnp.array([[1.0, 2.0]])
+    data_out = jnp.array([[3.0, 4.0]])
+    out = effect._update_data(data_in, data_out)
+    assert jnp.array_equal(out, data_out), "Data update failed"
+
+    # Tuple
+    out = effect._update_data((data_in, None), data_out)
+    assert jnp.array_equal(out[0], data_out), "Data update failed"
+    assert out[1] is None, "Data update failed"
+
+    # List
+    data_in_list = [jnp.array([[1.0, 2.0]]), jnp.array([[3.0, 4.0]])]
+    data_out_list = jnp.array([[5.0, 6.0], [7.0, 8.0]])
+    out = effect._update_data(data_in_list, data_out_list)
+    assert len(out) == 2, "Data update failed"
+    assert jnp.array_equal(out[0], data_out_list[:, [0]]), "Data update failed"
+    assert jnp.array_equal(out[1], data_out_list[:, [1]]), "Data update failed"
+
+    with pytest.raises(ValueError):
+        effect._update_data("error", data_out)

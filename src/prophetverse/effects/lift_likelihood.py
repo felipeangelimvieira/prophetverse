@@ -32,7 +32,7 @@ class LiftExperimentLikelihood(BaseEffect):
         The scale of the prior distribution for the likelihood.
     """
 
-    _tags = {"skip_predict_if_no_match": False, "capability:panel": False}
+    _tags = {"requires_X": False, "capability:panel": False}
 
     def __init__(
         self,

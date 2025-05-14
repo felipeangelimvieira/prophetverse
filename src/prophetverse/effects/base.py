@@ -8,6 +8,7 @@ from skbase.base import BaseObject
 import numpyro
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
+from collections import OrderedDict
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
@@ -84,12 +85,15 @@ class BaseEffect(BaseObject):
         "filter_indexes_with_forecating_horizon_at_transform": True,
         # Is fit() required before calling transform()?
         "requires_fit_before_transform": False,
+        # should this effect be applied to `y` (target) or
+        # `X` (exogenous variables)?
+        "applies_to": "X",
     }
 
     def __init__(self):
         self._is_fitted: bool = False
         super().__init__()
-        self.broadcasted_ = False
+        self._broadcasted = False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -132,7 +136,19 @@ class BaseEffect(BaseObject):
         if X is not None:
             self.columns_ = X.columns.tolist()
 
-        self._fit(y=y, X=X, scale=scale)
+        data = X if self.get_tag("applies_to", "X") == "X" else y
+
+        if (
+            data is not None
+            and len(data.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
+        ):
+            self.effects_ = OrderedDict(
+                (column, self.clone()) for column in data.columns
+            )
+            self._broadcast("fit", X=X, y=y, scale=scale)
+        else:
+            self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
@@ -208,21 +224,21 @@ class BaseEffect(BaseObject):
             and len(X.columns) > 1
             and not self.get_tag("capability:multivariate_input", False)
         ):
-            return self._broadcast_transform(X, fh)
+            return self._broadcast("transform", X=X, fh=fh)
         return self._transform(X, fh)
 
-    def _broadcast_transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+    def _broadcast(self, methodname: str, X, **kwargs):
         """
-        Broadcasts the transform method to handle multiple columns
+        Broadcasts a method to  handle multiple columns of the input DataFrame.
 
         Parameters
         ----------
-        X : pd.DataFrame
-            The input DataFrame containing the exogenous variables for the training
-            time indexes, if passed during fit, or for the forecasting time indexes, if
-            passed during predict.
-        fh : pd.Index
-            The forecasting horizon as a pandas Index.
+        methodname : str
+            The name of the method to be called.
+        *args : tuple
+            Positional arguments to be passed to the method.
+        **kwargs : dict
+            Keyword arguments to be passed to the method.
 
         Returns
         -------
@@ -230,8 +246,10 @@ class BaseEffect(BaseObject):
         """
 
         outputs = []
-        for column in X.columns:
-            xt = self._transform(X[[column]], fh)
+        for column in self.columns_:
+            X_ = X[[column]]
+            effect_ = self.effects_[column]
+            xt = getattr(effect_, methodname)(X=X_, **kwargs)
             outputs.append(xt)
         return outputs
 
@@ -297,8 +315,11 @@ class BaseEffect(BaseObject):
         if isinstance(data, list):
             x = 0
             for i, _data in enumerate(data):
+                effect_ = self.effects_[self.columns_[i]]
                 with numpyro.handlers.scope(prefix=self.columns_[i]):
-                    out = self._predict(_data, predicted_effects, params)
+                    out = effect_.predict(
+                        data=_data, predicted_effects=predicted_effects, params=params
+                    )
                 out = numpyro.deterministic(self.columns_[i], out)
                 x += out
 

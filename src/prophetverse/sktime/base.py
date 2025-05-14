@@ -366,6 +366,7 @@ class BaseBayesianForecaster(BaseForecaster):
             )
 
         df = pd.concat(dfs, axis=1)
+        df = self._inv_scale_y(df)
 
         return df
 

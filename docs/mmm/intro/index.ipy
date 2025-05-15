@@ -1,501 +1,215 @@
 # %% [markdown]
-# # Forecasting with saturation and adstock effects
+# # Forecasting with Adstock and Saturation Effects
 #
-# In Marketing Mix Modeling (MMM), we usually model the effects of marketing
-# channels on sales using saturation and adstock effects. These effects are used to
-# model the diminishing returns of marketing channels and the time lag between
-# marketing spend and its impact on sales.
+# This notebook demonstrates how to load a synthetic marketing mix dataset using `get_dataset()`
+# from `prophetverse.datasets._mmm.lifttest`, and fit a Prophetverse model with
+# **adstock** and **saturation** effects. We will:
 #
-# There are many ways to model these effects, and they are particularly easy
-# to implement and extend in Prophetverse. We have already some built-in effects,
-# such as HillEffect and GeometricAdstockEffect, which we will be using
-# in this example.
+# 1. Load the data with `get_dataset()`
+# 2. Fit a Prophetverse model chaining `GeometricAdstockEffect` and `HillEffect`
+# 3. Generate in-sample predictions and components
+# 4. Perform backtesting via cross-validation
+# 5. Visualize saturation curves
 #
-# ## Data
-#
-# We will use synthetic a dataset with 4 marketing channels and 1 target variable.
-# The dataset also contains the true incremental effect of the channels,
-# so we will be able to compare the predictions with the true values.
-# In real-life scenarious, we usually do not have access to such information,
-# but we will see in other sections how you can incorporate the output of
-# lift tests and attribution models to improve and calibrate your MMM.
-#
-# In Prophetverse, we adopt the amazing representation convention of sktime,
-# which is a library for time series analysis in Python. Sktime allows different
-# types of data representation, but the most common one is using pandas dataframes.
-#
-# In the case of the target variable `y`, the dataframes should have as index a
-# datetime-like index, and the columns should be the target variables.
-# In the case of the exogenous variables `X`, the dataframes should also have
-# datetime-like index, and the columns should be the exogenous variables.
+# ---
 #
 # %%
-import matplotlib.pyplot as plt
-import numpy as np
+import numpyro
 import pandas as pd
+import matplotlib.pyplot as plt
 
-y_components = pd.read_csv(
-    # "https://raw.githubusercontent.com/felipeangelimvieira/mmm_datasets/refs/heads/main/dataset1/components.csv",
-    "../../../examples/personal/components.csv"
-)
-X = pd.read_csv(
-    # "https://raw.githubusercontent.com/felipeangelimvieira/mmm_datasets/refs/heads/main/dataset1/X.csv",
-    "../../../examples/personal/X.csv"
-)
+plt.style.use("seaborn-v0_8-whitegrid")
+numpyro.enable_x64()
 
-X["date"] = pd.to_datetime(X["date"]).dt.to_period("D")
-y_components["date"] = pd.to_datetime(y_components["date"]).dt.to_period("D")
+from prophetverse.datasets._mmm.lifttest import get_dataset
 
-X = X.set_index("date")
-y_components = y_components.set_index("date")
-
-X = X.drop("Unnamed: 0", axis=1)
-y_components = y_components.drop("Unnamed: 0", axis=1)
-
-y = y_components["obs"]
-y
-
-# %%
-y = y_components["obs"]
-y.plot.line(figsize=(12, 4))
-
-
+# 1. Load synthetic data
+y, X, lift_tests, true_components, _ = get_dataset()
+# Quick inspection
+print(f"Target (y) shape: {y.shape}")
+print(f"Exogenous (X) shape: {X.shape}")
+X.head()
 # %% [markdown]
+# ## 2. In-Sample Prediction
 #
-# The dataset has many dummy variables indicating holidays, and 4 marketing
-# channels' spend.
+# We build a Prophetverse model with:
+# - Piecewise linear trend
+# - Yearly and weekly seasonality
+# - Channel effects: Geometric Adstock + Hill Saturation
+#
 # %%
 
-X.filter(regex="channel*", axis=1).plot.line(figsize=(12, 4))
-
-# %% [markdown]
-# ## Fitting a model without media mix information
-#
-# First, let's fit a model without any media mix information. We define
-# the `X`` dataframe with the holidays variables
-# %%
-
-X_holidays = X.filter(regex="holiday*", axis=1)
-
-# %% [markdown]
-# We now create a Prophetverse model with the following components
-# * A **piecewise linear trend**: a trend that is composed of linear segments,
-# and we allow their slope to change every 600 days. The slope will be
-# learned from the data.
-# * **Yearly, monthly and weekly seasonality**: we use Fourier series to model
-# the seasonality, and we use 10, 3 and 3 Fourier terms for the yearly,
-# monthly and weekly seasonality, respectively. We could use one single
-# component for all of them, but we keep them separate to make it easier to visualize later.
-# * **Linear effects for holidays dummies**, with a Laplace prior: we use a linear effect with a Laplace prior. The laplace
-# prior is used to model the holidays effect, and it is a good choice
-# because it allows for a sparse representation of the effect.
-#
-# Initially, we will also add the channels as linear effects, and soon we
-# will add the adstock and saturation effects.
-#
-# We use MAP inference engine to have a quick fit, but you can also use
-# MCMC inference engine to get the full posterior distribution of the parameters.
-#
-# Importing the required components:
-# %%
-
+import matplotlib.pyplot as plt
+import numpyro.distributions as dist
 from prophetverse.effects import (
+    PiecewiseLinearTrend,
+    LinearFourierSeasonality,
     ChainedEffects,
     GeometricAdstockEffect,
-    LinearEffect,
-    LinearFourierSeasonality,
-    PiecewiseLinearTrend,
     HillEffect,
 )
 from prophetverse.sktime import Prophetverse
 from prophetverse.engine import MAPInferenceEngine
-from numpyro import distributions as dist
+from prophetverse.engine.optimizer import LBFGSSolver
 
-
-# %% [markdown]
-# In Prophetverse, we state the components in a declarative way. We define each
-# component as a tuple of (name, effect, regex), where `name` is the name of the component,
-# `effect` is the effect to be used, and `regex` is a regex to select the columns.
-# %%
-
-model = Prophetverse(
-    inference_engine=MAPInferenceEngine(
-        num_steps=1000,
+# Define seasonalities
+yearly = (
+    "yearly_seasonality",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[365.25],
+        fourier_terms_list=[5],
+        prior_scale=0.1,
+        effect_mode="multiplicative",
     ),
-    trend=PiecewiseLinearTrend(changepoint_interval=600),
-    exogenous_effects=[
-        (
-            "yearly_seasonality",
-            LinearFourierSeasonality(
-                sp_list=[365.25],
-                fourier_terms_list=[10],
-                prior_scale=0.1,
-                effect_mode="multiplicative",
-                freq="D",
-            ),
-            None,
-        ),
-        (
-            "monthly_seasonality",
-            LinearFourierSeasonality(
-                sp_list=[30.5],
-                fourier_terms_list=[3],
-                prior_scale=0.1,
-                effect_mode="multiplicative",
-                freq="D",
-            ),
-            None,
-        ),
-        (
-            "weekly_seasonality",
-            LinearFourierSeasonality(
-                sp_list=[7],
-                fourier_terms_list=[3],
-                prior_scale=0.1,
-                effect_mode="multiplicative",
-                freq="D",
-            ),
-            None,
-        ),
-        (
-            "holidays",
-            LinearEffect(
-                effect_mode="multiplicative",
-                prior=dist.Laplace(0, 0.1),
-            ),
-            "holiday*",
-        ),
-        (
-            "channels",
-            LinearEffect(
-                effect_mode="multiplicative",
-                prior=dist.Laplace(0, 0.1),
-                broadcast=True,  # to visualize the effect of each channel
-            ),
-            "channel*",
-        ),
-    ],
+    None,
 )
-model
+weekly = (
+    "weekly_seasonality",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[7],
+        fourier_terms_list=[3],
+        prior_scale=0.05,
+        effect_mode="multiplicative",
+    ),
+    None,
+)
+# Adstock + saturation effect
+hill = HillEffect(
+    half_max_prior=dist.HalfNormal(1),
+    slope_prior=dist.InverseGamma(2, 1),
+    max_effect_prior=dist.HalfNormal(1),
+    effect_mode="additive",
+    input_scale=1e6,
+)
+chained_search = (
+    "ad_spend_search",
+    ChainedEffects(
+        [
+            ("adstock", GeometricAdstockEffect()),
+            ("saturation", hill),
+        ]
+    ),
+    "ad_spend_search",
+)
+chained_social = (
+    "ad_spend_social_media",
+    ChainedEffects(
+        [
+            ("adstock", GeometricAdstockEffect()),
+            ("saturation", hill),
+        ]
+    ),
+    "ad_spend_social_media",
+)
 
-# %% [markdown]
-# We can now fit and predict. We predict in-sample first to check if the model
-# could converge with the full dataset
-# %%
+# Build and fit model
+model = Prophetverse(
+    trend=PiecewiseLinearTrend(changepoint_interval=100),
+    exogenous_effects=[yearly, weekly, chained_search, chained_social],
+    inference_engine=MAPInferenceEngine(
+        num_steps=5000, optimizer=LBFGSSolver(memory_size=200, max_linesearch_steps=200)
+    ),
+)
+
 model.fit(y=y, X=X)
-y_pred_insample = model.predict(X=X, fh=X.index)
-
-
-y.plot.line(
-    figsize=(12, 4),
-    label="Observed",
-)
-y_pred_insample.plot.line(
-    figsize=(12, 4),
-    label="In-sample prediction",
-)
+# In-sample prediction
+y_pred = model.predict(X=X, fh=X.index)
+# Plot observed vs predicted
+plt.figure(figsize=(12, 4))
+y.plot(label="Observed")
+y_pred.plot(label="Predicted")
 plt.legend()
-plt.title("In-sample prediction")
+plt.title("In-Sample Forecast: Observed vs Predicted")
 plt.show()
-
-
 # %% [markdown]
-# ## Cross-validation
+# ## 3. Component-Level Diagnostics
 #
-# In sample accuracy is not a good indicator of the model performance, so we
-# will use cross-validation to evaluate the model.
+# Compare estimated components against true values for trend, seasonality, and channel effects.
 #
-# Since we use `sktime` interface, we can leverage all of its features. We
-# import a metric (MAPE) and `ExpandingWindowSplitter` to
-# check its out-of-sample performance. The `ExpandingWindowSplitter` will
-# create a training set that expands over time, and a test set that is
-# always the same size.
-
 # %%
+y_pred_components = model.predict_components(X=X, fh=X.index)
 
+
+fig, axes = plt.subplots(nrows=4, figsize=(12, 12))
+# Trend
+t_true = true_components["trend"]
+t_est = y_pred_components["trend"]
+t_true.plot(ax=axes[0], label="True Trend", color="black")
+t_est.plot(ax=axes[0], label="Estimated Trend")
+axes[0].legend()
+# Yearly seasonality
+y_true = true_components["yearly_seasonality"]
+y_est = y_pred_components["yearly_seasonality"]
+y_true.plot(ax=axes[1], label="True Yearly", color="black")
+y_est.plot(ax=axes[1], label="Estimated Yearly")
+axes[1].legend()
+# Channel effects
+for i, channel in enumerate(["ad_spend_search", "ad_spend_social_media"], start=2):
+    true_components[channel].plot(ax=axes[i], label="True Effect", color="black")
+    y_pred_components[channel].plot(ax=axes[i], label="Estimated Effect")
+    axes[i].set_title(channel)
+    axes[i].legend()
+fig.tight_layout()
+plt.show()
+# %% [markdown]
+# ## 4. Backtesting with Cross-Validation
+#
+# We perform rolling-window cross-validation to evaluate out-of-sample performance using MAPE.
+#
+# %%
 from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
-from sktime.split import ExpandingWindowSplitter, TestPlusTrainSplitter
+from sktime.split import ExpandingWindowSplitter
 from sktime.forecasting.model_evaluation import evaluate
 
 metric = MeanAbsolutePercentageError()
-cv_y = ExpandingWindowSplitter(
-    initial_window=365 * 5, step_length=250, fh=list(range(1, 90 + 1))
+cv = ExpandingWindowSplitter(
+    initial_window=365 * 3, step_length=180, fh=list(range(1, 180))
 )
-cv_X = TestPlusTrainSplitter(cv_y)
-
 results = evaluate(
     forecaster=model,
     y=y,
-    X=X_holidays,
-    cv=cv_y,
-    # cv_X=cv_X,
-    scoring=MeanAbsolutePercentageError(),
-    return_data=True,
-)
-results
-
-# %% [markdown]
-# The average MAPE is:
-#
-
-# %%
-print(results["test_MeanAbsolutePercentageError"].mean())
-
-# %% [markdown]
-# The forecasts look like this:
-# %%
-
-fig, axs = plt.subplots(
-    nrows=results.shape[0],
-    ncols=1,
-    figsize=(12, 6 * results.shape[0]),
-)
-for row_id, row_data in results.iterrows():
-
-    _y = pd.concat([row_data["y_train"].iloc[-100:], row_data["y_test"]])
-    _y.plot.line(ax=axs[row_id], label="Observed", color="black")
-    row_data["y_pred"].plot.line(
-        ax=axs[row_id],
-        label="Prediction",
-    )
-    axs[row_id].axvspan(
-        row_data["y_train"].index[0],
-        row_data["y_train"].index[-1],
-        color="lightblue",
-        alpha=0.2,
-    )
-
-    axs[row_id].set_title(f"MAPE: {row_data['test_MeanAbsolutePercentageError']:.2%}")
-    axs[row_id].legend()
-
-# %% [markdown]
-# To visualize the components of the model, we can use the `predict_components` method.
-# %%
-
-y_pred_components = model.predict_components(X=X, fh=X.index)
-y_pred_components
-
-
-# %% [markdown]
-# Although accuracy is good, the channel effects are not very
-# good, as we will see below. It is important to highlight that, in MMM, small error
-# is not necessarily a sign of a good model.
-# %%
-
-components = [
-    "trend",
-    "yearly_seasonality",
-    "holidays",
-    "channelA",
-    "channelB",
-    "channelC",
-    "channelD",
-]
-
-
-fig, ax = plt.subplots(nrows=len(components), figsize=(12, 4 * len(components)))
-for i, component in enumerate(components):
-    prefix = "channels/" if "channel" in component else ""
-    y_pred_components[prefix + component].plot.line(
-        ax=ax[i],
-        label="In-sample prediction",
-    )
-    y_components[component].plot.line(
-        ax=ax[i],
-        label="Observed",
-    )
-    ax[i].set_title(component)
-    ax[i].legend()
-
-# %% [markdown]
-# ## Adding Adstock and Saturation Effects
-#
-# Now that we have a plain‐vanilla multiplicative model, let's enrich our
-# channel representation by chaining a **Geometric Adstock** with a
-# **Hill saturation** effect. This will allow us to capture both:
-#
-# 1. **Adstock** – the carry‐over / lagged impact of past investment, and
-# 2. **Saturation** – the diminishing returns as spend grows large.
-#
-# We wrap both in a `ChainedEffects` object and clone our original model,
-# appending this new channel effect definition.
-#
-# Our Hill Saturation effect will consider a multiplicative effect
-# with respect to the non‐media baseline (trend + seasonality + holidays).
-# We know that investment effectiveness typically changes with the baseline,
-# and this is what we try to capture here. Note how this is easy to do in
-# Prophetverse.
-
-# %%
-hill_effect = HillEffect(
-    half_max_prior=dist.InverseGamma(3, 2),
-    slope_prior=dist.InverseGamma(3, 2),
-    max_effect_prior=dist.InverseGamma(3, 2),
-    effect_mode="multiplicative",
-    input_scale=0.1,
-    base_effect_name=[
-        "trend",
-        "yearly_seasonality",
-        "holidays",
-    ],
-)
-hill_effect
-
-# %%
-from numpyro import distributions as dist
-
-chained_adstock_saturation = ChainedEffects(
-    steps=[
-        ("adstock", GeometricAdstockEffect(raise_error_if_fh_changes=False)),
-        ("saturation", hill_effect),
-    ],
-)
-
-# clone the baseline model and add the chained channel effects
-model_with_investment = model.clone()
-model_with_investment.set_params(channels=chained_adstock_saturation)
-
-# %% [markdown]
-# ### In-Sample Fit with Investment Effects
-#
-# We fit the augmented model and compare the in-sample predictions.
-
-# %%
-import numpyro
-
-numpyro.enable_x64()
-
-model_with_investment.fit(y=y, X=X)
-y_pred_insample_investment = model_with_investment.predict(X=X, fh=X.index)
-
-# plot observed vs. prediction
-y.plot.line(figsize=(12, 4), label="Observed")
-y_pred_insample_investment.plot.line(label="Predicted w/ Adstock+Sat")
-plt.legend()
-plt.title("In-Sample Forecast: Base vs. Investment Model")
-plt.show()
-
-# %% [markdown]
-# ### Component-Level Diagnostics
-#
-# Let's look at each component (trend, seasonality, holidays, channels)
-# and compute the in-sample MAPE for each channel.
-y_pred_components = model_with_investment.predict_components(X=X, fh=X.index)
-
-components = [
-    "trend",
-    "yearly_seasonality",
-    "holidays",
-    "channelA",
-    "channelB",
-    "channelC",
-    "channelD",
-]
-
-fig, ax = plt.subplots(nrows=len(components), figsize=(12, 4 * len(components)))
-for i, comp in enumerate(components):
-    key = ("channels/" + comp) if comp.startswith("channel") else comp
-    series_pred = y_pred_components[key]
-    series_true = y_components[comp]
-    # compute channel‐level MAPE if relevant
-    if comp.startswith("channel"):
-        err = metric(series_true, series_pred)
-        title = f"{comp} – MAPE: {err:.2%}"
-    else:
-        title = comp
-    series_pred.plot.line(ax=ax[i], label="Predicted")
-    series_true.plot.line(ax=ax[i], label="True")
-    ax[i].set_title(title)
-    ax[i].legend()
-fig.tight_layout()
-
-# %% [markdown]
-# We can see that incorporating adstock and saturation typically **reduces
-# channel MAPE**, indicating a better recovery of each channel’s true
-# incremental impact.
-
-# %% [markdown]
-# ## Cross-Validation with Investment Effects
-#
-# Next, we re-run our expanding‐window CV to see how the augmented model
-# performs out of sample.
-results_investment = evaluate(
-    forecaster=model_with_investment,
-    y=y,
     X=X,
-    cv=cv_y,
-    # cv_X=cv_X,
+    cv=cv,
     scoring=metric,
     error_score="raise",
     return_data=True,
 )
+print("Average OOS MAPE:", results["test_MeanAbsolutePercentageError"].mean())
 
 # %%
+import matplotlib.pyplot as plt
 
-previous_mape = results["test_MeanAbsolutePercentageError"].mean()
-new_mape = results_investment["test_MeanAbsolutePercentageError"].mean()
-print(f"Base model avg. MAPE: {previous_mape:.2%}")
-print(f"Adstock + Saturation model avg. MAPE: {new_mape:.2%}")
+# Plot each fold
+for idx, row in results.iterrows():
 
+    plt.figure(figsize=(10, 4))
+    data = pd.concat([row["y_train"].iloc[-100:], row["y_test"]])
+    data.plot(label="Observed", color="black")
+    row["y_pred"].plot(label="Prediction")
+    plt.title(f"Fold {idx+1} – MAPE: {row['test_MeanAbsolutePercentageError']:.2%}")
+    plt.legend()
+    plt.show()
+
+    if idx > 3:
+        break  # Limit to first 4 folds for brevity
 # %% [markdown]
-# Although good out-of-sample does not mean good in-sample, we can see that
-# by better capturing the incremental effect, we could improve our
-# out of sample performance.
-# %%
-# plot each fold
-fig, axs = plt.subplots(
-    nrows=results_investment.shape[0],
-    ncols=1,
-    figsize=(12, 6 * results_investment.shape[0]),
-)
-for idx, row in results_investment.iterrows():
-    history = pd.concat([row["y_train"].iloc[-100:], row["y_test"]])
-    history.plot.line(ax=axs[idx], label="Observed", color="black")
-    row["y_pred"].plot.line(ax=axs[idx], label="Predicted")
-    axs[idx].axvspan(
-        row["y_train"].index[0],
-        row["y_train"].index[-1],
-        color="lightblue",
-        alpha=0.2,
-    )
-    mape = row["test_MeanAbsolutePercentageError"]
-    axs[idx].set_title(f"Fold {idx + 1} – MAPE: {mape:.2%}")
-    axs[idx].legend()
-plt.tight_layout()
-
-# %%
-# Compare average MAPE
-base_mape = results["test_MeanAbsolutePercentageError"].mean()
-inv_mape = results_investment["test_MeanAbsolutePercentageError"].mean()
-print(f"Base model avg. MAPE: {base_mape:.2%}")
-print(f"Investment model avg. MAPE: {inv_mape:.2%}")
-
-# %% [markdown]
-# We observe the out-of-sample MAPE dropping from
-# **{base_mape:.2%}** to **{inv_mape:.2%}**, confirming that modeling
-# adstock + saturation improves predictive performance.
-
-# %% [markdown]
-# ## Visualizing Saturation Curves
+# ## 5. Saturation Curves
 #
-# Finally, let's inspect how each channel’s marginal ROI behaves by
-# plotting the ratio of the channel component to the non‐media baseline
-# (trend + seasonality + holidays) against historical spend:
-fig, ax = plt.subplots(figsize=(10, 6))
-baseline = (
-    y_pred_components["trend"]
-    + y_pred_components["yearly_seasonality"]
-    + y_pred_components["holidays"]
-)
-for ch in ["channelA", "channelB", "channelC", "channelD"]:
-    ax.scatter(
-        X[ch],
-        y_pred_components[f"channels/{ch}"] / baseline,
-        label=ch,
-        alpha=0.6,
-    )
-ax.set_xlabel("Daily Spend")
-ax.set_ylabel("Incremental % of Baseline")
-ax.set_title("Saturation Curves: Spend vs. Incremental Return")
-ax.legend()
+# Plot the marginal ROI (effect / baseline) vs spend for each channel.
+#
+# %%
+baseline = y_pred_components["trend"] + y_pred_components["yearly_seasonality"]
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(8, 6))
+for channel in ["ad_spend_search", "ad_spend_social_media"]:
+    plt.scatter(X[channel], y_pred_components[channel], alpha=0.6, label=channel)
+plt.xlabel("Daily Spend")
+plt.ylabel("Incremental Effect")
+plt.title("Saturation Curves")
+plt.legend()
 plt.show()
+
+# %%

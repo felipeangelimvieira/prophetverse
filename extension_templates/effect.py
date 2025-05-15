@@ -18,7 +18,7 @@ class MySimpleEffectName(BaseEffect):
         "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
-        "skip_predict_if_no_match": True,
+        "requires_X": True,
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
@@ -57,7 +57,7 @@ class MySimpleEffectName(BaseEffect):
         # series
 
         # Here you use the params to compute the effect.
-        rcapability: panelror("Subclasses must implement _predict()")
+        raise NotImplementedError("Subclasses must implement _predict()")
 
 
 class MyEffectName(BaseEffect):
@@ -69,7 +69,7 @@ class MyEffectName(BaseEffect):
         "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
-        "skip_predict_if_no_match": True,
+        "requires_X": True,
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,

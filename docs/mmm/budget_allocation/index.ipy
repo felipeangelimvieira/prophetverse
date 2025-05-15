@@ -1,0 +1,337 @@
+# %% [markdown]
+# # UMM Tutorial Part I: Data Loading & Model Setup
+#
+# In this tutorial we’ll:
+#
+# 1. Load the synthetic MMM dataset (time-series + lift tests)
+# 2. Define a Prophetverse model that incorporates:
+#    - **LiftExperimentLikelihood** for randomized spend experiments
+#    - **ExactLikelihood** for day-by-day attribution outputs
+#
+# This sets the stage for Joint Time-Series + Experimental modeling.
+
+# %%
+import numpyro
+
+numpyro.enable_x64()
+
+import matplotlib.pyplot as plt
+from prophetverse.datasets._mmm.dataset1 import get_dataset
+
+# 1. Load synthetic data
+y, X, lift_tests, true_components, _ = get_dataset()
+
+# Inspect
+print(f"y: {y.shape=}")
+print(f"X: {X.shape=}")
+print(f"Lift tests: {[df.shape for df in lift_tests]}")
+
+# %% [markdown]
+# ## 2. Prepare Lift & Attribution Data
+#
+# - `lift_tests` is a list of two DataFrames (one per channel), each with:
+#   `date`, `x_start`, `x_end`, `lift`, `se`
+# - We’ll also simulate a day-by-day “attribution” series for each channel.
+
+# %%
+import numpy as np
+
+lift_search, lift_social = lift_tests
+
+# Create synthetic attribution by perturbing the true component
+rng = np.random.default_rng(0)
+attrib_search = true_components[["ad_spend_search"]] * rng.normal(
+    1, 0.1, size=(len(y), 1)
+)
+attrib_social = true_components[["ad_spend_social_media"]] * rng.normal(
+    1, 0.1, size=(len(y), 1)
+)
+
+# %% [markdown]
+# ## 3. Define Model with Lift + Attribution Likelihoods
+#
+# We start from a simple trend + seasonality + channel chain, then wrap each
+# channel effect in:
+# - `LiftExperimentLikelihood` to anchor to our randomized tests
+# - `ExactLikelihood` to tie to our attribution series
+
+# %%
+from numpyro import distributions as dist
+from prophetverse.effects import (
+    PiecewiseLinearTrend,
+    LinearFourierSeasonality,
+    ChainedEffects,
+    GeometricAdstockEffect,
+    HillEffect,
+    ExactLikelihood,
+)
+from prophetverse.effects.lift_likelihood import LiftExperimentLikelihood
+from prophetverse.sktime import Prophetverse
+from prophetverse.engine import MAPInferenceEngine
+
+# Seasonalities
+yearly = (
+    "yearly",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[365.25],
+        fourier_terms_list=[5],
+        prior_scale=0.1,
+        effect_mode="multiplicative",
+    ),
+    None,
+)
+weekly = (
+    "weekly",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[7],
+        fourier_terms_list=[3],
+        prior_scale=0.05,
+        effect_mode="multiplicative",
+    ),
+    None,
+)
+
+# Base channel effect (adstock + hill saturation)
+base_hill = HillEffect(
+    half_max_prior=dist.HalfNormal(1.0),
+    slope_prior=dist.InverseGamma(2, 1),
+    max_effect_prior=dist.InverseGamma(2, 1),
+    effect_mode="multiplicative",
+    input_scale=1e6,
+)
+
+chained_search = ChainedEffects(
+    [
+        ("adstock", GeometricAdstockEffect()),
+        ("saturation", base_hill),
+    ]
+)
+chained_social = ChainedEffects(
+    [
+        ("adstock", GeometricAdstockEffect()),
+        ("saturation", base_hill),
+    ]
+)
+
+# Wrap in LiftExperimentLikelihood
+lift_effect_search = LiftExperimentLikelihood(
+    effect=chained_search, lift_test_results=lift_search, prior_scale=0.05
+)
+lift_effect_social = LiftExperimentLikelihood(
+    effect=chained_social, lift_test_results=lift_social, prior_scale=0.05
+)
+
+# Add attribution likelihoods
+exact_effect_search = ExactLikelihood(
+    effect_name="ad_spend_search", reference_df=attrib_search, prior_scale=0.1
+)
+exact_effect_social = ExactLikelihood(
+    effect_name="ad_spend_social_media", reference_df=attrib_social, prior_scale=0.1
+)
+
+# Build model
+model = Prophetverse(
+    trend=PiecewiseLinearTrend(changepoint_interval=100),
+    exogenous_effects=[
+        yearly,
+        weekly,
+        ("ad_spend_search", lift_effect_search, "ad_spend_search"),
+        ("ad_spend_social_media", lift_effect_social, "ad_spend_social_media"),
+        ("attrib_search", exact_effect_search, None),
+        ("attrib_social", exact_effect_social, None),
+    ],
+    inference_engine=MAPInferenceEngine(num_steps=2000),
+)
+
+# Model summary
+model
+# %%
+
+model.fit(X=X, y=y)
+
+# %%
+import pandas as pd
+
+from prophetverse.experimental.budget_optimization import (
+    BudgetOptimizer,
+    SharedBudgetConstraint,
+    MaximizeKPI,
+)
+
+
+budget_optimizer = BudgetOptimizer(
+    objective=MaximizeKPI(),
+    constraints=[SharedBudgetConstraint()],
+)
+
+horizon = pd.period_range("2004-01-01", "2004-12-31", freq="D")
+X_opt = budget_optimizer.optimize(
+    model=model,
+    X=X,
+    horizon=horizon,
+    columns=["ad_spend_search", "ad_spend_social_media"],
+)
+
+# %%
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+X.loc["2004", ["ad_spend_search", "ad_spend_social_media"]].plot(
+    ax=ax[0], title="Baseline Spend"
+)
+X_opt.loc["2004", ["ad_spend_search", "ad_spend_social_media"]].plot(
+    ax=ax[1], title="Optimized Spend"
+)
+ax[0].set_ylabel("Spend")
+ax[1].set_ylabel("Spend")
+ax[0].set_xlabel("Date")
+ax[1].set_xlabel("Date")
+plt.tight_layout()
+plt.show()
+
+# %%
+y_pred_baseline = model.predict(X=X, fh=horizon)
+y_pred_opt = model.predict(X=X_opt, fh=horizon)
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(12, 6))
+plt.plot(y_pred_baseline.index.to_timestamp(), y_pred_baseline, label="Baseline")
+plt.plot(y_pred_opt.index.to_timestamp(), y_pred_opt, label="Optimized")
+
+# %% [markdown]
+#
+# ## Optimizing channel share
+#
+
+# %%
+
+from prophetverse.experimental.budget_optimization import InvestmentPerChannelTransform
+
+budget_optimizer = BudgetOptimizer(
+    objective=MaximizeKPI(),
+    constraints=[SharedBudgetConstraint()],
+    parametrization_transform=InvestmentPerChannelTransform(),
+)
+
+X_opt = budget_optimizer.optimize(
+    model=model,
+    X=X,
+    horizon=horizon,
+    columns=["ad_spend_search", "ad_spend_social_media"],
+)
+
+
+# %%
+fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+X.loc["2004", ["ad_spend_search", "ad_spend_social_media"]].plot(
+    ax=ax[0], title="Baseline Spend"
+)
+X_opt.loc["2004", ["ad_spend_search", "ad_spend_social_media"]].plot(
+    ax=ax[1], title="Optimized Spend"
+)
+ax[0].set_ylabel("Spend")
+ax[1].set_ylabel("Spend")
+ax[0].set_xlabel("Date")
+ax[1].set_xlabel("Date")
+plt.tight_layout()
+plt.show()
+# %%
+y_pred_baseline = model.predict(X=X, fh=horizon)
+y_pred_opt = model.predict(X=X_opt, fh=horizon)
+
+total_baseline = y_pred_baseline.sum()
+total_opt = y_pred_opt.sum()
+plt.figure(figsize=(12, 6))
+plt.plot(y_pred_baseline.index.to_timestamp(), y_pred_baseline, label="Baseline")
+plt.plot(y_pred_opt.index.to_timestamp(), y_pred_opt, label="Optimized")
+plt.legend()
+plt.title(
+    f"MMM Predictions - Baseline: {total_baseline/1e9:.2f}B - Optimized: {total_opt/1e9:.2f}B"
+)
+plt.xlabel("Date")
+plt.ylabel("Predicted Sales")
+plt.show()
+
+
+# %% [markdown]
+# ## Mimizing budget to reach a target
+#
+# The current YoY is
+#
+# %%
+print(y.loc["2004"].sum() / y.loc["2003"].sum() - 1)
+
+#  %% [markdown]
+#
+# How much should we invest to reach 50% in 2005?
+#
+# Let's create a dataframe expanding to year 2005
+
+# %%
+
+
+X_next_year = X.copy()
+X_next_year.index = X_next_year.index + 366
+X_next_year = X_next_year.loc["2005"]
+X_next_year
+# %%
+
+from prophetverse.experimental.budget_optimization import (
+    MinimizeBudget,
+    MinimumTargetResponse,
+)
+
+target = y.loc["2004"].sum() * 1.5
+
+budget_optimizer = BudgetOptimizer(
+    objective=MinimizeBudget(),
+    constraints=[MinimumTargetResponse(target_response=target)],
+)
+
+X_opt = budget_optimizer.optimize(
+    model=model,
+    X=X_next_year,
+    horizon=X_next_year.index,
+    columns=["ad_spend_search", "ad_spend_social_media"],
+)
+
+# %%
+y_pred_baseline = model.predict(X=X_next_year, fh=X_next_year.index)
+y_pred_opt = model.predict(X=X_opt, fh=X_next_year.index)
+total_baseline = y_pred_baseline.sum()
+total_opt = y_pred_opt.sum()
+
+plt.figure(figsize=(12, 6))
+plt.plot(
+    y_pred_baseline.index.to_timestamp(),
+    y_pred_baseline,
+    label="Baseline",
+)
+plt.plot(
+    y_pred_opt.index.to_timestamp(),
+    y_pred_opt,
+    label="Optimized",
+)
+plt.legend()
+plt.title(
+    f"MMM Predictions - Baseline: {total_baseline/1e9:.2f}B - Optimized: {total_opt/1e9:.2f}B"
+)
+plt.xlabel("Date")
+plt.ylabel("Predicted Sales")
+plt.show()
+# %%
+fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+X_next_year.loc[:, ["ad_spend_search", "ad_spend_social_media"]].plot(
+    ax=ax[0], title="Baseline Spend"
+)
+X_opt.loc[:, ["ad_spend_search", "ad_spend_social_media"]].plot(
+    ax=ax[1], title="Optimized Spend"
+)
+ax[0].set_ylabel("Spend")
+ax[1].set_ylabel("Spend")
+ax[0].set_xlabel("Date")
+ax[1].set_xlabel("Date")
+plt.tight_layout()
+plt.show()

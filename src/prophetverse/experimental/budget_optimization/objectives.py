@@ -82,10 +82,11 @@ class MinimizeBudget(BaseOptimizationObjective):
     Minimize budget constraint objective function.
     """
 
-    def __init__(self):
+    def __init__(self, scale=1):
+        self.scale = scale
         super().__init__()
 
-    def _objective(self, x: jnp.ndarray, *args):
+    def _objective(self, x: jnp.ndarray, budget_optimizer):
         """
         Compute objective function value from `obs` site
 
@@ -99,6 +100,6 @@ class MinimizeBudget(BaseOptimizationObjective):
         float
             Objective function value
         """
-        total_investment = x.sum()
+        total_investment = x.sum() / self.scale
 
         return total_investment

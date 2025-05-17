@@ -8,6 +8,7 @@ from .constraints import SharedBudgetConstraint, MinimumTargetResponse
 from .parametrization_transformations import (
     IdentityTransform,
     InvestmentPerChannelTransform,
+    TotalInvestmentTransform,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "MinimumTargetResponse",
     "IdentityTransform",
     "InvestmentPerChannelTransform",
+    "TotalInvestmentTransform",
 ]

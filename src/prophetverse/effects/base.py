@@ -8,6 +8,7 @@ from skbase.base import BaseObject
 import numpyro
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
+from collections import OrderedDict
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
@@ -84,12 +85,15 @@ class BaseEffect(BaseObject):
         "filter_indexes_with_forecating_horizon_at_transform": True,
         # Is fit() required before calling transform()?
         "requires_fit_before_transform": False,
+        # should this effect be applied to `y` (target) or
+        # `X` (exogenous variables)?
+        "applies_to": "X",
     }
 
     def __init__(self):
         self._is_fitted: bool = False
         super().__init__()
-        self.broadcasted_ = False
+        self._broadcasted = False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -128,7 +132,21 @@ class BaseEffect(BaseObject):
                     + "support multivariate data"
                 )
 
-        self._fit(y=y, X=X, scale=scale)
+        self.columns_ = None
+        if X is not None:
+            self.columns_ = X.columns.tolist()
+
+        data = X if self.get_tag("applies_to", "X") == "X" else y
+
+        if (
+            data is not None
+            and len(data.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
+        ):
+            self._set_broadcasting_attributes(data)
+            self._broadcast("fit", X=X, y=y, scale=scale)
+        else:
+            self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
@@ -204,21 +222,26 @@ class BaseEffect(BaseObject):
             and len(X.columns) > 1
             and not self.get_tag("capability:multivariate_input", False)
         ):
-            return self._broadcast_transform(X, fh)
+            if not self._is_fitted:
+                # Since the broadcasting attributes are set during fit,
+                # we need to set them
+                self._set_broadcasting_attributes(X)
+
+            return self._broadcast("transform", X=X, fh=fh)
         return self._transform(X, fh)
 
-    def _broadcast_transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+    def _broadcast(self, methodname: str, X, **kwargs):
         """
-        Broadcasts the transform method to handle multiple columns
+        Broadcasts a method to  handle multiple columns of the input DataFrame.
 
         Parameters
         ----------
-        X : pd.DataFrame
-            The input DataFrame containing the exogenous variables for the training
-            time indexes, if passed during fit, or for the forecasting time indexes, if
-            passed during predict.
-        fh : pd.Index
-            The forecasting horizon as a pandas Index.
+        methodname : str
+            The name of the method to be called.
+        *args : tuple
+            Positional arguments to be passed to the method.
+        **kwargs : dict
+            Keyword arguments to be passed to the method.
 
         Returns
         -------
@@ -226,8 +249,10 @@ class BaseEffect(BaseObject):
         """
 
         outputs = []
-        for column in X.columns:
-            xt = self._transform(X[[column]], fh)
+        for column in self.columns_:
+            X_ = X[[column]]
+            effect_ = self.effects_[column]
+            xt = getattr(effect_, methodname)(X=X_, **kwargs)
             outputs.append(xt)
         return outputs
 
@@ -293,8 +318,14 @@ class BaseEffect(BaseObject):
         if isinstance(data, list):
             x = 0
             for i, _data in enumerate(data):
-                with numpyro.handlers.scope(prefix=f"dim{i}"):
-                    x += self._predict(_data, predicted_effects, params)
+                effect_ = self.effects_[self.columns_[i]]
+                with numpyro.handlers.scope(prefix=self.columns_[i]):
+                    out = effect_.predict(
+                        data=_data, predicted_effects=predicted_effects, params=params
+                    )
+                out = numpyro.deterministic(self.columns_[i], out)
+                x += out
+
         else:
             x = self._predict(data, predicted_effects, params)
         return x
@@ -409,6 +440,19 @@ class BaseEffect(BaseObject):
             "Expected jnp.ndarray, tuple, dict or list."
         )
 
+    def _set_broadcasting_attributes(self, X):
+        """
+        Set broadcasting attributes for the effect.
+
+        This method is called during the `fit` method to set the
+        broadcasting attributes for the effect, or during `transform`
+        of the method does not require fitting before transform.
+        """
+
+        self.effects_ = OrderedDict((column, self.clone()) for column in X.columns)
+        self.columns_ = X.columns.tolist()
+        self._broadcasted = True
+
     # TODO: Remove in version 0.8.0
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -459,6 +503,11 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
 
         super().__init__()
 
+        if not isinstance(self.base_effect_name, list):
+            self._base_effect_name = [self.base_effect_name]
+        else:
+            self._base_effect_name = self.base_effect_name
+
     def predict(
         self,
         data: Any,
@@ -491,16 +540,16 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         if self.effect_mode == "additive":
             return x
 
-        if (
-            self.base_effect_name not in predicted_effects
-            and self.effect_mode == "multiplicative"
-        ):
-            raise ValueError(
-                "BaseAdditiveOrMultiplicativeEffect requires trend in"
-                + " predicted_effects"
-            )
+        base_effect = 0
+        for base_effect_name in self._base_effect_name:
+            if base_effect_name not in predicted_effects:
+                raise ValueError(
+                    f"BaseAdditiveOrMultiplicativeEffect requires {base_effect_name} in"
+                    + " predicted_effects"
+                )
 
-        base_effect = predicted_effects[self.base_effect_name]
+            base_effect += predicted_effects[base_effect_name]
+
         if base_effect.ndim == 1:
             base_effect = base_effect.reshape((-1, 1))
         x = x.reshape(base_effect.shape)

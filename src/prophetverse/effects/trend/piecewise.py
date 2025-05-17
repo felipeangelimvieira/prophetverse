@@ -390,7 +390,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
 
         def zeros_with_first_value(size, first_value):
             x = jnp.zeros(size)
-            x.at[0].set(first_value)
+            x = x.at[0].set(first_value)
             return x
 
         changepoint_prior_scale_vector = np.concatenate(

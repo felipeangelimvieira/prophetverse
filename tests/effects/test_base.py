@@ -85,8 +85,8 @@ def test_broadcasting():
     with numpyro.handlers.trace() as trace, numpyro.handlers.seed(rng_seed=0):
         out = effect.predict(data=Xt)
 
-    factor0 = trace["dim0/factor"]["value"]
-    factor1 = trace["dim1/factor"]["value"]
+    factor0 = trace["exog/factor"]["value"]
+    factor1 = trace["exog2/factor"]["value"]
 
     assert factor0 != factor1
     expected = (X["exog"].values * factor0 + X["exog2"].values * factor1).reshape(

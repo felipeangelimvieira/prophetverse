@@ -62,3 +62,39 @@ class InvestmentPerChannelTransform(BaseParametrizationTransformation):
         xt = xt * self.daily_share_
         xt = xt.flatten()
         return xt
+
+
+class TotalInvestmentTransform(BaseParametrizationTransformation):
+    """
+    Change parametrization to be the total investment.
+
+    Instead of parametrizing every time x channel investment, this transform
+    parametrize to optimize per channel investment, while keeping the initial
+    guess temporal share of the investment.
+    """
+
+    def _fit(self, X, horizon, columns):
+        X = X.loc[horizon, columns]
+
+        x_array = jnp.array(X.values)
+
+        # get daily share
+        self.daily_share_ = x_array / x_array.sum()
+
+    def _transform(self, x: jnp.ndarray):
+        # get share per column
+        # x is a (N*M) array
+        x = x.reshape((-1, len(self.columns_)))
+        # get the sum of each row
+        x_sum = jnp.sum(x)
+        # get the share of each column
+        # Make sure x_sum is one dimensional
+        x_sum = x_sum.reshape(-1)
+        return x_sum
+
+    def _inverse_transform(self, xt):
+        # Multiply each column share by the daily share
+
+        xt = xt * self.daily_share_
+        xt = xt.flatten()
+        return xt

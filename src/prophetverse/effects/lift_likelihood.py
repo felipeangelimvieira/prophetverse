@@ -56,7 +56,7 @@ class LiftExperimentLikelihood(BaseEffect):
             column in self.lift_test_results.columns for column in mandatory_columns
         ), f"lift_test_results must have the following columns: {mandatory_columns}"
 
-    def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1):
         """Initialize the effect.
 
         This method is called during `fit()` of the forecasting model.
@@ -84,7 +84,7 @@ class LiftExperimentLikelihood(BaseEffect):
         self.effect_ = self.effect.clone()
         self.effect_.fit(X=X, y=y, scale=scale)
         self.timeseries_scale = scale
-        super().fit(X=X, y=y, scale=scale)
+        # super().fit(X=X, y=y, scale=scale)
 
     def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Dict[str, Any]:
         """Prepare input data to be passed to numpyro model.
@@ -107,20 +107,29 @@ class LiftExperimentLikelihood(BaseEffect):
             Dictionary with data for the lift and for the inner effect
         """
         data_dict = {}
-        data_dict["inner_effect_data"] = self.effect_._transform(X, fh=fh)
+        data_dict["inner_effect_data"] = self.effect_.transform(X, fh=fh)
 
         # Check if fh and self.lift_test_results have same index type
         if not isinstance(fh, self.lift_test_results.index.__class__):
             raise TypeError(
                 "fh and self.lift_test_results must have the same index type"
             )
-        X_lift = self.lift_test_results.reindex(fh, fill_value=jnp.nan)
 
+        X_lift = self.lift_test_results.reindex(fh, fill_value=jnp.nan)
         data_dict["observed_lift"] = series_to_tensor_or_array(X_lift["lift"].dropna())
-        data_dict["x_start"] = series_to_tensor_or_array(X_lift["x_start"].dropna())
-        data_dict["x_end"] = series_to_tensor_or_array(X_lift["x_end"].dropna())
         data_dict["obs_mask"] = ~jnp.isnan(series_to_tensor_or_array(X_lift["lift"]))
 
+        # fill x_start column nan values with values from X
+        X_lift["x_start"] = X_lift["x_start"].fillna(X.iloc[:, 0])
+        X_lift["x_end"] = X_lift["x_end"].fillna(X.iloc[:, 0])
+
+        data_dict["x_start"] = series_to_tensor_or_array(X_lift["x_start"])
+        data_dict["x_end"] = series_to_tensor_or_array(X_lift["x_end"])
+
+        # Get indexes of self.lift_test_results.index in X_lift
+        data_dict["experiment_date_idx"] = jnp.array(
+            X_lift.index.get_indexer(self.lift_test_results.index), dtype=jnp.int32
+        )
         return data_dict
 
     def _predict(
@@ -146,10 +155,6 @@ class LiftExperimentLikelihood(BaseEffect):
         x_end = data["x_end"].reshape((-1, 1))
         obs_mask = data["obs_mask"]
 
-        predicted_effects_masked = {
-            k: v[obs_mask] for k, v in predicted_effects.items()
-        }
-
         with CacheMessenger():
             # Call the effect a first time
             x = self.effect_.predict(
@@ -157,14 +162,20 @@ class LiftExperimentLikelihood(BaseEffect):
                 predicted_effects=predicted_effects,
             )
 
+            x_start_data = self.effect_._update_data(data["inner_effect_data"], x_start)
             # Get the start and end values
             y_start = self.effect_.predict(
-                data=x_start,
-                predicted_effects=predicted_effects_masked,
+                data=x_start_data,
+                predicted_effects=predicted_effects,
             )
+
+            x_end_data = self.effect_._update_data(data["inner_effect_data"], x_end)
             y_end = self.effect_.predict(
-                data=x_end, predicted_effects=predicted_effects_masked
+                data=x_end_data, predicted_effects=predicted_effects
             )
+
+            y_end = y_end[obs_mask]
+            y_start = y_start[obs_mask]
 
         # Calculate the delta_y
         delta_y = y_end / y_start
@@ -181,6 +192,12 @@ class LiftExperimentLikelihood(BaseEffect):
             )
 
         return x
+
+    def _update_data(self, data, arr):
+        data["inner_effect_data"] = self.effect_._update_data(
+            data["inner_effect_data"], arr
+        )
+        return data
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

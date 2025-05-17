@@ -75,8 +75,9 @@ class MinimumTargetResponse(BaseConstraint):
         to this value.
     """
 
-    def __init__(self, target_response: float):
+    def __init__(self, target_response: float, constraint_type="ineq"):
         self.target_response = target_response
+        self.constraint_type = constraint_type
         super().__init__()
 
     def __call__(self, X, horizon, columns):
@@ -94,10 +95,12 @@ class MinimumTargetResponse(BaseConstraint):
             """
             obs = budget_optimizer.predictive_(x_array)
             out = obs.mean(axis=0)[horizon_idx].sum()
-            return out - self.target_response
+            out = out - self.target_response
+
+            return out
 
         return {
-            "type": "ineq",
+            "type": self.constraint_type,
             "fun": func,
             "jac": grad(func),
         }

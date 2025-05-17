@@ -6,25 +6,18 @@ from prophetverse.experimental.simulate import simulate
 from prophetverse.effects import HillEffect, GeometricAdstockEffect, ChainedEffects
 import pytest
 import pandas as pd
+import numpy as np
 import jax.numpy as jnp
 
 
 @pytest.fixture
 def X():
     """Generate synthetic data for testing."""
-    # Simulate data
-    X = pd.DataFrame(
-        [
-            [1.0, 2.0],
-            [3.0, 4.0],
-            [5.0, 6.0],
-        ],
-        columns=["channel1", "channel2"],
-        index=pd.PeriodIndex(
-            ["2023-01-01", "2023-01-02", "2023-01-03"],
-            freq="D",
-        ),
-    )
+    # Create 100 sequential periods starting from 2023-01-01 with daily frequency.
+    dates = pd.period_range(start="2023-01-01", periods=100, freq="D")
+    # Generate a 100x2 array of random values.
+    data = np.random.random((100, 2))
+    X = pd.DataFrame(data, columns=["channel1", "channel2"], index=dates)
     return X
 
 
@@ -70,10 +63,11 @@ def _run_test(optimizer: BudgetOptimizer, components, X, true_model):
     """Run the test for the BudgetOptimizer."""
     # Initialize the optimizer
     X_before = X.copy()
+    horizon = X.index[1:]
     X_opt = optimizer.optimize(
         model=true_model,
         X=X,
-        horizon=X.index,
+        horizon=horizon,
         columns=X.columns.tolist(),
     )
     assert X_before.equals(X)
@@ -82,6 +76,10 @@ def _run_test(optimizer: BudgetOptimizer, components, X, true_model):
     assert X_opt.shape == X.shape
     assert X_opt.index.equals(X.index)
     assert X_opt.columns.equals(X.columns)
+
+    not_equal = X_opt != X
+    assert not_equal.loc[horizon].sum().sum() == len(horizon) * len(X.columns)
+    assert not_equal.loc[~not_equal.index.isin(horizon)].sum().sum() == 0
 
     # assert no nans in optimizer.result_.x
     assert not jnp.isnan(optimizer.result_.x).any()

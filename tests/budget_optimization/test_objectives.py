@@ -51,7 +51,15 @@ def test_maximize_kpi_basic():
 
 def test_minimize_budget_basic():
     x = jnp.array([1.0, 1.0, 3.0])
+
+    pred = jnp.array(
+        [
+            [1.0, 2.0, 3.0],
+            [1.0, 2.0, 3.0],
+        ]
+    )
+    optimizer = DummyOptimizer(pred, jnp.array([1, 2]))
     obj = MinimizeBudget()
     # sum(x)=5
-    result = float(obj._objective(x))
+    result = float(obj._objective(x, optimizer))
     assert result == pytest.approx(5.0)

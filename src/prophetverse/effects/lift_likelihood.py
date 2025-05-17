@@ -154,11 +154,6 @@ class LiftExperimentLikelihood(BaseEffect):
         x_start = data["x_start"].reshape((-1, 1))
         x_end = data["x_end"].reshape((-1, 1))
         obs_mask = data["obs_mask"]
-        experiment_date_idx = data["experiment_date_idx"]
-
-        predicted_effects_masked = {
-            k: v[obs_mask] for k, v in predicted_effects.items()
-        }
 
         with CacheMessenger():
             # Call the effect a first time

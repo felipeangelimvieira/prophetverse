@@ -23,10 +23,15 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
             model = handlers.substitute(model, self.substitute)
 
         prior_predictive = Predictive(
-            model, num_samples=self.num_samples, exclude_deterministic=False
+            model,
+            num_samples=self.num_samples,
+            exclude_deterministic=True,
         )
         self.posterior_samples_ = prior_predictive(self._rng_key, **kwargs)
-        del self.posterior_samples_["obs"]
+
+        if "obs" in self.posterior_samples_:
+            # Remove the observed data from the samples
+            del self.posterior_samples_["obs"]
         return self
 
     def _predict(self, **kwargs):

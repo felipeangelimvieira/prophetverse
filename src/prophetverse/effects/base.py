@@ -143,9 +143,7 @@ class BaseEffect(BaseObject):
             and len(data.columns) > 1
             and not self.get_tag("capability:multivariate_input", False)
         ):
-            self.effects_ = OrderedDict(
-                (column, self.clone()) for column in data.columns
-            )
+            self._set_broadcasting_attributes(data)
             self._broadcast("fit", X=X, y=y, scale=scale)
         else:
             self._fit(y=y, X=X, scale=scale)
@@ -224,6 +222,11 @@ class BaseEffect(BaseObject):
             and len(X.columns) > 1
             and not self.get_tag("capability:multivariate_input", False)
         ):
+            if not self._is_fitted:
+                # Since the broadcasting attributes are set during fit,
+                # we need to set them
+                self._set_broadcasting_attributes(X)
+
             return self._broadcast("transform", X=X, fh=fh)
         return self._transform(X, fh)
 
@@ -436,6 +439,19 @@ class BaseEffect(BaseObject):
             f"Unexpected data type {type(data)}. "
             "Expected jnp.ndarray, tuple, dict or list."
         )
+
+    def _set_broadcasting_attributes(self, X):
+        """
+        Set broadcasting attributes for the effect.
+
+        This method is called during the `fit` method to set the
+        broadcasting attributes for the effect, or during `transform`
+        of the method does not require fitting before transform.
+        """
+
+        self.effects_ = OrderedDict((column, self.clone()) for column in X.columns)
+        self.columns_ = X.columns.tolist()
+        self._broadcasted = True
 
     # TODO: Remove in version 0.8.0
     def __init_subclass__(cls, **kwargs):

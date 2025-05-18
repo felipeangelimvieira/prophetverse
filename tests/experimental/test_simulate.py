@@ -29,11 +29,11 @@ def test_simulate(model, do):
     )
     assert samples.index.get_level_values(-1).nunique() == len(fh)
 
-    expected_intervention = jnp.arange(len(fh))
-    assert jnp.all(
-        samples["exogenous_variables_effect"].values
-        == jnp.tile(
+    expected_intervention = jnp.arange(len(fh)) * model._scale
+    assert jnp.allclose(
+        samples["exogenous_variables_effect"].values,
+        jnp.tile(
             expected_intervention,
             (model.inference_engine_.num_samples,),
-        ).flatten()
+        ).flatten(),
     )

@@ -367,6 +367,10 @@ class BaseBayesianForecaster(BaseForecaster):
 
         df = pd.concat(dfs, axis=1)
 
+        # Scale but apply the transformation to each sample at index level 0
+        df = df.groupby(level=0).apply(lambda x: self._inv_scale_y(x.droplevel(0)))
+        df = df.sort_index(level=0)
+
         return df
 
     def predict_samples(self, fh: ForecastingHorizon, X: Optional[pd.DataFrame] = None):

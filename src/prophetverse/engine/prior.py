@@ -22,10 +22,19 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
         if self.substitute is not None:
             model = handlers.substitute(model, self.substitute)
 
+        trace = handlers.trace(handlers.seed(model, self._rng_key)).get_trace(**kwargs)
+        sample_sites = [
+            site_name
+            for site_name in trace.keys()
+            if trace[site_name]["type"] == "sample"
+            and not trace[site_name]["is_observed"]
+        ]
+
         prior_predictive = Predictive(
             model,
             num_samples=self.num_samples,
             exclude_deterministic=True,
+            return_sites=sample_sites,
         )
         self.posterior_samples_ = prior_predictive(self._rng_key, **kwargs)
 

@@ -125,9 +125,8 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
         for i in range(len(self.constraints_)):
             fun = self.constraints_[i]["fun"]
-            self.constraints_[i]["fun"] = lambda x, *args: fun(
-                self._parametrization_transform.inverse_transform(x), *args
-            )
+            self.constraints_[i]["fun"] = self.wrap_func_with_inv_transform(fun)
+            self.constraints_[i]["jac"] = grad(self.constraints_[i]["fun"])
             self.constraints_[i]["args"] = (self,)
 
         minimize_kwargs = dict(
@@ -203,7 +202,6 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
         x_array = jnp.array(X.values)
 
-        @jax.jit
         def predictive(new_x):
             """
             Update predict data and call self._predict
@@ -223,7 +221,8 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
             return obs
 
-        self.predictive_ = predictive
+        self.predictive_no_jit_ = predictive
+        self.predictive_ = jax.jit(predictive)
         self.horizon_idx_ = horizon_idx
 
     def wrap_func_with_inv_transform(self, fun):

@@ -14,6 +14,8 @@ class BaseTargetEffect(BaseEffect):
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
+        # Should the effect be applied to the target variable?
+        "applies_to": "y",
     }
 
     def _transform(self, X, fh):

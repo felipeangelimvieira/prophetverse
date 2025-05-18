@@ -20,7 +20,7 @@ class CacheMessenger(numpyro.primitives.Messenger):
             for k, v in self._cache[msg["name"]].items():
                 msg[k] = v
             # Avoid errors in tracers above due to duplicated names
-            msg["name"] = msg["name"] + "_cached_" + str(id(msg))
+            msg["name"] = msg["name"] + "_cached_" + str(id(msg)) + ":ignore"
 
     def postprocess_message(self, msg):
         # after a real sample has been taken, cache it

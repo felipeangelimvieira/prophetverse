@@ -3,14 +3,22 @@
 import numpy as np
 import numpyro.distributions as dist
 import pandas as pd
-
-from prophetverse.effects import HillEffect, LinearEffect, LinearFourierSeasonality
+from pathlib import Path
+from prophetverse.effects import (
+    HillEffect,
+    LinearEffect,
+    LinearFourierSeasonality,
+    ChainedEffects,
+    GeometricAdstockEffect,
+)
 from prophetverse.effects.trend import PiecewiseLinearTrend
-from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.prior import PriorPredictiveInferenceEngine
 from prophetverse.experimental.simulate import simulate
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils.regex import exact, no_input_columns
 from prophetverse.effects.target.univariate import NegativeBinomialTargetLikelihood
+import jax.numpy as jnp
+import json
 
 
 def get_index():
@@ -62,6 +70,20 @@ def get_X(index):
     return X
 
 
+def get_site_values():
+
+    posterior_samples_path = Path(__file__).parent / Path(
+        "dataset1_posterior_samples.json"
+    )
+    with open(posterior_samples_path, "r") as f:
+        posterior_samples = json.load(f)
+
+    for key in posterior_samples.keys():
+        posterior_samples[key] = jnp.array(posterior_samples[key])
+
+    return posterior_samples
+
+
 def get_groundtruth_model():
     """
     Define and configure a Prophetverse model with custom components.
@@ -71,14 +93,13 @@ def get_groundtruth_model():
     Prophetverse
         Configured Prophetverse model.
     """
+
+    site_samples = get_site_values()
     model = Prophetverse(
         trend=PiecewiseLinearTrend(
             changepoint_interval=100,
-            changepoint_prior_scale=1000,
             changepoint_range=-100,
             remove_seasonality_before_suggesting_initial_vals=False,
-            offset_prior_loc=10000,
-            global_rate_prior_loc=10000,
         ),
         exogenous_effects=[
             (
@@ -117,28 +138,24 @@ def get_groundtruth_model():
             (
                 "ad_spend_search",
                 HillEffect(
-                    half_max_prior=dist.Normal(20_000, 1000),
-                    slope_prior=dist.Normal(3, 0.01),
-                    max_effect_prior=dist.Normal(1e6, 1e-8),
                     effect_mode="additive",
                 ),
                 exact("ad_spend_search"),
             ),
             (
                 "ad_spend_social_media",
-                HillEffect(
-                    half_max_prior=dist.Normal(10_000, 1000),
-                    slope_prior=dist.Normal(1.5, 0.01),
-                    max_effect_prior=dist.Normal(1e5, 1e-8),
-                    effect_mode="additive",
+                ChainedEffects(
+                    steps=[
+                        ("adstock", GeometricAdstockEffect()),
+                        ("saturation", HillEffect(effect_mode="additive")),
+                    ]
                 ),
                 exact("ad_spend_social_media"),
             ),
         ],
-        inference_engine=MAPInferenceEngine(
-            num_steps=1, num_samples=1, progress_bar=True
+        inference_engine=PriorPredictiveInferenceEngine(
+            num_samples=1, substitute=site_samples
         ),
-        # likelihood=NegativeBinomialTargetLikelihood(noise_scale=0.05),
         scale=1,
     )
 
@@ -184,28 +201,7 @@ def get_y(samples, index):
     return samples.loc[0, "obs"].to_frame("sales")
 
 
-def get_true_effect(samples, index):
-    """
-    Extract the true effects for the exogenous variables from the simulated samples.
-
-    Parameters
-    ----------
-    samples : dict
-        Simulated samples from the model.
-    index : pd.PeriodIndex
-        Time index for the true effects.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame containing true effects for the exogenous variables.
-    """
-
-    true_effect = samples.loc[0]
-    return true_effect
-
-
-def get_simulated_lift_test(X, model, samples, true_effect, n=10):
+def get_simulated_lift_test(X, model, true_effect, n=10):
     """
     Perform a simulated lift test by perturbing exogenous variables.
 
@@ -270,9 +266,10 @@ def get_dataset():
     index = get_index()
     X = get_X(index)
     model = get_groundtruth_model()
-    samples, model = get_samples(model, X)
-    y = get_y(samples, index)
-    true_effect = get_true_effect(samples, index)
-    lift_test = get_simulated_lift_test(X, model, samples, true_effect, n=30)
 
-    return y, X, lift_test, true_effect
+    model.fit(X=X, y=pd.Series(np.zeros(X.shape[0]), index=X.index))
+    y = model.predict(X=X, fh=index)
+    true_effect = model.predict_components(X=X, fh=index)
+    lift_test = get_simulated_lift_test(X, model, true_effect, n=30)
+
+    return y, X, lift_test, true_effect, model

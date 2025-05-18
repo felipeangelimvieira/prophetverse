@@ -36,11 +36,16 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         self,
         effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
         prior: Optional[Distribution] = None,
+        broadcast=False,
     ):
         self.prior = prior
+        self.broadcast = broadcast
         self._prior = self.prior if prior is not None else dist.Normal(0, 0.1)
 
         super().__init__(effect_mode=effect_mode)
+
+        if self.broadcast:
+            self.set_tags(**{"capability:multivariate_input": False})
 
     def _predict(
         self,
@@ -77,4 +82,4 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         if data.ndim == 3 and coefficients.ndim == 2:
             coefficients = jnp.expand_dims(coefficients, axis=0)
 
-        return matrix_multiplication(data, coefficients)
+        return data @ coefficients

@@ -6,6 +6,7 @@ import pytest
 from prophetverse.experimental.budget_optimization.parametrization_transformations import (
     IdentityTransform,
     InvestmentPerChannelTransform,
+    TotalInvestmentTransform,
 )
 
 
@@ -54,3 +55,16 @@ def test_investment_per_channel_inverse_scaling():
     expected = np.array([1.0, 3.6, 1.0, 0.4])  # Day1: [1, 3.6], Day2: [1, 0.4]
     assert result.shape == (4,)
     assert np.allclose(result, expected)
+
+
+def test_total_investment_transform():
+    # 2 days, 2 channels
+    X = pd.DataFrame([[1.0, 3.0], [2.0, 4.0]], index=[0, 1], columns=["a", "b"])
+    t = TotalInvestmentTransform()
+    t.fit(X, horizon=[0, 1], columns=["a", "b"])
+    x0 = X.values.flatten()
+    xt = t.transform(x0)
+    assert xt == X.values.sum()
+    x_rec = t.inverse_transform(xt)
+    assert x_rec.shape == x0.shape
+    assert np.allclose(x_rec, x0)

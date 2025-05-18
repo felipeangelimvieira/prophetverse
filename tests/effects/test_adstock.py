@@ -41,3 +41,14 @@ def test_geometric_adstock_predict():
 
     # Verify output values
     assert jnp.allclose(result, expected), "Adstock computation incorrect."
+
+    ## Now test calling adstock with a different time span
+    X2 = X.iloc[2:]
+    data = effect.transform(X2, fh=X2.index)
+    with numpyro.handlers.seed(rng_seed=0), numpyro.handlers.do(data=params):
+        with numpyro.handlers.trace() as exec_trace:
+            result2 = effect.predict(data, predicted_effects)
+    # Expected adstock output
+    assert jnp.allclose(
+        result2, expected[2:]
+    ), "Adstock computation incorrect for different time span."

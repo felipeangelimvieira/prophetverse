@@ -43,6 +43,10 @@ class HolidayEffect(BaseAdditiveOrMultiplicativeEffect):
         all holidays or a dictionary mapping holiday names to prior scales.
     effect_mode : str, default 'additive'
         Either "multiplicative" or "additive".
+    include_day_of_week : bool, default False
+        If True, includes the day of week in holiday identifiers. This allows the model to
+        learn different effects for the same holiday depending on which day of the week it
+        falls on (e.g., Christmas on Monday vs Christmas on Saturday).
     """
 
     _tags = {
@@ -57,6 +61,7 @@ class HolidayEffect(BaseAdditiveOrMultiplicativeEffect):
         lower_window: int = 0,
         upper_window: int = 0,
         prior_scale: float = 0.1,
+        include_day_of_week: bool = False,
         effect_mode: EFFECT_APPLICATION_TYPE = "additive"
     ):
         self.holidays = holidays
@@ -64,6 +69,7 @@ class HolidayEffect(BaseAdditiveOrMultiplicativeEffect):
         self.lower_window = lower_window
         self.upper_window = upper_window
         self.prior_scale = prior_scale
+        self.include_day_of_week = include_day_of_week
 
         super().__init__(effect_mode = effect_mode)
         
@@ -118,6 +124,21 @@ class HolidayEffect(BaseAdditiveOrMultiplicativeEffect):
         # Extract and return unique years
         return sorted(list(time_index.year.unique()))
     
+    def _get_day_of_week_name(self, date: pd.Timestamp) -> str:
+        """Get the day of week name for a given date.
+        
+        Parameters
+        ----------
+        date : pd.Timestamp
+            The date to get the day of week name for.
+            
+        Returns
+        -------
+        str
+            Day of week name (Monday, Tuesday, etc.)
+        """
+        return date.day_name()
+
     def _preprocess_holidays(self) -> pd.DataFrame:
         """Preprocess the holidays DataFrame.
         
@@ -165,16 +186,26 @@ class HolidayEffect(BaseAdditiveOrMultiplicativeEffect):
             lower_window = row['lower_window']
             upper_window = row['upper_window']
             prior_scale = row['prior_scale']
+
             if prior_scale is None:
                 prior_scale = self.prior_scale
             
             # Create a row for each day in the holiday window
             for offset in range(lower_window, upper_window + 1):
                 day = holiday_date + pd.Timedelta(days=offset)
+
+                # Create the holiday identifier based on whether to include day of week
+                if self.include_day_of_week:
+                    day_of_week = self._get_day_of_week_name(day)
+                    holiday_id = f"{holiday_name}_{str(offset)}_{day_of_week}"
+                else:
+                    holiday_id = f"{holiday_name}_{str(offset)}"
+
                 expanded_holidays.append({
-                    'holiday': f"{holiday_name}_{str(offset)}",
+                    'holiday': holiday_id,
                     'ds': day,
                     'offset': offset,
+                    'day_of_week': self._get_day_of_week_name(day),
                     'prior_scale': prior_scale,
                     'country': row.get('country', 'user_defined')
                 })

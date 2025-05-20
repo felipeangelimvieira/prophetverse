@@ -1,0 +1,73 @@
+# PiecewiseLinearTrend { #prophetverse.effects.PiecewiseLinearTrend }
+
+```python
+effects.PiecewiseLinearTrend(
+    self,
+    changepoint_interval=25,
+    changepoint_range=0.8,
+    changepoint_prior_scale=0.001,
+    offset_prior_scale=0.1,
+    squeeze_if_single_series=True,
+    remove_seasonality_before_suggesting_initial_vals=True,
+    global_rate_prior_loc=None,
+    offset_prior_loc=None,
+)
+```
+
+Piecewise Linear Trend model.
+
+This model assumes that the trend is piecewise linear, with changepoints
+at regular intervals. The number of changepoints is determined by the
+`changepoint_interval` and `changepoint_range` parameters. The
+`changepoint_interval` parameter specifies the interval between changepoints,
+while the `changepoint_range` parameter specifies the range of the changepoints.
+
+This implementation is based on the `Prophet`_ library. The initial values (global
+rate and global offset) are suggested using the maximum and minimum values of the
+time series data.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+| Name                                              | Type              | Description                                                                                              | Default   |
+|---------------------------------------------------|-------------------|----------------------------------------------------------------------------------------------------------|-----------|
+| changepoint_interval                              | int               | The interval between changepoints.                                                                       | `25`      |
+| changepoint_range                                 | int               | The range of the changepoints.                                                                           | `0.8`     |
+| changepoint_prior_scale                           | dist.Distribution | The prior scale for the changepoints.                                                                    | `0.001`   |
+| offset_prior_scale                                | float             | The prior scale for the offset. Default is 0.1.                                                          | `0.1`     |
+| squeeze_if_single_series                          | bool              | If True, squeeze the output if there is only one series. Default is True.                                | `True`    |
+| remove_seasonality_before_suggesting_initial_vals | bool              | If True, remove seasonality before suggesting initial values, using sktime's detrender. Default is True. | `True`    |
+| global_rate_prior_loc                             | float             | The prior location for the global rate. Default is suggested empirically from data.                      | `None`    |
+| offset_prior_loc                                  | float             | The prior location for the offset. Default is suggested empirically from data.                           | `None`    |
+
+## Attributes
+
+| Name | Description |
+| --- | --- |
+| [n_changepoint_per_series](#prophetverse.effects.PiecewiseLinearTrend.n_changepoint_per_series) | Get the number of changepoints per series. |
+| [n_changepoints](#prophetverse.effects.PiecewiseLinearTrend.n_changepoints) | Get the total number of changepoints. |
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [get_changepoint_matrix](#prophetverse.effects.PiecewiseLinearTrend.get_changepoint_matrix) | Return the changepoint matrix for the given index. |
+
+### get_changepoint_matrix { #prophetverse.effects.PiecewiseLinearTrend.get_changepoint_matrix }
+
+```python
+effects.PiecewiseLinearTrend.get_changepoint_matrix(idx)
+```
+
+Return the changepoint matrix for the given index.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type           | Description                                            | Default    |
+|--------|----------------|--------------------------------------------------------|------------|
+| idx    | pd.PeriodIndex | The index for which to compute the changepoint matrix. | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                                 | Description   |
+|--------|--------------------------------------|---------------|
+|        | jnp.ndarray: The changepoint matrix. |               |

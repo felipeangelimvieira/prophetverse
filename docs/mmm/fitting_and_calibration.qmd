@@ -1,0 +1,446 @@
+---
+title: "Forecasting, Calibration, and Unified Marketing Measurement"
+description: "*A tutorial on building a Marketing Mix Model (MMM) with Prophetverse, including forecasting, calibration, and unified marketing measurement*."
+---
+
+---
+
+In this tutorial, we walk through the lifecycle of a modern Marketing Mix Model (MMM),
+from time-series forecasting to incorporating causal evidence like lift tests and attribution.
+
+You will learn:
+
+1. How to **forecast** revenue using media spend with Adstock and Saturation effects.  
+2. How to **diagnose model behavior** and evaluate with backtesting.  
+3. Why **correlated spend channels** confuse effect estimation—and how to fix it.  
+4. How to **calibrate** your model using **lift tests** and **attribution models** for better ROI measurement.
+
+👉 **Why this matters**: MMMs are foundational for budget allocation. But good predictions are not enough — we need **credible effect estimates** to make real-world decisions.
+
+
+Let’s get started!
+
+Setting up some libraries, float64 precision, and plot style:
+
+```{python}
+# | echo: false
+import warnings
+
+warnings.filterwarnings("ignore")
+```
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpyro
+import numpyro.distributions as dist
+
+plt.style.use("seaborn-v0_8-whitegrid")
+numpyro.enable_x64()
+```
+
+```{python}
+from prophetverse.datasets._mmm.dataset1 import get_dataset
+
+y, X, lift_tests, true_components, _ = get_dataset()
+lift_test_search, lift_test_social = lift_tests
+
+print(f"y shape: {y.shape}, X shape: {X.shape}")
+X.head()
+```
+
+---
+
+## Part 1: Forecasting with Adstock & Saturation Effects
+
+Here we’ll build a **time-series forecasting model** that includes:
+
+* **Trend** and **seasonality**  
+* **Lagged media effects** (Adstock)  
+* **Diminishing returns** (Saturation / Hill curves)
+
+🔎 **Why this matters**:  
+Raw spend is **not immediately effective**, and it **doesn’t convert linearly**.  
+Capturing these dynamics is essential to make ROI estimates realistic.
+
+```{python}
+from prophetverse.effects import (
+    PiecewiseLinearTrend,
+    LinearFourierSeasonality,
+    ChainedEffects,
+    GeometricAdstockEffect,
+    HillEffect,
+)
+from prophetverse.sktime import Prophetverse
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.optimizer import LBFGSSolver
+
+yearly = (
+    "yearly_seasonality",
+    LinearFourierSeasonality(freq="D", sp_list=[365.25], fourier_terms_list=[5], prior_scale=0.1, effect_mode="multiplicative"),
+    None,
+)
+
+weekly = (
+    "weekly_seasonality",
+    LinearFourierSeasonality(freq="D", sp_list=[7], fourier_terms_list=[3], prior_scale=0.05, effect_mode="multiplicative"),
+    None,
+)
+
+hill = HillEffect(
+    half_max_prior=dist.HalfNormal(1),
+    slope_prior=dist.InverseGamma(2, 1),
+    max_effect_prior=dist.HalfNormal(1),
+    effect_mode="additive",
+    input_scale=1e6,
+)
+
+chained_search = (
+    "ad_spend_search",
+    ChainedEffects([("adstock", GeometricAdstockEffect()), ("saturation", hill)]),
+    "ad_spend_search",
+)
+chained_social = (
+    "ad_spend_social_media",
+    ChainedEffects([("adstock", GeometricAdstockEffect()), ("saturation", hill)]),
+    "ad_spend_social_media",
+)
+```
+
+```{python}
+baseline_model = Prophetverse(
+    trend=PiecewiseLinearTrend(changepoint_interval=100),
+    exogenous_effects=[yearly, weekly, chained_search, chained_social],
+    inference_engine=MAPInferenceEngine(
+        num_steps=5000,
+        optimizer=LBFGSSolver(memory_size=300, max_linesearch_steps=300),
+    ),
+)
+baseline_model.fit(y=y, X=X)
+```
+
+```{python}
+y_pred = baseline_model.predict(X=X, fh=X.index)
+
+plt.figure(figsize=(8, 4))
+y.plot(label="Observed")
+y_pred.plot(label="Predicted")
+plt.title("In-Sample Forecast: Observed vs Predicted")
+plt.legend()
+plt.show()
+```
+
+### 1.1 Component-Level Diagnostics
+
+With `predict_components`, we can obtain the model's components.
+
+```{python}
+y_pred_components = baseline_model.predict_components(X=X, fh=X.index)
+y_pred_components.head()
+```
+
+In a real use-casee, you would not have access to the ground truth of the components.
+We use them here to show how the model behaves, and how incorporing extra information can improve it.
+
+```{python}
+fig, axs = plt.subplots(4, 1, figsize=(8, 12), sharex=True)
+for i, name in enumerate(
+    ["trend", "yearly_seasonality", "ad_spend_search", "ad_spend_social_media"]
+):
+    true_components[name].plot(ax=axs[i], label="True", color="black")
+    y_pred_components[name].plot(ax=axs[i], label="Estimated")
+    axs[i].set_title(name)
+    axs[i].legend()
+plt.tight_layout()
+plt.show()
+```
+
+### 1.2 Backtesting with Cross-Validation
+
+We use rolling-window CV to assess out-of-sample accuracy using **MAPE**.
+
+🧠 **Caution**: Low error ≠ correct attribution. But high error often indicates a bad model.
+
+```{python}
+from sktime.split import ExpandingWindowSplitter
+from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
+from sktime.forecasting.model_evaluation import evaluate
+
+metric = MeanAbsolutePercentageError()
+cv = ExpandingWindowSplitter(
+    initial_window=365 * 3, step_length=180, fh=list(range(1, 180))
+)
+cv_results = evaluate(
+    forecaster=baseline_model, y=y, X=X, cv=cv, scoring=metric, return_data=True
+)
+cv_results
+```
+
+The average error across folds is:
+```{python}
+cv_results["test_MeanAbsolutePercentageError"].mean()
+```
+
+We can visualize them by iterating the dataframe:
+```{python}
+for idx, row in cv_results.iterrows():
+    plt.figure(figsize=(8, 2))
+    observed = pd.concat([row["y_train"].iloc[-100:], row["y_test"]])
+    observed.plot(label="Observed", color="black")
+    row["y_pred"].plot(label="Prediction")
+    plt.title(f"Fold {idx + 1} – MAPE: {row['test_MeanAbsolutePercentageError']:.2%}")
+    plt.legend()
+    plt.show()
+    if idx > 3:
+        break
+```
+
+### 1.3 Saturation Curves
+
+
+These curves show **diminishing marginal effect** as spend increases.
+
+🔍 **Insight**: This shape helps guide budget allocation decisions (e.g. where additional spend will have little return).
+
+Note how the model captures a saturation effect, but it is still far
+from the correct shape.
+
+This is why, in many situations, you will need calibration to correct the model's behavior. This is what we will do in the next section.
+
+```{python}
+fig, axs = plt.subplots(figsize=(8, 6), nrows=1, ncols=2)
+
+for ax, channel in zip(axs, ["ad_spend_search", "ad_spend_social_media"]):
+    ax.scatter(
+        X[channel],
+        y_pred_components[channel],
+        alpha=0.6,
+        label=channel,
+    )
+    ax.scatter(
+        X[channel],
+        true_components[channel],
+        color="black",
+        label="True Effect",
+    )
+    ax.set(
+        xlabel="Daily Spend",
+        ylabel="Incremental Effect",
+        title=f"{channel} - Saturation Curve",
+    )
+    ax.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+---
+
+## Part 2: Calibration with Causal Evidence
+
+Time-series alone **cannot disentangle** correlated channels.
+
+We integrate **lift tests** (local experiments) and **attribution models** (high-resolution signal) to correct this.
+
+```{python}
+lift_test_search
+```
+
+### 2.1 Visualizing Lift Tests
+
+Each experiment records: pre-spend (`x_start`), post-spend (`x_end`), and measured `lift`.
+These give us **causal “ground truth” deltas**.
+
+
+```{python}
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# Scatter plot for pre-spend and observed lift
+ax.scatter(lift_test_search["x_start"], [1] * len(lift_test_search), label="Pre-Spend", alpha=0.6)
+ax.scatter(lift_test_search["x_end"], lift_test_search["lift"], label="Observed Lift", alpha=0.6)
+
+# Annotate with arrows to show lift effect
+for _, row in lift_test_search.iterrows():
+    ax.annotate(
+        "",
+        xy=(row["x_end"], row["lift"]),
+        xytext=(row["x_start"], 1),
+        arrowprops=dict(arrowstyle="->", alpha=0.5),
+    )
+
+# Add horizontal line and labels
+ax.axhline(1, linestyle="--", color="gray", alpha=0.7)
+ax.set(
+    title="Search Ads Lift Tests",
+    xlabel="Spend",
+    ylabel="Revenue Ratio",
+)
+
+# Add legend and finalize layout
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+### 2.2 Improve Estimates via LiftExperimentLikelihood
+
+This adds a new **likelihood term** that makes the model match lift observations.
+
+🔁 **Still Bayesian**: It incorporates test variance and model uncertainty.
+
+Since we use `sktime` interface, we have access to `get_params()` and `set_params(**kwargs)` methods.
+This allows us to **easily swap** effects and likelihoods.
+When we define our model, the effect's name become a key in the model's
+`get_params()` dictionary. We can use this to set the effect's parameters
+directly.
+
+
+```{python}
+from prophetverse.effects.lift_likelihood import LiftExperimentLikelihood
+
+model_lift = baseline_model.clone()
+model_lift.set_params(
+    ad_spend_search=LiftExperimentLikelihood(
+        effect=baseline_model.get_params()["ad_spend_search"],
+        lift_test_results=lift_test_search,
+        prior_scale=0.05,
+    ),
+    ad_spend_social_media=LiftExperimentLikelihood(
+        effect=baseline_model.get_params()["ad_spend_social_media"],
+        lift_test_results=lift_test_social,
+        prior_scale=0.05,
+    ),
+)
+
+model_lift.fit(y=y, X=X)
+```
+
+```{python}
+components_lift = model_lift.predict_components(X=X, fh=X.index)
+components_lift.head()
+```
+
+```{python}
+fig, axs = plt.subplots(figsize=(8, 6), ncols=2)
+
+for ax, channel in zip(axs, ["ad_spend_search", "ad_spend_social_media"]):
+    ax.scatter(
+        X[channel],
+        y_pred_components[channel],
+        label="Baseline",
+        alpha=0.6,
+        s=50,
+    )
+    ax.scatter(
+        X[channel],
+        components_lift[channel],
+        label="With Lift Test",
+        alpha=0.6,
+        s=50,
+    )
+    ax.plot(
+        X[channel],
+        true_components[channel],
+        label="True",
+        color="black",
+        linewidth=2,
+    )
+    ax.set(
+        title=f"{channel} Predicted Effects",
+        xlabel="Daily Spend",
+        ylabel="Incremental Effect",
+    )
+    ax.axhline(0, linestyle="--", color="gray", alpha=0.7)
+    ax.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+Much better, right? And it was implemented with a really modular and flexible code.
+You could wrap any effect with `LiftExperimentLikelihood` to add lift test data to guide its behaviour. Nevertheless,
+this is not the end of the story. 
+
+
+### 2.3 Add Attribution Signals with ExactLikelihood
+
+Attribution models can provide **daily signals**. If available, you can
+incorporate them by adding another likelihood term via `ExactLikelihood`.
+
+We create a synthetic attribution signal by multiplying the true effect with a random noise factor.
+
+
+```{python}
+from prophetverse.effects import ExactLikelihood
+
+rng = np.random.default_rng(42)
+
+# Generate attribution signals for search and social media channels
+attr_search = true_components[["ad_spend_search"]] * rng.normal(
+    1, 0.1, size=(len(y), 1)
+)
+attr_social = true_components[["ad_spend_social_media"]] * rng.normal(
+    1, 0.1, size=(len(y), 1)
+)
+
+# Display the first few rows of the social media attribution signal
+attr_social.head()
+```
+
+```{python}
+model_umm = model_lift.clone()
+model_umm.set_params(
+    exogenous_effects=model_lift.get_params()["exogenous_effects"]
+    + [
+        (
+            "attribution_search",
+            ExactLikelihood("ad_spend_search", attr_search, 0.01),
+            None,
+        ),
+        (
+            "attribution_social_media",
+            ExactLikelihood("ad_spend_social_media", attr_social, 0.01),
+            None,
+        ),
+    ]
+)
+model_umm.fit(y=y, X=X)
+```
+
+```{python}
+components_umm = model_umm.predict_components(X=X, fh=X.index)
+
+fig, axs = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
+for ax, channel in zip(axs, ["ad_spend_search", "ad_spend_social_media"]):
+    ax.scatter(X[channel], y_pred_components[channel], label="Baseline", alpha=0.4)
+    ax.scatter(X[channel], components_lift[channel], label="With Lift Test", alpha=0.4)
+    ax.scatter(X[channel], components_umm[channel], label="With Attribution", alpha=0.4)
+    ax.plot(X[channel], true_components[channel], label="True Effect", color="black")
+    ax.set_title(channel)
+    ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+
+Even better! And, due to sktime-like interface, wrapping and adding new effects is easy.
+
+
+## Final Thoughts: Toward Unified Marketing Measurement
+
+
+✅ **What we learned**:  
+1. Adstock + saturation are essential to capture media dynamics.  
+2. Good predictions ≠ good attribution.  
+3. Causal data like lift tests can **correct** misattribution.  
+4. Attribution signals add further constraints.
+
+🛠️ **Use this when**:  
+* Channels are correlated → Use lift tests.  
+* You have granular model output → Add attribution likelihoods.  
+
+🧪 **Model selection tip**:  
+Always validate **causal logic**, not just fit quality.  
+
+With Prophetverse, you can **combine observational, experimental, and model-based signals** into one coherent MMM+UMM pipeline.

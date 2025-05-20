@@ -1,3 +1,0 @@
-# Inference Engine
-
-::: prophetverse.engine

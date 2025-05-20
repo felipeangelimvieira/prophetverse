@@ -44,7 +44,7 @@ jobs:
 
       - name: Render Quarto site
         run: |
-          poetry run quarto render
+          poetry run quarto render docs
 
       # Deploy Preview for PRs
       - name: Publish PR Preview
@@ -74,7 +74,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
+          publish_dir: ./docs/_site
           destination_dir: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,7 +85,7 @@ jobs:
           version="${GITHUB_REF#refs/tags/}"
           echo "Detected version: $version"
           mkdir -p ./latest
-          cp -r ./_site/* ./latest/
+          cp -r ./docs/_site/* ./latest/
       
       - name: Publish Versioned Site to latest
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')

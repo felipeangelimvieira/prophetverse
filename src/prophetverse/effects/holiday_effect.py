@@ -8,13 +8,13 @@ import numpyro
 import numpyro.distributions as dist
 from datetime import datetime, timedelta
 
-from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
+from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseAdditiveOrMultiplicativeEffect
 from prophetverse.utils.frame_to_array import series_to_tensor
 
 __all__ = ["HolidayEffect"]
 
 
-class HolidayEffect(BaseEffect):
+class HolidayEffect(BaseAdditiveOrMultiplicativeEffect):
     """Holiday effect for time series forecasting.
     
     This effect models specific holidays or events as additive or multiplicative effects.
@@ -56,7 +56,7 @@ class HolidayEffect(BaseEffect):
         country_name: Optional[str] = None,
         lower_window: int = 0,
         upper_window: int = 0,
-        prior_scale: float = 1.0,
+        prior_scale: float = 0.1,
         effect_mode: EFFECT_APPLICATION_TYPE = "additive"
     ):
         self.holidays = holidays
@@ -64,8 +64,8 @@ class HolidayEffect(BaseEffect):
         self.lower_window = lower_window
         self.upper_window = upper_window
         self.prior_scale = prior_scale
-        self.effect_mode = effect_mode
-        super().__init__()
+
+        super().__init__(effect_mode = effect_mode)
         
     def _get_built_in_holidays(self) -> pd.DataFrame:
         """Get built-in holidays for the specified country.
@@ -368,11 +368,6 @@ class HolidayEffect(BaseEffect):
         else:
             # For univariate case
             holiday_effect = jnp.sum(features * beta, axis=-1, keepdims=True)
-            
-        if effect_mode == "multiplicative":
-            # For multiplicative effect_mode, we add 1 to the effect
-            # so that the base value is 1 (no effect)
-            holiday_effect = 1 + holiday_effect
             
         return holiday_effect
         

@@ -1,0 +1,115 @@
+# HierarchicalProphet { #prophetverse.sktime.HierarchicalProphet }
+
+```python
+sktime.HierarchicalProphet(
+    self,
+    trend='linear',
+    feature_transformer=None,
+    exogenous_effects=None,
+    default_effect=None,
+    shared_features=None,
+    noise_scale=0.05,
+    correlation_matrix_concentration=1.0,
+    rng_key=None,
+    inference_engine=None,
+    likelihood=None,
+)
+```
+
+A Bayesian hierarchical time series forecasting model based on Meta's Prophet.
+
+This method forecasts all bottom series in a hierarchy at once, using a
+MultivariateNormal as the likelihood function and LKJ priors for the correlation
+matrix.
+
+This forecaster is particularly interesting if you want to fit shared coefficients
+across series. In that case, `shared_features` parameter should be a list of
+feature names that should have that behaviour.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+| Name                             | Type                     | Description                                         | Default    |
+|----------------------------------|--------------------------|-----------------------------------------------------|------------|
+| trend                            | Union\[BaseEffect, str\] | Trend component of the model.                       | `"linear"` |
+| feature_transformer              | BaseTransformer          | Transformer for features preprocessing.             | `None`     |
+| exogenous_effects                | optional                 | Effects to model exogenous variables.               | `None`     |
+| default_effect                   | optional                 | Default effect specification.                       | `None`     |
+| shared_features                  | optional                 | Features shared across time series.                 | `None`     |
+| noise_scale                      | float                    | Scale parameter for the noise distribution.         | `0.05`     |
+| correlation_matrix_concentration | float                    | Concentration parameter for the correlation matrix. | `1.0`      |
+| rng_key                          | optional                 | Random number generator key.                        | `None`     |
+| inference_engine                 | optional                 | Engine used for inference.                          | `None`     |
+
+## Examples {.doc-section .doc-section-examples}
+
+```python
+>>> from sktime.forecasting.naive import NaiveForecaster
+>>> from sktime.transformations.hierarchical.aggregate import Aggregator
+>>> from sktime.utils._testing.hierarchical import _bottom_hier_datagen
+>>> from prophetverse.sktime.multivariate import HierarchicalProphet
+>>> agg = Aggregator()
+>>> y = _bottom_hier_datagen(
+...     no_bottom_nodes=3,
+...     no_levels=1,
+...     random_seed=123,
+...     length=7,
+... )
+>>> y = agg.fit_transform(y)
+>>> forecaster = HierarchicalProphet()
+>>> forecaster = forecaster.fit(y)
+>>> y_pred = forecaster.predict(fh=[1])
+```
+
+## Attributes
+
+| Name | Description |
+| --- | --- |
+| [n_series](#prophetverse.sktime.HierarchicalProphet.n_series) | Get the number of series. |
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [get_test_params](#prophetverse.sktime.HierarchicalProphet.get_test_params) | Params to be used in sktime unit tests. |
+| [predict_samples](#prophetverse.sktime.HierarchicalProphet.predict_samples) | Generate samples for the given exogenous variables and forecasting horizon. |
+
+### get_test_params { #prophetverse.sktime.HierarchicalProphet.get_test_params }
+
+```python
+sktime.HierarchicalProphet.get_test_params(parameter_set='default')
+```
+
+Params to be used in sktime unit tests.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name          | Type   | Description                                                   | Default     |
+|---------------|--------|---------------------------------------------------------------|-------------|
+| parameter_set | str    | The parameter set to be used (ignored in this implementation) | `'default'` |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                     | Description                                            |
+|--------|--------------------------|--------------------------------------------------------|
+|        | List\[dict\[str, int\]\] | A list of dictionaries containing the test parameters. |
+
+### predict_samples { #prophetverse.sktime.HierarchicalProphet.predict_samples }
+
+```python
+sktime.HierarchicalProphet.predict_samples(fh, X=None)
+```
+
+Generate samples for the given exogenous variables and forecasting horizon.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name   | Type               | Description          | Default    |
+|--------|--------------------|----------------------|------------|
+| X      | pd.DataFrame       | Exogenous variables. | `None`     |
+| fh     | ForecastingHorizon | Forecasting horizon. | _required_ |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type       | Description        |
+|--------|------------|--------------------|
+|        | np.ndarray | Predicted samples. |

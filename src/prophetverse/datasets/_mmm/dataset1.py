@@ -34,7 +34,7 @@ def get_index():
     return index
 
 
-def get_X(index):
+def get_X(index, rng):
     """
     Create a DataFrame of two simulated investments with daily data.
 
@@ -48,7 +48,6 @@ def get_X(index):
     pd.DataFrame
         DataFrame containing normalized simulated investments.
     """
-    rng = np.random.default_rng(0)
 
     X = pd.DataFrame(
         {
@@ -201,7 +200,7 @@ def get_y(samples, index):
     return samples.loc[0, "obs"].to_frame("sales")
 
 
-def get_simulated_lift_test(X, model, true_effect, n=10):
+def get_simulated_lift_test(X, model, true_effect, rng, n=10):
     """
     Perform a simulated lift test by perturbing exogenous variables.
 
@@ -223,7 +222,7 @@ def get_simulated_lift_test(X, model, true_effect, n=10):
     tuple of pd.DataFrame
         Lift test results for each exogenous variable.
     """
-    rng = np.random.default_rng(1)
+
     outs = []
     for col in ["ad_spend_search", "ad_spend_social_media"]:
 
@@ -240,12 +239,12 @@ def get_simulated_lift_test(X, model, true_effect, n=10):
         lift_test_dataframe = pd.DataFrame(
             index=X.index,
             data={
-                "lift": (lift[col] * rng.normal(1, 0.05)).clip(0, None),
+                "lift": (lift[col] * rng.normal(1, 0.05, size=X.shape[0])),
                 "x_start": X.loc[:, col],
                 "x_end": X_b.loc[:, col],
             },
         )
-        outs.append(lift_test_dataframe.sample(n=n, replace=False))
+        outs.append(lift_test_dataframe.sample(n=n, replace=False, random_state=42))
 
     return tuple(outs)
 
@@ -263,13 +262,15 @@ def get_dataset():
         Contains observed sales, exogenous data, lift test results, true effects,
         and the Prophetverse model.
     """
+
+    rng = np.random.default_rng(0)
     index = get_index()
-    X = get_X(index)
+    X = get_X(index, rng=rng)
     model = get_groundtruth_model()
 
     model.fit(X=X, y=pd.Series(np.zeros(X.shape[0]), index=X.index))
     y = model.predict(X=X, fh=index)
     true_effect = model.predict_components(X=X, fh=index)
-    lift_test = get_simulated_lift_test(X, model, true_effect, n=30)
+    lift_test = get_simulated_lift_test(X, model, true_effect, n=30, rng=rng)
 
     return y, X, lift_test, true_effect, model

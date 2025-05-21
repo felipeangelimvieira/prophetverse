@@ -1,0 +1,99 @@
+---
+title: Marketing Mix Modeling
+---
+
+
+```{python}
+# | echo: false
+# | message: false
+# | warning: false
+# | error: false
+# | fig-align: "center"
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+# Generate synthetic data
+dates = pd.date_range("2021-01-01", periods=100, freq="W")
+series_a = np.random.rand(100).cumsum()
+series_b = np.random.rand(100).cumsum() * 0.8
+series_c = np.random.rand(100).cumsum() * 0.6
+
+# Plot stacked area
+fig, ax = plt.subplots(figsize=(5, 2.5))
+colors = plt.cm.Blues(np.linspace(0.3, 0.8, 3))
+ax.stackplot(dates, series_a, series_b, series_c, colors=colors)
+
+# ax.legend(["Channel A", "Channel B", "Channel C"], loc="upper left")
+ax.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+
+::::: {.grid}
+
+:::: {.g-col-6}
+
+::: {.callout-note appearance="simple"}
+## Fit, calibrate and backtest your MMM model
+
+Checkout how to fit, backtest and calibrate your MMM model with lift tests and attribution models.
+
+---
+  
+[**Click here!**](/mmm/fitting_and_calibration.qmd)
+
+:::
+    
+::::
+
+:::: {.g-col-6}
+
+::: {.callout-tip appearance="simple"}
+
+## New! Optimize your budget
+
+
+Checkout how to optimize your budget to arbitrary constraints, objectives and parametrizations!
+
+---
+
+[**See here!**](/mmm/budget_allocation.qmd)
+
+:::
+
+::::
+
+:::::
+
+Marketing Mix Modeling (MMM) is a statistical analysis technique that helps in obtaining insights and planning marketing strategies. It is tightly related to Time Series Analysis — we can think of MMM as a special case of Time Series forecasting, where the goal is to understand the incrementality of different exogenous variables on the target variable.
+
+When Prophetverse was created, the objective was to provide a more up-to-date implementation of Facebook's Prophet model and to add features and customization options that were not available in the original implementation. However, as the library evolved, it became clear that it could be used for more than just forecasting and that it could be a powerful tool for MMM.
+
+Prophetverse has the following features that make it a great choice for MMM:
+
+* __Modularity__: Prophetverse allows users to create additive Bayesian models in a modular fashion. Users can easily include different effects to account for various relationships between the exogenous variables and the target variable, and even create their own effects.
+
+* __Versatility__: The effects API can be used not only for adding new components but also for adding new likelihood terms, such as those used for lift tests.
+
+The following effects may be of interest if you are working on MMM:
+
+* [**GeometricAdstockEffect**](/reference/GeometricAdstockEffect.qmd): The geometric adstock effect is a widely used technique in MMM to account for the lagged effect of advertising on sales. It is based on the idea that the effect of an ad on sales decays over time and that the decay follows a geometric progression.
+
+* [**HillEffect**](/reference/HillEffect.qmd): The Hill curve accounts for diminishing returns in the effect of an exogenous variable on the target variable.
+
+* [**ChainedEffects**](/reference/ChainedEffects.qmd): The chained effect is a way to combine multiple effects into a single one. For example, you can use adstock and Hill together.
+
+* [**LiftExperimentLikelihood**](/reference/LiftExperimentLikelihood.qmd): The lift experiment likelihood is a likelihood term that can be used to account for the effect of a lift test on the target variable. It is useful if you want to understand the incrementality of a variable and have already run a lift test to analyze how variations in the input affect the output.
+
+* [**ExactLikelihood**](/reference/ExactLikelihood.qmd): The exact likelihood is a likelihood term that can be used to incorporate a reference value as the incrementality of an exogenous variable. It is useful if another team in your company has already calculated the incrementality of a variable and you want to use it in your MMM model.
+
+## Related Libraries
+
+I invite you to check out other libraries for MMM. Two of them are:
+
+* [PyMC-Marketing](https://www.pymc-marketing.io/en/stable/index.html): This is an amazing project by PyMC's developers. It is a library that provides a set of tools for building Bayesian models for marketing analytics. The documentation is very comprehensive and a great source of information.
+
+* [Lightweight-MMM](https://lightweight-mmm.readthedocs.io/en/latest/index.html): This library, as far as I know, was created by Google developers based on NumPyro. Now, they are developing a new one called [Meridian](https://developers.google.com/meridian?hl=fr).
+

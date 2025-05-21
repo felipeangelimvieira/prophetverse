@@ -1,0 +1,72 @@
+# Prophetverse { #prophetverse.sktime.Prophetverse }
+
+```python
+sktime.Prophetverse(
+    self,
+    trend='linear',
+    exogenous_effects=None,
+    default_effect=None,
+    feature_transformer=None,
+    noise_scale=None,
+    likelihood='normal',
+    scale=None,
+    rng_key=None,
+    inference_engine=None,
+)
+```
+
+Univariate Prophetverse forecaster with multiple likelihood options.
+
+This forecaster implements a univariate model with support for different likelihoods.
+It differs from Facebook's Prophet in several ways:
+  - Logistic trend is parametrized differently, inferring capacity from data.
+  - Arbitrary sktime transformers can be used (e.g., FourierFeatures or HolidayFeatures).
+  - No default weekly or yearly seasonality; these must be provided via the feature_transformer.
+  - Uses 'changepoint_interval' instead of 'n_changepoints' for selecting changepoints.
+  - Allows for configuring distinct functions for each exogenous variable effect.
+
+## Parameters {.doc-section .doc-section-parameters}
+
+| Name                | Type                           | Description                                                                                  | Default    |
+|---------------------|--------------------------------|----------------------------------------------------------------------------------------------|------------|
+| trend               | Union\[str, BaseEffect\]       | Type of trend to use. Either "linear" (default) or "logistic", or a custom effect object.    | `'linear'` |
+| exogenous_effects   | Optional\[List\[BaseEffect\]\] | List of effect objects defining the exogenous effects.                                       | `None`     |
+| default_effect      | Optional\[BaseEffect\]         | The default effect for variables without a specified effect.                                 | `None`     |
+| feature_transformer | sktime transformer             | Transformer object to generate additional features (e.g., Fourier terms).                    | `None`     |
+| noise_scale         | float                          | Scale parameter for the observation noise. Must be greater than 0. (default: 0.05)           | `None`     |
+| likelihood          | str                            | The likelihood model to use. One of "normal", "gamma", or "negbinomial". (default: "normal") | `'normal'` |
+| scale               | optional                       | Scaling value inferred from the data.                                                        | `None`     |
+| rng_key             | optional                       | A jax.random.PRNGKey instance, or None.                                                      | `None`     |
+| inference_engine    | optional                       | An inference engine for running the model.                                                   | `None`     |
+
+## Raises {.doc-section .doc-section-raises}
+
+| Name   | Type       | Description                                                                    |
+|--------|------------|--------------------------------------------------------------------------------|
+|        | ValueError | If noise_scale is not greater than 0 or an unsupported likelihood is provided. |
+
+## Methods
+
+| Name | Description |
+| --- | --- |
+| [get_test_params](#prophetverse.sktime.Prophetverse.get_test_params) | Return parameters to be used in sktime unit tests. |
+
+### get_test_params { #prophetverse.sktime.Prophetverse.get_test_params }
+
+```python
+sktime.Prophetverse.get_test_params(parameter_set='default')
+```
+
+Return parameters to be used in sktime unit tests.
+
+#### Parameters {.doc-section .doc-section-parameters}
+
+| Name          | Type   | Description                                 | Default     |
+|---------------|--------|---------------------------------------------|-------------|
+| parameter_set | str    | The parameter set name (currently ignored). | `'default'` |
+
+#### Returns {.doc-section .doc-section-returns}
+
+| Name   | Type                     | Description                                        |
+|--------|--------------------------|----------------------------------------------------|
+|        | List\[dict\[str, int\]\] | A list of dictionaries containing test parameters. |

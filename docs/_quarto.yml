@@ -1,0 +1,158 @@
+project:
+  type: website
+
+website:
+  title: "prophetverse"
+  favicon: static/logo-removebg.png
+  search:
+    location: navbar
+    limit: 5
+    type: textbox
+  navbar:
+    logo: static/logo-removebg.png
+    search: true
+    left:
+      - sidebar:tutorials
+      - sidebar:howto
+      - href: mmm
+        text: "Marketing Mix Modeling  🚀"
+      - href: the-theory.qmd
+        text: "Mathematical Formulation 📖"
+      - text: "API Reference"
+        href: reference
+    right:
+      - icon: github
+        menu:
+          - text: Source Code
+            url:  https://github.com/felipeangelimvieira/prophetverse
+          - text: Development guide
+            href: development.qmd
+      - icon: discord
+        menu:
+          - text: Join the community
+            url: https://discord.com/channels/1075852648688930887/1372332867111358504
+      - text: Version
+        menu:
+          - text: latest
+            href: /latest
+          - text: 0.6.0
+            href: https://prophetverse.com/0.6.0
+          
+  sidebar:
+    - id: tutorials
+      title: "Tutorials 📚"
+      style: "floating"
+      collapse-level: 3
+      contents:
+        - text: "Univariate forecasting"
+          href: tutorials/univariate.qmd
+        - text: "Hyperparameter tuning"
+          href: tutorials/tuning.qmd
+    - id: howto
+      title: "How To 🛠️"
+      style: "floating"
+      contents:
+        - text: "Introduction to Effects"
+          href: howto/effect_api_intro.qmd
+        - text: "Custom trend"
+          href: howto/custom_trend.qmd
+        - text: "Custom exogenous effect"
+          href: howto/custom_effects.qmd
+        - text: "Creating composite effects"
+          href: howto/composite_effects.qmd
+    - title: "Marketing Mix Modeling"
+      style: "floating"
+      contents:
+        - text: "Fitting, calibrating and Unified Marketing Measurement"
+          href: mmm/fitting_and_calibration.qmd
+        - text: "Budget Optimization"
+          href: mmm/budget_allocation.qmd        
+
+format:
+  html:
+    toc: true
+    toc-expand: true
+    theme:
+      - cosmo
+      - brand
+    css:
+      - styles.css
+      - reference/_styles-quartodoc.css
+
+# tell quarto to read the generated sidebar
+metadata-files:
+  - reference/_sidebar.yml
+  - mmm/_sidebar.yml
+
+quartodoc:
+  # the name used to import the package you want to create reference docs for
+  package: prophetverse
+
+  # write sidebar and style data
+  sidebar: reference/_sidebar.yml
+  css: reference/_styles-quartodoc.css
+
+  sections:
+    - title: Sktime
+      desc: Sktime models
+      package: prophetverse.sktime
+      contents:
+        # the functions being documented in the package.
+        # you can refer to anything: class methods, modules, etc..
+        - Prophetverse
+        - HierarchicalProphet
+    - title: Exogenous effects
+      desc: Exogenous effects
+      package: prophetverse.effects
+      contents:
+        - LinearEffect
+        - LinearFourierSeasonality
+        - LogEffect
+        - HillEffect
+        - ChainedEffects
+        - GeometricAdstockEffect
+    - title: MMM Likelihoods
+      desc: MMM Likelihoods
+      package: prophetverse.effects
+      contents:
+        - LiftExperimentLikelihood
+        - ExactLikelihood
+    - title: Trends
+      desc: Trends
+      package: prophetverse.effects
+      contents:
+        - PiecewiseLinearTrend
+        - PiecewiseLogisticTrend
+        - FlatTrend
+    - title: Target Likelihoods
+      desc: Likelihoods for the target variable
+      package: prophetverse.effects
+      contents:
+        - MultivariateNormal
+        - NormalTargetLikelihood
+        - GammaTargetLikelihood
+        - NegativeBinomialTargetLikelihood
+    - title: Budget Optimization
+      desc: Budget Optimization
+      package: prophetverse.experimental.budget_optimization.optimizer
+      contents:
+        - BudgetOptimizer
+    - title: Budget Constraints
+      desc: Budget Constraints
+      package: prophetverse.experimental.budget_optimization.constraints
+      contents:
+        - SharedBudgetConstraint
+        - MinimumTargetResponse
+    - title: Objective Functions
+      desc: Objective Functions
+      package: prophetverse.experimental.budget_optimization.objectives
+      contents:
+        - MinimizeBudget
+        - MaximizeKPI
+        - MaximizeROI
+    - title: Budget Parametrizations
+      desc: Budget Parametrizations
+      package: prophetverse.experimental.budget_optimization.parametrization_transformations
+        - InvestmentPerChannelTransform
+        - TotalInvestmentTransform
+        - IdentityTransform

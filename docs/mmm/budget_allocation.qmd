@@ -32,10 +32,14 @@ warnings.simplefilter(action="ignore")
 
 ```{python}
 import numpyro
+
 numpyro.enable_x64()
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import pandas as pd
+
+plt.style.use("seaborn-v0_8-whitegrid")
 ```
 
 
@@ -56,19 +60,36 @@ def plot_spend_comparison(
     channels,
     indexer,
     *,
-    baseline_title="Baseline Spend",
-    optimized_title="Optimized Spend",
-    figsize=(8, 6),
+    baseline_title="Baseline Spend: Pre-Optimization",
+    optimized_title="Optimized Spend: Maximizing KPI",
+    figsize=(12, 6),
 ):
     fig, ax = plt.subplots(1, 2, figsize=figsize)
-    X_baseline.loc[indexer, channels].plot(ax=ax[0], title=baseline_title)
-    X_optimized.loc[indexer, channels].plot(ax=ax[1], title=optimized_title)
+
+    X_baseline.loc[indexer, channels].plot(ax=ax[0], linewidth=2)
+    X_optimized.loc[indexer, channels].plot(ax=ax[1], linewidth=2, linestyle="--")
+
+    ax[0].set_title(baseline_title, fontsize=14, weight="bold")
+    ax[1].set_title(optimized_title, fontsize=14, weight="bold")
+
     for a in ax:
         a.set_ylabel("Spend")
         a.set_xlabel("Date")
+        a.legend(loc="upper right", frameon=True)
+        a.grid(axis="x", visible=False)
+        a.grid(axis="y", linestyle="--", alpha=0.7)
+        a.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+
+    # Align y-axis
+    y_max = max(
+        X_baseline.loc[indexer, channels].max().max(),
+        X_optimized.loc[indexer, channels].max().max(),
+    )
+    for a in ax:
+        a.set_ylim(0, y_max * 1.05)
+
     plt.tight_layout()
     return fig, ax
-
 ```
 
 ## 2. Budget Optimization
@@ -128,25 +149,28 @@ X_opt = budget_optimizer.optimize(
 
 #### Baseline vs. optimized spend
 
+We can call predict to get the baseline and optimized predictions.
+
 ```{python}
-plot_spend_comparison(
+
+y_pred_baseline = model.predict(X=X, fh=horizon)
+y_pred_opt = model.predict(X=X_opt, fh=horizon)
+
+```
+
+```{python}
+fig, ax = plot_spend_comparison(
     X,
     X_opt,
     ["ad_spend_search", "ad_spend_social_media"],
     "2004",
 )
-plt.show()
-```
 
-#### Predictions comparison
+kpi_gain = y_pred_opt.sum() / y_pred_baseline.sum() - 1
+fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16,weight="bold", y=1.02)
+fig.tight_layout()
+fig.show()
 
-```{python}
-y_pred_baseline = model.predict(X=X, fh=horizon)
-y_pred_opt = model.predict(X=X_opt, fh=horizon)
-
-print(
-    f"MMM Predictions - Optimization KPI gain: +{y_pred_opt.sum()/y_pred_baseline.sum()-1:.2%}"
-)
 ```
 
 ### 2.2. Reparametrization: Optimizing channel share
@@ -177,24 +201,23 @@ X_opt = budget_optimizer.optimize(
 #### Baseline vs. optimized spend
 
 ```{python}
-plot_spend_comparison(
+
+y_pred_baseline = model.predict(X=X, fh=horizon)
+y_pred_opt = model.predict(X=X_opt, fh=horizon)
+
+
+fig, ax = plot_spend_comparison(
     X,
     X_opt,
     ["ad_spend_search", "ad_spend_social_media"],
     horizon,
+    figsize=(12, 6),
 )
-plt.show()
-```
 
-#### Predictions comparison
-
-```{python}
-y_pred_baseline = model.predict(X=X, fh=horizon)
-y_pred_opt = model.predict(X=X_opt, fh=horizon)
-
-print(
-    f"MMM Predictions - Optimization KPI gain: +{y_pred_opt.sum()/y_pred_baseline.sum()-1:.2%}"
-)
+kpi_gain = y_pred_opt.sum() / y_pred_baseline.sum() - 1
+fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16, weight="bold", y=1.02)
+fig.tight_layout()
+fig.show()
 ```
 
 ### 2.3. Minimizing budget to reach a target

@@ -883,9 +883,16 @@ class FourierHolidayEffect(BaseAdditiveOrMultiplicativeEffect):
             holiday_effect = self.holiday_linear_effects_[holiday_name]
             holiday_data[holiday_name] = holiday_effect.transform(holiday_fourier, fh)
         
+        # Determine expected shape for the output
+        if self.has_multiple_series_:
+            expected_shape = (len(self.series_idx_), len(fh), 1)
+        else:
+            expected_shape = (len(fh), 1)
+
         return {
             'holiday_data': holiday_data,
-            'effect_mode': self.effect_mode
+            'effect_mode': self.effect_mode,
+            'expected_shape': expected_shape
         }
     
     def _predict(
@@ -906,14 +913,57 @@ class FourierHolidayEffect(BaseAdditiveOrMultiplicativeEffect):
             The holiday effect values.
         """
         holiday_data = data['holiday_data']
+        # expected_shape is (num_series, num_timesteps, 1) or (num_timesteps, 1)
+        # This was added to `data` by the `_transform` method.
+        expected_shape = data['expected_shape']
+
+        # If there are no holiday effects to apply (e.g. no holidays in the forecast horizon),
+        # return zeros with the pre-calculated expected shape.
+        if not holiday_data:
+            return jnp.zeros(expected_shape, dtype=jnp.float32)
+
+        # Initialize holiday_effect as a JAX numpy array of zeros with the correct shape.
+        holiday_effect = jnp.zeros(expected_shape, dtype=jnp.float32)
         
         # Sum up effects from all holidays
-        for holiday_name, holiday_features in holiday_data.items():
-            # Get the LinearEffect for this holiday
+        for holiday_name, holiday_features_data in holiday_data.items():
+            # Get the LinearEffect model for this specific holiday
+            # self.holiday_linear_effects_ stores LinearEffect instances keyed by holiday_name
+            if holiday_name not in self.holiday_linear_effects_:
+                # This handles cases where a holiday might be in holiday_data (e.g., from fh)
+                # but wasn't significant or present in the training data, so no model was stored.
+                # In such scenarios, this holiday contributes nothing to the effect.
+                continue
+
             holiday_effect_model = self.holiday_linear_effects_[holiday_name]
             
-            # Predict the effect for this holiday
-            holiday_effect = holiday_effect_model.predict(holiday_features, predicted_effects)
+            # Predict the effect for the current holiday
+            # `holiday_features_data` is the dictionary returned by the LinearEffect's _transform method,
+            # which is then passed to its _predict method.
+            current_holiday_effect = holiday_effect_model.predict(
+                data=holiday_features_data, predicted_effects=predicted_effects
+            )
+            
+            # Accumulate the effect.
+            # Ensure shapes are compatible for accumulation.
+            # This should generally be true if expected_shape is derived correctly and
+            # LinearEffect.predict adheres to generating effects of this shape.
+            if current_holiday_effect.shape == holiday_effect.shape:
+                holiday_effect += current_holiday_effect
+            else:
+                # Handle potential shape mismatches. This is a safeguard.
+                # If shapes are compatible for broadcasting (e.g. one is (T,1) and other is (N,T,1)),
+                # JAX might handle it. However, explicit check is safer.
+                # A common case could be current_holiday_effect is (T,1) and holiday_effect is (N,T,1)
+                # if the LinearEffect isn't aware of N series.
+                # For now, we rely on LinearEffect.predict to return correctly shaped output
+                # matching expected_shape. If not, this error will highlight it.
+                raise ValueError(
+                    f"Shape mismatch during holiday effect accumulation for '{holiday_name}'. "
+                    f"Accumulated effect shape: {holiday_effect.shape}, "
+                    f"Current holiday effect shape: {current_holiday_effect.shape}. "
+                    f"Ensure LinearEffect.predict returns shape compatible with {expected_shape}."
+                )
         
         return holiday_effect
         

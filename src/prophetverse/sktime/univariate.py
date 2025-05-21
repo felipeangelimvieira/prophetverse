@@ -186,6 +186,7 @@ class Prophetverse(BaseProphetForecaster):
             Dictionary containing prepared data for model fitting.
         """
         fh = y.index.get_level_values(-1).unique()
+        fh = pd.Index(list(fh.to_numpy()))
 
         self.trend_model_ = self._trend.clone()
         self.likelihood_model_ = self._likelihood.clone()

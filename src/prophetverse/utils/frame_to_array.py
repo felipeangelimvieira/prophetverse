@@ -9,6 +9,7 @@ from jax import numpy as jnp
 from .multiindex import iterate_all_series
 
 NANOSECONDS_TO_SECONDS = 1000 * 1000 * 1000
+PANDAS_DATETIME_NS = 'datetime64[ns]'
 
 __all__ = [
     "convert_index_to_days_since_epoch",
@@ -33,6 +34,9 @@ def convert_index_to_days_since_epoch(idx: pd.Index) -> np.array:
         The converted array of days since epoch.
     """
     t = idx
+
+    if t.dtype != PANDAS_DATETIME_NS:
+        t = t.astype(PANDAS_DATETIME_NS)
 
     if not (isinstance(t, pd.PeriodIndex) or isinstance(t, pd.DatetimeIndex)):
         return t.values

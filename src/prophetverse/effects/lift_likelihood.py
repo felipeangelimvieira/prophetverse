@@ -7,7 +7,7 @@ import numpyro
 import numpyro.distributions as dist
 import pandas as pd
 
-from prophetverse.distributions import GammaReparametrized, InverseGammaReparametrized
+from prophetverse.distributions import GammaReparametrized
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
 from prophetverse.utils.numpyro import CacheMessenger
 from .base import BaseEffect

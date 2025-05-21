@@ -42,38 +42,3 @@ class GammaReparametrized(dist.Gamma):
         super().__init__(
             rate=rate, concentration=concentration, validate_args=validate_args
         )
-
-
-class InverseGammaReparametrized(dist.InverseGamma):
-    """
-    A reparametrized Inverse-Gamma distribution in terms of mean (loc) and
-    standard deviation (scale) instead of concentration and rate.
-
-    Parameters
-    ----------
-    loc : float or jnp.ndarray
-        Desired mean of the distribution (must be > 0).
-    scale : float or jnp.ndarray
-        Desired standard deviation of the distribution (must be > 0).
-    """
-
-    arg_constraints = {
-        "loc": constraints.positive,
-        "scale": constraints.positive,
-    }
-    support = constraints.positive
-    reparametrized_params = ["loc", "scale"]
-
-    def __init__(self, loc, scale=1.0, *, validate_args=None):
-        # broadcast loc and scale
-        self.loc, self.scale = promote_shapes(loc, scale)
-
-        # solve for concentration (alpha) and rate (beta)
-        concentration = 2.0 + (self.loc / self.scale) ** 2
-        rate = self.loc * (1.0 + (self.loc / self.scale) ** 2)
-
-        super().__init__(
-            concentration=concentration,
-            rate=rate,
-            validate_args=validate_args,
-        )

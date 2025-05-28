@@ -23,8 +23,16 @@ class BaseInferenceEngine(BaseObject):
     ----------
     model : Callable
         The model used for inference.
-    rng_key : jax.random.PRNGKey
-        The random number generator key.
+    rng_key : jax.random.PRNGKey, optional
+        The JAX random number generator key to be used for any stochastic
+        operations within the inference engine (e.g., parameter initialization,
+        sampling in MCMC, or stochastic optimization in MAP).
+        Its primary purpose is to ensure reproducibility of results.
+        If not provided (i.e., set to `None`), a default key,
+        `jax.random.PRNGKey(0)`, will be used.
+        Users should provide their own key if they need to manage randomness
+        explicitly across different runs or environments, for instance, when
+        conducting experiments or ensuring consistent behavior in production.
     """
 
     _tags = {
@@ -32,11 +40,13 @@ class BaseInferenceEngine(BaseObject):
     }
 
     def __init__(self, rng_key=None):
-        self.rng_key = rng_key
-
         if rng_key is None:
-            rng_key = jax.random.PRNGKey(0)
-        self._rng_key = rng_key
+            self.rng_key = jax.random.PRNGKey(0)
+        else:
+            self.rng_key = rng_key
+        # Store the key that will actually be used internally,
+        # ensuring it's always a JAX PRNGKey.
+        self._rng_key = self.rng_key
 
     # pragma: no cover
     def infer(self, model, **kwargs):

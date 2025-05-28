@@ -41,8 +41,11 @@ class MAPInferenceEngine(BaseInferenceEngine):
     num_samples : int, optional
         The number of samples to generate during prediction.
         Default is _DEFAULT_PREDICT_NUM_SAMPLES.
-    rng_key : optional
-        The random number generator key.
+    rng_key : jax.random.PRNGKey, optional
+        The JAX random number generator key to be used for any stochastic
+        operations. This is passed to the superclass `BaseInferenceEngine`.
+        If not provided, `jax.random.PRNGKey(0)` is used by default.
+        Refer to `BaseInferenceEngine` for more details on `rng_key` management.
     progress_bar : bool, optional
         Whether to display a progress bar during inference. Default is DEFAULT_PROGRESS_BAR.
     stable_update : bool, optional

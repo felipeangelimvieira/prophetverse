@@ -31,8 +31,11 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         The number of MCMC chains to run in parallel.
     dense_mass : bool
         Whether to use dense mass matrix for NUTS sampler.
-    rng_key : Optional
-        The random number generator key.
+    rng_key : jax.random.PRNGKey, optional
+        The JAX random number generator key to be used for any stochastic
+        operations. This is passed to the superclass `BaseInferenceEngine`.
+        If not provided, `jax.random.PRNGKey(0)` is used by default.
+        Refer to `BaseInferenceEngine` for more details on `rng_key` management.
     r_hat: Optional
         The required r_hat for considering the chains to have converged.
     progress_bar : bool

@@ -4,7 +4,7 @@ This module implements the Univariate Prophet model, similar to the one implemen
 the `prophet` library.
 """
 
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Tuple, Callable, Any
 
 import numpyro
 import jax.numpy as jnp
@@ -46,7 +46,7 @@ class Prophetverse(BaseProphetForecaster):
     ----------
     trend : Union[str, BaseEffect], optional
         Type of trend to use. Either "linear" (default) or "logistic", or a custom effect object.
-    exogenous_effects : Optional[List[BaseEffect]], optional
+    exogenous_effects : Optional[List[Tuple[str, BaseEffect, Optional[Union[str, Callable[..., Any], Tuple[Any, ...]]]]]], optional
         List of effect objects defining the exogenous effects.
     default_effect : Optional[BaseEffect], optional
         The default effect for variables without a specified effect.
@@ -83,7 +83,7 @@ class Prophetverse(BaseProphetForecaster):
     def __init__(
         self,
         trend: Union[BaseEffect, str] = "linear",
-        exogenous_effects: Optional[List[BaseEffect]] = None,
+        exogenous_effects: Optional[List[Tuple[str, BaseEffect, Optional[Union[str, Callable[..., Any]]]]]] = None,
         default_effect: Optional[BaseEffect] = None,
         feature_transformer=None,
         noise_scale=None,

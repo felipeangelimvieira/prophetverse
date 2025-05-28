@@ -14,6 +14,7 @@ import pandas as pd
 from sktime.base import _HeterogenousMetaEstimator
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
+from prophetverse._model import model as model_func
 from prophetverse.effects.base import BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.effects.trend import (
@@ -28,7 +29,6 @@ from prophetverse.engine import (
 )
 from prophetverse.engine.optimizer.optimizer import CosineScheduleAdamOptimizer
 from prophetverse.utils import get_multiindex_loc
-from prophetverse._model import model as model_func
 
 _VALID_TREND_STRINGS = ["linear", "logistic", "flat"]
 
@@ -158,6 +158,23 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
+    def model(self, *args, **kwargs):
+        """Numpyro model. If not overridden by subclass, defaults to :func:`model_func`.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments.
+        **kwargs : dict
+            Keyword arguments.
+
+        Returns
+        -------
+        Any
+            Model output.
+        """
+        return model_func(*args, **kwargs)
+
     def _fit(self, y, X, fh):
         """
         Fit the Bayesian forecaster to the training data.
@@ -184,12 +201,8 @@ class BaseBayesianForecaster(BaseForecaster):
 
         self.distributions_ = data.get("distributions", {})
 
-        rng_key = self.rng_key
-        if rng_key is None:
-            rng_key = jax.random.PRNGKey(24)
-
         self.inference_engine_ = self._inference_engine.clone()
-        self.inference_engine_.infer(model_func, **data)
+        self.inference_engine_.infer(self.model, **data)
 
         return self
 

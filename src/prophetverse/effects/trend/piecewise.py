@@ -19,7 +19,7 @@ from prophetverse.utils.frame_to_array import series_to_tensor
 
 from .base import TrendEffectMixin
 
-__all__ = ["PiecewiseLinearTrend", "PiecewiseLogisticTrend"]
+__all__ = ["PiecewiseLinearTrend", "PiecewiseFlatTrend", "PiecewiseLogisticTrend"]
 
 
 class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
@@ -40,7 +40,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
     ----------
     changepoint_interval : int
         The interval between changepoints.
-    changepoint_range : int
+    changepoint_range : float
         The range of the changepoints.
     changepoint_prior_scale : dist.Distribution
         The prior scale for the changepoints.
@@ -64,8 +64,8 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
     def __init__(
         self,
         changepoint_interval: int = 25,
-        changepoint_range: int = 0.8,
-        changepoint_prior_scale: dist.Distribution = 0.001,
+        changepoint_range: float = 0.8,
+        changepoint_prior_scale: Union[float, dist.Distribution] = 0.001,
         offset_prior_scale=0.1,
         squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
@@ -449,6 +449,231 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         return global_rate, offset_loc
 
 
+class PiecewiseFlatTrend(PiecewiseLinearTrend):
+    """Piecewise Flat Trend model.
+
+    This model assumes that the trend is piecewise flat (constant), with changepoints
+    at regular intervals. The number of changepoints is determined by the
+    `changepoint_interval` and `changepoint_range` parameters. The
+    `changepoint_interval` parameter specifies the interval between changepoints,
+    while the `changepoint_range` parameter specifies the range of the changepoints.
+
+    Parameters
+    ----------
+    changepoint_interval : int
+        The interval between changepoints.
+    changepoint_range : int
+        The range of the changepoints.
+    changepoint_prior_scale : dist.Distribution
+        The prior scale for the changepoints.
+    offset_prior_scale : float, optional
+        The prior scale for the offset. Default is 0.1.
+    squeeze_if_single_series : bool, optional
+        If True, squeeze the output if there is only one series. Default is True.
+    remove_seasonality_before_suggesting_initial_vals : bool, optional
+        If True, remove seasonality before suggesting initial values, using sktime's
+        detrender. Default is True.
+    offset_prior_loc : float, optional
+        The prior location for the offset. Default is suggested
+        empirically from data.
+    """
+
+    def __init__(
+        self,
+        changepoint_interval: int = 25,
+        changepoint_range: int = 0.8,
+        changepoint_prior_scale: dist.Distribution = 0.001,
+        offset_prior_scale=0.1,
+        squeeze_if_single_series: bool = True,
+        remove_seasonality_before_suggesting_initial_vals: bool = True,
+        global_rate_prior_loc: Optional[float] = None,
+        offset_prior_loc: Optional[float] = None,
+    ):
+
+        super().__init__(
+            changepoint_interval,
+            changepoint_range,
+            changepoint_prior_scale,
+            offset_prior_scale=offset_prior_scale,
+            squeeze_if_single_series=squeeze_if_single_series,
+            remove_seasonality_before_suggesting_initial_vals=remove_seasonality_before_suggesting_initial_vals,
+            global_rate_prior_loc=global_rate_prior_loc,
+            offset_prior_loc=offset_prior_loc,
+        )
+
+
+    def _predict(
+        self,
+        data: jnp.ndarray,
+        predicted_effects: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs,
+    ) -> jnp.ndarray:
+        """
+        Compute the trend based on the given changepoint matrix.
+
+        Parameters
+        ----------
+        data: jnp.ndarray
+            The changepoint matrix.
+        predicted_effects: Dict[str, jnp.ndarray]
+            Dictionary of previously computed effects. For the trend, it is an empty
+            dict.
+
+        Returns
+        -------
+        jnp.ndarray
+            The computed trend.
+        """
+        # alias for clarity
+        changepoint_matrix = data
+
+        offset = numpyro.sample(
+            "offset",
+            dist.Normal(self._offset_prior_loc, self._offset_prior_scale),
+        )
+
+        changepoint_coefficients = numpyro.sample(
+            "changepoint_coefficients",
+            dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
+        )
+
+        if changepoint_matrix.ndim == 3:
+            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
+            offset = offset.reshape((-1, 1, 1))
+
+        trend = (changepoint_matrix) @ changepoint_coefficients + offset
+
+        if trend.ndim == 1 or (
+            trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series
+        ):
+            trend = trend.reshape((-1, 1))
+
+        return trend
+
+    def _get_multivariate_changepoint_matrix(self, t_scaled) -> jnp.ndarray:
+        """
+        Get the changepoint matrix for a flat piecewise trend.
+
+        The changepoint matrix has shape (n_series, n_timepoints, total number of
+        changepoints for all series). A mask is applied so that for index i at dim 0,
+        only the changepoints for series i are non-zero at dim -1.
+
+        For a flat trend, each element of the matrix is 1 if the time point is after
+        the corresponding changepoint, and 0 otherwise.
+
+        Parameters
+        ----------
+        t_scaled: jnp.ndarray
+            Transformed time index.
+
+        Returns
+        -------
+        jnp.ndarray
+            The changepoint matrix.
+        """
+        changepoint_ts = np.concatenate(self._changepoint_ts)
+        changepoint_design_tensor_list = []
+        changepoint_mask_tensor_list = []
+        for i, n_changepoints in enumerate(self.n_changepoint_per_series):
+            A = _get_flat_changepoint_matrix(t_scaled, changepoint_ts)
+
+            start_idx = sum(self.n_changepoint_per_series[:i])
+            end_idx = start_idx + n_changepoints
+            mask = np.zeros_like(A)
+            mask[:, start_idx:end_idx] = 1
+
+            changepoint_design_tensor_list.append(A)
+            changepoint_mask_tensor_list.append(mask)
+
+        changepoint_design_tensor: np.ndarray = np.stack(
+            changepoint_design_tensor_list, axis=0
+        )
+        changepoint_mask_tensor: np.ndarray = np.stack(
+            changepoint_mask_tensor_list, axis=0
+        )
+        return changepoint_design_tensor * changepoint_mask_tensor
+
+    def _setup_changepoint_prior_vectors(self, y: pd.DataFrame) -> None:
+        """
+        Set up the changepoint prior vectors for the model.
+
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The input DataFrame containing the time series data.
+
+        Returns
+        -------
+            None
+        """
+        if self.remove_seasonality_before_suggesting_initial_vals:
+            detrender = Detrender()
+            y = y - detrender.fit_transform(y)
+
+        self._offset_prior_loc = self._suggest_offset(y)
+        self._changepoint_prior_loc, self._changepoint_prior_scale = (
+            self._get_changepoint_prior_vectors()
+        )
+        self._offset_prior_scale = self.offset_prior_scale
+
+    def _get_changepoint_prior_vectors(self) -> Tuple[jnp.array, jnp.array]:
+        """
+        Return the prior vectors for the changepoint coefficients.
+
+        For a flat trend, the prior location for all changepoints is set to 0,
+        indicating no change in level by default.
+
+        Returns
+        -------
+        Tuple[jnp.array, jnp.array]
+            A tuple containing the changepoint prior location vector and the
+            changepoint prior scale vector.
+        """
+        n_series = len(self.n_changepoint_per_series)
+
+        changepoint_prior_scale_vector = np.concatenate(
+            [
+                np.ones(n_changepoint) * cur_changepoint_prior_scale
+                for n_changepoint, cur_changepoint_prior_scale in zip(
+                    self.n_changepoint_per_series,
+                    _to_list_if_scalar(self.changepoint_prior_scale, n_series),
+                )
+            ]
+        )
+
+        # For flat trend, all changepoint priors have location 0
+        changepoint_prior_loc_vector = np.zeros(self.n_changepoints)
+
+        return jnp.array(changepoint_prior_loc_vector), jnp.array(
+            changepoint_prior_scale_vector
+        )
+
+    def _suggest_offset(self, y: pd.DataFrame) -> jnp.array:
+        """
+        Suggest the offset for the given time series data.
+
+        For a flat trend, we suggest the offset as the mean of the time series.
+
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The time series data.
+
+        Returns
+        -------
+        jnp.array
+            The suggested offset.
+        """
+        y_array = series_to_tensor(y)
+        offset_loc = y_array.mean(axis=1).squeeze()
+
+        if self.offset_prior_loc is not None:
+            offset_loc = jnp.ones_like(offset_loc) * self.offset_prior_loc
+
+        return offset_loc
+
+
 class PiecewiseLogisticTrend(PiecewiseLinearTrend):
     """
     Piecewise logistic trend model.
@@ -741,3 +966,28 @@ def _get_changepoint_timeindexes(
 
     changepoint_t = jnp.arange(0, max_t, changepoint_interval)
     return changepoint_t
+
+
+def _get_flat_changepoint_matrix(t: jnp.ndarray, changepoint_t: jnp.array) -> jnp.ndarray:
+    """
+    Generate a flat changepoint matrix based on the time indexes and changepoint indexes.
+
+    For a flat trend, each element of the matrix is 1 if the time point is after
+    the corresponding changepoint, and 0 otherwise.
+
+    Parameters
+    ----------
+    t: jnp.ndarray
+        array with timepoints of shape (n, 1) preferably
+    changepoint_t: jnp.array
+        array with changepoint timepoints of shape (n_changepoints,)
+
+    Returns
+    -------
+    jnp.ndarray
+        changepoint matrix of shape (n, n_changepoints)
+    """
+    expanded_ts = jnp.tile(t.reshape((-1, 1)), (1, len(changepoint_t)))
+    # For flat trend, we just need a binary 0/1 based on whether time is after changepoint
+    A = (expanded_ts >= changepoint_t.reshape((1, -1))).astype(int)
+    return A

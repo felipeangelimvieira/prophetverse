@@ -15,7 +15,7 @@ from .target.univariate import (
     GammaTargetLikelihood,
     NegativeBinomialTargetLikelihood,
 )
-from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
+from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, PiecewiseFlatTrend, FlatTrend
 
 __all__ = [
     "BaseEffect",
@@ -33,5 +33,9 @@ __all__ = [
     "NegativeBinomialTargetLikelihood",
     "PiecewiseLinearTrend",
     "PiecewiseLogisticTrend",
+    "PiecewiseFlatTrend",
     "FlatTrend",
+    "BinaryHolidayEffect",
+    "BinaryStdHolidayEffect",
+    "FourierHolidayEffect"
 ]

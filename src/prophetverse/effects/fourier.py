@@ -1,6 +1,6 @@
 """Fourier effects for time series forecasting with seasonality."""
 
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -10,6 +10,7 @@ from sktime.transformations.series.fourier import FourierFeatures
 from prophetverse.effects.base import EFFECT_APPLICATION_TYPE, BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.sktime._expand_column_per_level import ExpandColumnPerLevel
+from prophetverse.utils.frame_to_array import convert_index_to_days_since_epoch
 
 __all__ = ["LinearFourierSeasonality"]
 
@@ -31,6 +32,12 @@ class LinearFourierSeasonality(BaseEffect):
         Scale of the prior distribution for the effect, by default 1.0.
     effect_mode : str, optional
         Either "multiplicative" or "additive" by default "additive".
+    active_period_start : Optional[pd.Timestamp], optional
+        Start date of the period where the seasonality effect is active.
+        If None, the effect is active from the beginning of the series. Defaults to None.
+    active_period_end : Optional[pd.Timestamp], optional
+        End date of the period where the seasonality effect is active.
+        If None, the effect is active until the end of the series. Defaults to None.
     """
 
     _tags = {
@@ -49,12 +56,16 @@ class LinearFourierSeasonality(BaseEffect):
         freq: Union[str, None],
         prior_scale: float = 1.0,
         effect_mode: EFFECT_APPLICATION_TYPE = "additive",
+        active_period_start: Optional[pd.Timestamp] = None,
+        active_period_end: Optional[pd.Timestamp] = None,
     ):
         self.sp_list = sp_list
         self.fourier_terms_list = fourier_terms_list
         self.freq = freq
         self.prior_scale = prior_scale
         self.effect_mode = effect_mode
+        self.active_period_start = active_period_start
+        self.active_period_end = active_period_end
         self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
         super().__init__()
 
@@ -122,6 +133,26 @@ class LinearFourierSeasonality(BaseEffect):
             X = self.expand_column_per_level_.transform(X)
 
         array = self.linear_effect_.transform(X, fh)
+
+        time_index = X.index
+        mask = jnp.ones(time_index.shape, dtype=bool)
+
+        if self.active_period_start is not None:
+            # Convert both time_index and start_date to comparable numerical values
+            time_index_numeric = convert_index_to_days_since_epoch(time_index)
+            start_date_numeric = convert_index_to_days_since_epoch(pd.Index([self.active_period_start]))[0]
+            mask = jnp.where(time_index_numeric < start_date_numeric, False, mask)
+
+        if self.active_period_end is not None:
+            # Convert both time_index and end_date to comparable numerical values
+            time_index_numeric = convert_index_to_days_since_epoch(time_index)
+            end_date_numeric = convert_index_to_days_since_epoch(pd.Index([self.active_period_end]))[0]
+            mask = jnp.where(time_index_numeric > end_date_numeric, False, mask)
+
+        if array.ndim == 2: # Shape (T, n_features), mask (T,) -> (T, 1)
+            array = array * mask[:, jnp.newaxis]
+        elif array.ndim == 3: # Shape (N, T, n_features), mask (T,) -> (1, T, 1)
+            array = array * mask[jnp.newaxis, :, jnp.newaxis]
 
         return array
 

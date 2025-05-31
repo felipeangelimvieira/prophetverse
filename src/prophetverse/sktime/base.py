@@ -14,6 +14,7 @@ import pandas as pd
 from sktime.base import _HeterogenousMetaEstimator
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
+from prophetverse._model import model as model_func
 from prophetverse.effects.base import BaseEffect
 from prophetverse.effects.linear import LinearEffect
 from prophetverse.effects.trend import (
@@ -133,6 +134,12 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
+    def get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon):
+        if not isinstance(fh, ForecastingHorizon):
+            fh = self._check_fh(fh)
+        X = self._check_X(X=X)
+        return self._get_predict_data(X=X, fh=fh)
+
     # pragma: no cover
     def _get_predict_data(self, X: pd.DataFrame, fh: ForecastingHorizon):
         """Generate samples from the posterior predictive distribution.
@@ -151,13 +158,8 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         raise NotImplementedError("Must be implemented by subclass")
 
-    # pragma: no cover
     def model(self, *args, **kwargs):
-        """
-        Numpyro model.
-
-        This method must be implemented by the subclass, or overriden as
-        a class attribute.
+        """Numpyro model. If not overridden by subclass, defaults to :func:`model_func`.
 
         Parameters
         ----------
@@ -170,13 +172,8 @@ class BaseBayesianForecaster(BaseForecaster):
         -------
         Any
             Model output.
-
-        Raises
-        ------
-        NotImplementedError
-            If the method is not implemented by the subclass.
         """
-        raise NotImplementedError("Must be implemented by subclass")
+        return model_func(*args, **kwargs)
 
     def _fit(self, y, X, fh):
         """
@@ -203,10 +200,6 @@ class BaseBayesianForecaster(BaseForecaster):
         data = self._get_fit_data(y, X, fh)
 
         self.distributions_ = data.get("distributions", {})
-
-        rng_key = self.rng_key
-        if rng_key is None:
-            rng_key = jax.random.PRNGKey(24)
 
         self.inference_engine_ = self._inference_engine.clone()
         self.inference_engine_.infer(self.model, **data)
@@ -313,10 +306,8 @@ class BaseBayesianForecaster(BaseForecaster):
             data. The keys are the names of the time series, and the values are NumPy
             arrays representing the predictive samples.
         """
-        if not isinstance(fh, ForecastingHorizon):
-            fh = self._check_fh(fh)
 
-        predict_data = self._get_predict_data(X=X, fh=fh)
+        predict_data = self.get_predict_data(X=X, fh=fh)
 
         predictive_samples_ = self.inference_engine_.predict(**predict_data)
 
@@ -350,8 +341,7 @@ class BaseBayesianForecaster(BaseForecaster):
                 "predict_component_samples", X=X, fh=fh
             )
 
-        X_inner = self._check_X(X=X)
-        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X_inner)
+        predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
         fh_as_index = self.fh_to_index(fh)
         dfs = []
@@ -373,6 +363,14 @@ class BaseBayesianForecaster(BaseForecaster):
             # Set samples_idx as level 0 of idx
             idx = pd.MultiIndex.from_tuples(tuples, names=["sample", *idxs.names])
 
+            flattened_data = data.flatten()
+
+            if flattened_data.shape[0] != len(idx):
+                warnings.warn(
+                    f"Data shape {flattened_data.shape} does not match index shape {len(idx)}"
+                    f"for site {site}. This site will not be returned."
+                )
+                continue
             dfs.append(
                 pd.DataFrame(
                     data={site: data.flatten()},
@@ -381,6 +379,10 @@ class BaseBayesianForecaster(BaseForecaster):
             )
 
         df = pd.concat(dfs, axis=1)
+
+        # Scale but apply the transformation to each sample at index level 0
+        df = df.groupby(level=0).apply(lambda x: self._inv_scale_y(x.droplevel(0)))
+        df = df.sort_index(level=0)
 
         return df
 
@@ -520,7 +522,7 @@ class BaseBayesianForecaster(BaseForecaster):
         if self._likelihood_is_discrete:
             return y
 
-        if isinstance(self._scale, float):
+        if isinstance(self._scale, (float, int)):
             return y * self._scale
         scale_for_each_obs = self._scale.loc[y.index.droplevel(-1)].values
         return y * scale_for_each_obs
@@ -949,7 +951,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         for effect_name, effect, columns in self.exogenous_effects_:
             # If no columns are found, skip
             if columns is None or len(columns) == 0:
-                if effect.get_tag("skip_predict_if_no_match"):
+                if effect.get_tag("requires_X"):
                     continue
 
             data: Dict[str, jnp.ndarray] = effect.transform(X[columns], fh=fh)
@@ -970,7 +972,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         return {
             effect_name: effect
             for effect_name, effect, columns in self.exogenous_effects_
-            if len(columns) > 0 or not effect.get_tag("skip_predict_if_no_match")
+            if len(columns) > 0 or not effect.get_tag("requires_X")
         }
 
     def _get_trend_model(self):

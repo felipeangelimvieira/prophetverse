@@ -1,12 +1,14 @@
 """Module that stores abstract class of effects."""
 
 from typing import Any, Dict, Literal, Optional
-
+import numpyro
 import jax.numpy as jnp
 import pandas as pd
 from skbase.base import BaseObject
-
+import numpyro
+from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
+from collections import OrderedDict
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
@@ -53,7 +55,7 @@ class BaseEffect(BaseObject):
         The id of the effect, by default "". Used to identify the effect in the model.
     regex : Optional[str], optional
         A regex pattern to match the columns of the exogenous variables dataframe,
-        by default None. If None, and _tags["skip_predict_if_no_match"] is True, the
+        by default None. If None, and _tags["requires_X"] is True, the
         effect will be skipped if no columns are found.
     effect_mode : EFFECT_APPLICATION_TYPE, optional
         The mode of the effect, either "additive" or "multiplicative", by default
@@ -65,25 +67,33 @@ class BaseEffect(BaseObject):
     ----------
     should_skip_predict : bool
         If True, the effect should be skipped during prediction. This is determined by
-        the `skip_predict_if_no_match` tag and the presence of input feature columns
+        the `requires_X` tag and the presence of input feature columns
         names. If the tag is True and there are no input feature columns names, the
         effect should be skipped during prediction.
     """
 
     _tags = {
-        "supports_multivariate": False,
+        # Can handle panel data?
+        "capability:panel": False,
+        # Can handle multiple input feature columns?
+        "capability:multivariate_input": False,
         # If no columns are found, should
         # _predict be skipped?
-        "skip_predict_if_no_match": True,
+        "requires_X": True,
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
         # Is fit() required before calling transform()?
         "requires_fit_before_transform": False,
+        # should this effect be applied to `y` (target) or
+        # `X` (exogenous variables)?
+        "applies_to": "X",
     }
 
     def __init__(self):
         self._is_fitted: bool = False
+        super().__init__()
+        self._broadcasted = False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -115,14 +125,28 @@ class BaseEffect(BaseObject):
             If the effect does not support multivariate data and the DataFrame has more
             than one level of index.
         """
-        if not self.get_tag("supports_multivariate", False):
+        if not self.get_tag("capability:panel", False):
             if X is not None and X.index.nlevels > 1:
                 raise ValueError(
                     f"The effect {self.__class__.__name__} does not "
                     + "support multivariate data"
                 )
 
-        self._fit(y=y, X=X, scale=scale)
+        self.columns_ = None
+        if X is not None:
+            self.columns_ = X.columns.tolist()
+
+        data = X if self.get_tag("applies_to", "X") == "X" else y
+
+        if (
+            data is not None
+            and len(data.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
+        ):
+            self._set_broadcasting_attributes(data)
+            self._broadcast("fit", X=X, y=y, scale=scale)
+        else:
+            self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
@@ -156,6 +180,15 @@ class BaseEffect(BaseObject):
         the data needed for the effect. Those data will be passed to the `predict`
         method as `data` argument.
 
+        The private methods `_transform` should always return one of the
+        following:
+
+        * a `jnp.ndarray`, with an array or tensor with the data
+          from the exogenous variables
+        * a tuple, where the first element is a `jnp.ndarray` with the data
+            from the exogenous variables, and the rest of the elements are
+        * a dict, where one of the keys must be "data" and the value
+
         Parameters
         ----------
         X : pd.DataFrame
@@ -184,8 +217,44 @@ class BaseEffect(BaseObject):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
+        if (
+            X is not None
+            and len(X.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
+        ):
+            if not self._is_fitted:
+                # Since the broadcasting attributes are set during fit,
+                # we need to set them
+                self._set_broadcasting_attributes(X)
 
+            return self._broadcast("transform", X=X, fh=fh)
         return self._transform(X, fh)
+
+    def _broadcast(self, methodname: str, X, **kwargs):
+        """
+        Broadcasts a method to  handle multiple columns of the input DataFrame.
+
+        Parameters
+        ----------
+        methodname : str
+            The name of the method to be called.
+        *args : tuple
+            Positional arguments to be passed to the method.
+        **kwargs : dict
+            Keyword arguments to be passed to the method.
+
+        Returns
+        -------
+        jnp.ndarray
+        """
+
+        outputs = []
+        for column in self.columns_:
+            X_ = X[[column]]
+            effect_ = self.effects_[column]
+            xt = getattr(effect_, methodname)(X=X_, **kwargs)
+            outputs.append(xt)
+        return outputs
 
     def _transform(
         self,
@@ -246,8 +315,19 @@ class BaseEffect(BaseObject):
         if params is None:
             params = self.sample_params(data, predicted_effects)
 
-        x = self._predict(data, predicted_effects, params)
+        if isinstance(data, list):
+            x = 0
+            for i, _data in enumerate(data):
+                effect_ = self.effects_[self.columns_[i]]
+                with numpyro.handlers.scope(prefix=self.columns_[i]):
+                    out = effect_.predict(
+                        data=_data, predicted_effects=predicted_effects, params=params
+                    )
+                out = numpyro.deterministic(self.columns_[i], out)
+                x += out
 
+        else:
+            x = self._predict(data, predicted_effects, params)
         return x
 
     def sample_params(
@@ -271,6 +351,7 @@ class BaseEffect(BaseObject):
         Dict
             A dictionary containing the sampled parameters.
         """
+
         if predicted_effects is None:
             predicted_effects = {}
 
@@ -301,7 +382,7 @@ class BaseEffect(BaseObject):
         return {}
 
     def _predict(
-        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], params: Dict
+        self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -331,6 +412,61 @@ class BaseEffect(BaseObject):
         """Run the processes to calculate effect as a function."""
         return self.predict(data=data, predicted_effects=predicted_effects)
 
+    def _update_data(self, data: jnp.ndarray, arr: jnp.ndarray):
+        """
+        Update the data obtained from .transform with a new array.
+
+        This method is used during optimization to update the transformed
+        data, given an array with new information.
+
+        If
+        """
+
+        if isinstance(data, jnp.ndarray):
+            return arr
+        if isinstance(data, tuple):
+            return (arr, *data[1:])
+        if isinstance(data, dict):
+            data = data.copy()
+            data["data"] = arr
+            return data
+        if isinstance(data, list):
+            out = []
+            for i, d in enumerate(data):
+                out.append(self._update_data(d, arr[:, i].reshape((-1, 1))))
+            return out
+        raise ValueError(
+            f"Unexpected data type {type(data)}. "
+            "Expected jnp.ndarray, tuple, dict or list."
+        )
+
+    def _set_broadcasting_attributes(self, X):
+        """
+        Set broadcasting attributes for the effect.
+
+        This method is called during the `fit` method to set the
+        broadcasting attributes for the effect, or during `transform`
+        of the method does not require fitting before transform.
+        """
+
+        self.effects_ = OrderedDict((column, self.clone()) for column in X.columns)
+        self.columns_ = X.columns.tolist()
+        self._broadcasted = True
+
+    # TODO: Remove in version 0.8.0
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if getattr(cls, "_sample_params") is not getattr(BaseEffect, "_sample_params"):
+            deprecation_warning(
+                "sample_params",
+                "0.7.0",
+                "Sorry for the inconvenience, but this method will be deprecated. "
+                "It was introducted to avoid resampling the same site twice, but"
+                "a new, and better, interface is being implemented. "
+                "Please call the parameters directly from _predict using"
+                "numpyro.sample as you would call numpyro.sample",
+            )
+
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
     """
@@ -348,7 +484,7 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
         The id of the effect, by default "".
     regex : Optional[str], optional
         A regex pattern to match the columns of the exogenous variables dataframe,
-        by default None. If None, and _tags["skip_predict_if_no_match"] is True, the
+        by default None. If None, and _tags["requires_X"] is True, the
         effect will be skipped if no columns are found.
     effect_mode : EFFECT_APPLICATION_TYPE, optional. Can be "additive"
         or "multiplicative".
@@ -367,11 +503,17 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
 
         super().__init__()
 
+        if not isinstance(self.base_effect_name, list):
+            self._base_effect_name = [self.base_effect_name]
+        else:
+            self._base_effect_name = self.base_effect_name
+
     def predict(
         self,
         data: Any,
         predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
-        params: Optional[Dict[str, jnp.ndarray]] = None,
+        *args,
+        **kwargs,
     ) -> jnp.ndarray:
         """Apply and return the effect values.
 
@@ -390,29 +532,24 @@ class BaseAdditiveOrMultiplicativeEffect(BaseEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        if predicted_effects is None:
-            predicted_effects = {}
-
-        if params is None:
-            params = self.sample_params(data, predicted_effects)
-
-        if (
-            self.base_effect_name not in predicted_effects
-            and self.effect_mode == "multiplicative"
-        ):
-            raise ValueError(
-                "BaseAdditiveOrMultiplicativeEffect requires trend in"
-                + " predicted_effects"
-            )
 
         x = super().predict(
-            data=data, predicted_effects=predicted_effects, params=params
+            data=data, predicted_effects=predicted_effects, *args, **kwargs
         )
 
         if self.effect_mode == "additive":
             return x
 
-        base_effect = predicted_effects[self.base_effect_name]
+        base_effect = 0
+        for base_effect_name in self._base_effect_name:
+            if base_effect_name not in predicted_effects:
+                raise ValueError(
+                    f"BaseAdditiveOrMultiplicativeEffect requires {base_effect_name} in"
+                    + " predicted_effects"
+                )
+
+            base_effect += predicted_effects[base_effect_name]
+
         if base_effect.ndim == 1:
             base_effect = base_effect.reshape((-1, 1))
         x = x.reshape(base_effect.shape)

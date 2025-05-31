@@ -9,6 +9,13 @@ from .hill import HillEffect
 from .lift_likelihood import LiftExperimentLikelihood
 from .linear import LinearEffect
 from .log import LogEffect
+from .target.multivariate import MultivariateNormal
+from .target.univariate import (
+    NormalTargetLikelihood,
+    GammaTargetLikelihood,
+    NegativeBinomialTargetLikelihood,
+)
+from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
 
 __all__ = [
     "BaseEffect",
@@ -20,4 +27,11 @@ __all__ = [
     "LinearFourierSeasonality",
     "GeometricAdstockEffect",
     "ChainedEffects",
+    "MultivariateNormal",
+    "NormalTargetLikelihood",
+    "GammaTargetLikelihood",
+    "NegativeBinomialTargetLikelihood",
+    "PiecewiseLinearTrend",
+    "PiecewiseLogisticTrend",
+    "FlatTrend",
 ]

@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.31">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Use Prophetverse to optimize media budget allocation across channels.">
+
+<title>Budget Optimization – prophetverse</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../static/logo-removebg.png" rel="icon" type="image/png">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e1a5c8363afafaef2c763b6775fbf3ca.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-7b920e46fb914018b55d082dd7b50a2a.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "textbox",
+  "limit": 5,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="../reference/_styles-quartodoc.css">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="../index.html" class="navbar-brand navbar-brand-logo">
+    <img src="../static/logo-removebg.png" alt="" class="navbar-logo">
+    </a>
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">prophetverse</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-tutorials-📚" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Tutorials 📚</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-tutorials-📚">    
+        <li>
+    <a class="dropdown-item" href="../tutorials/univariate.html">
+ <span class="dropdown-text">Univariate forecasting</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/tuning.html">
+ <span class="dropdown-text">Hyperparameter tuning</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-how-to-🛠️" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">How To 🛠️</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-how-to-🛠️">    
+        <li>
+    <a class="dropdown-item" href="../howto/effect_api_intro.html">
+ <span class="dropdown-text">Introduction to Effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../howto/custom_trend.html">
+ <span class="dropdown-text">Custom trend</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../howto/custom_effects.html">
+ <span class="dropdown-text">Custom exogenous effect</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../howto/composite_effects.html">
+ <span class="dropdown-text">Creating composite effects</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../mmm"> 
+<span class="menu-text">Marketing Mix Modeling 🚀</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../the-theory.html"> 
+<span class="menu-text">Mathematical Formulation 📖</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../reference"> 
+<span class="menu-text">API Reference</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-bi-github" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-bi-github">    
+        <li>
+    <a class="dropdown-item" href="https://github.com/felipeangelimvieira/prophetverse">
+ <span class="dropdown-text">Source Code</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../development.html">
+ <span class="dropdown-text">Development guide</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-bi-discord" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-discord" role="img">
+</i> 
+ <span class="menu-text"></span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-bi-discord">    
+        <li>
+    <a class="dropdown-item" href="https://discord.com/channels/1075852648688930887/1372332867111358504">
+ <span class="dropdown-text">Join the community</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-version" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Version</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="nav-menu-version">    
+        <li>
+    <a class="dropdown-item" href="../latest">
+ <span class="dropdown-text">latest</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="https://prophetverse.com/0.6.0">
+ <span class="dropdown-text">0.6.0</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../mmm/budget_allocation.html">Budget Optimization</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../mmm/fitting_and_calibration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Fitting, calibrating and Unified Marketing Measurement</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../mmm/budget_allocation.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Budget Optimization</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#setting-up-the-problem" id="toc-setting-up-the-problem" class="nav-link active" data-scroll-target="#setting-up-the-problem">1. Setting Up the Problem</a>
+  <ul class="collapse">
+  <li><a href="#load-synthetic-data" id="toc-load-synthetic-data" class="nav-link" data-scroll-target="#load-synthetic-data">1.1 Load synthetic data</a></li>
+  <li><a href="#utility-plotting-functions" id="toc-utility-plotting-functions" class="nav-link" data-scroll-target="#utility-plotting-functions">1.2 Utility plotting functions</a></li>
+  </ul></li>
+  <li><a href="#budget-optimization" id="toc-budget-optimization" class="nav-link" data-scroll-target="#budget-optimization">2. Budget Optimization</a>
+  <ul class="collapse">
+  <li><a href="#maximizing-a-kpi" id="toc-maximizing-a-kpi" class="nav-link" data-scroll-target="#maximizing-a-kpi">2.1 Maximizing a KPI</a></li>
+  <li><a href="#reparametrization-optimizing-channel-share" id="toc-reparametrization-optimizing-channel-share" class="nav-link" data-scroll-target="#reparametrization-optimizing-channel-share">2.2. Reparametrization: Optimizing channel share</a></li>
+  <li><a href="#minimizing-budget-to-reach-a-target" id="toc-minimizing-budget-to-reach-a-target" class="nav-link" data-scroll-target="#minimizing-budget-to-reach-a-target">2.3. Minimizing budget to reach a target</a></li>
+  <li><a href="#reparametrization-optimizing-channel-share-1" id="toc-reparametrization-optimizing-channel-share-1" class="nav-link" data-scroll-target="#reparametrization-optimizing-channel-share-1">2.4. Reparametrization: optimizing channel share</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Budget Optimization</h1>
+</div>
+
+<div>
+  <div class="description">
+    <em>Use Prophetverse to optimize media budget allocation across channels.</em>
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>In this tutorial, you’ll learn how to use Prophetverse’s budget-optimization module to:</p>
+<ul>
+<li><strong>Allocate daily spend across channels</strong> to maximize a key performance indicator (KPI).</li>
+<li><strong>Minimize total spend</strong> required to achieve a target KPI.</li>
+</ul>
+<p>You’ll also see how to switch between two parametrizations without hassle:</p>
+<ul>
+<li><strong>Daily-spend mode</strong>: Optimize the exact dollar amount for each day and channel.</li>
+<li><strong>Share-of-budget mode</strong>: Fix your overall spending pattern and optimize only the channel shares.</li>
+</ul>
+<p>By the end, you’ll know how to pick the right setup for your campaign goals and make adjustments in seconds.</p>
+<section id="setting-up-the-problem" class="level2">
+<h2 class="anchored" data-anchor-id="setting-up-the-problem">1. Setting Up the Problem</h2>
+<p>In this example, we will load the same dataset as in the previous tutorial, and use the complete model, including the calibration with lift tests and attribution models.</p>
+<div id="260c4cc3" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>numpyro.enable_x64()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">"seaborn-v0_8-whitegrid"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="load-synthetic-data" class="level3">
+<h3 class="anchored" data-anchor-id="load-synthetic-data">1.1 Load synthetic data</h3>
+<div id="68b1891a" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.datasets._mmm.dataset1 <span class="im">import</span> get_dataset</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>y, X, lift_tests, true_components, model <span class="op">=</span> get_dataset()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="utility-plotting-functions" class="level3">
+<h3 class="anchored" data-anchor-id="utility-plotting-functions">1.2 Utility plotting functions</h3>
+<div id="20a098d9" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> plot_spend_comparison(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    X_baseline,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    X_optimized,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    channels,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    indexer,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    baseline_title<span class="op">=</span><span class="st">"Baseline Spend: Pre-Optimization"</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    optimized_title<span class="op">=</span><span class="st">"Optimized Spend: Maximizing KPI"</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>),</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>figsize)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    X_baseline.loc[indexer, channels].plot(ax<span class="op">=</span>ax[<span class="dv">0</span>], linewidth<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    X_optimized.loc[indexer, channels].plot(ax<span class="op">=</span>ax[<span class="dv">1</span>], linewidth<span class="op">=</span><span class="dv">2</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    ax[<span class="dv">0</span>].set_title(baseline_title, fontsize<span class="op">=</span><span class="dv">14</span>, weight<span class="op">=</span><span class="st">"bold"</span>)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    ax[<span class="dv">1</span>].set_title(optimized_title, fontsize<span class="op">=</span><span class="dv">14</span>, weight<span class="op">=</span><span class="st">"bold"</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> a <span class="kw">in</span> ax:</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        a.set_ylabel(<span class="st">"Spend"</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        a.set_xlabel(<span class="st">"Date"</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        a.legend(loc<span class="op">=</span><span class="st">"upper right"</span>, frameon<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        a.grid(axis<span class="op">=</span><span class="st">"x"</span>, visible<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        a.grid(axis<span class="op">=</span><span class="st">"y"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>, alpha<span class="op">=</span><span class="fl">0.7</span>)</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        a.xaxis.set_major_formatter(mdates.DateFormatter(<span class="st">'%b'</span>))</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Align y-axis</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    y_max <span class="op">=</span> <span class="bu">max</span>(</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        X_baseline.loc[indexer, channels].<span class="bu">max</span>().<span class="bu">max</span>(),</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        X_optimized.loc[indexer, channels].<span class="bu">max</span>().<span class="bu">max</span>(),</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> a <span class="kw">in</span> ax:</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>        a.set_ylim(<span class="dv">0</span>, y_max <span class="op">*</span> <span class="fl">1.05</span>)</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    plt.tight_layout()</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fig, ax</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="budget-optimization" class="level2">
+<h2 class="anchored" data-anchor-id="budget-optimization">2. Budget Optimization</h2>
+<p>Once we have our model to predict the KPI, we can use it to optimize our budget-allocation strategy.</p>
+<p>You can use this feature to provide not only a descriptive analysis of the channels’ contributions, but also a prescriptive analysis of the budget allocation.</p>
+<p>The budget-optimization module is designed to be flexible and extensible. It is composed of three main components:</p>
+<ul>
+<li><strong>The objective function</strong> – what you want to optimize.</li>
+<li><strong>The constraints</strong> – e.g.&nbsp;budget caps, channel-share rules, or any custom rule.</li>
+<li><strong>The parametrization transform</strong> – optionally, how you want to parameterize the problem.</li>
+</ul>
+<p>For example, instead of optimizing the daily spend for each channel, you can optimize the share of budget for each channel while keeping the overall spending pattern fixed.</p>
+<section id="maximizing-a-kpi" class="level3">
+<h3 class="anchored" data-anchor-id="maximizing-a-kpi">2.1 Maximizing a KPI</h3>
+<p>The <code>BudgetOptimizer</code> class is the main entry point for the budget-optimization module. It takes these three components as input and uses them to optimize the budget allocation.</p>
+<div id="d4a29991" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.experimental.budget_optimization <span class="im">import</span> (</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    BudgetOptimizer,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    SharedBudgetConstraint,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    MaximizeKPI,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>budget_optimizer <span class="op">=</span> BudgetOptimizer(</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    objective<span class="op">=</span>MaximizeKPI(),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    constraints<span class="op">=</span>[SharedBudgetConstraint()],</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>budget_optimizer</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<style>#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 {color: black;background-color: white;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 pre{padding: 0;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-toggleable {background-color: white;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 label.sk-toggleable__label {cursor: pointer;display: block;width: 100%;margin-bottom: 0;padding: 0.3em;box-sizing: border-box;text-align: center;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 label.sk-toggleable__label-arrow:before {content: "▸";float: left;margin-right: 0.25em;color: #696969;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 label.sk-toggleable__label-arrow:hover:before {color: black;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-estimator:hover label.sk-toggleable__label-arrow:before {color: black;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-toggleable__content {max-height: 0;max-width: 0;overflow: hidden;text-align: left;background-color: #f0f8ff;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-toggleable__content pre {margin: 0.2em;color: black;border-radius: 0.25em;background-color: #f0f8ff;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 input.sk-toggleable__control:checked~div.sk-toggleable__content {max-height: 200px;max-width: 100%;overflow: auto;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {content: "▾";}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {background-color: #d4ebff;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {background-color: #d4ebff;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 input.sk-hidden--visually {border: 0;clip: rect(1px 1px 1px 1px);clip: rect(1px, 1px, 1px, 1px);height: 1px;margin: -1px;overflow: hidden;padding: 0;position: absolute;width: 1px;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-estimator {font-family: monospace;background-color: #f0f8ff;border: 1px dotted black;border-radius: 0.25em;box-sizing: border-box;margin-bottom: 0.5em;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-estimator:hover {background-color: #d4ebff;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel-item::after {content: "";width: 100%;border-bottom: 1px solid gray;flex-grow: 1;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-label:hover label.sk-toggleable__label {background-color: #d4ebff;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-serial::before {content: "";position: absolute;border-left: 1px solid gray;box-sizing: border-box;top: 2em;bottom: 0;left: 50%;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-serial {display: flex;flex-direction: column;align-items: center;background-color: white;padding-right: 0.2em;padding-left: 0.2em;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-item {z-index: 1;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel {display: flex;align-items: stretch;justify-content: center;background-color: white;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel::before {content: "";position: absolute;border-left: 1px solid gray;box-sizing: border-box;top: 2em;bottom: 0;left: 50%;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel-item {display: flex;flex-direction: column;position: relative;background-color: white;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel-item:first-child::after {align-self: flex-end;width: 50%;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel-item:last-child::after {align-self: flex-start;width: 50%;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-parallel-item:only-child::after {width: 0;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-dashed-wrapped {border: 1px dashed gray;margin: 0 0.4em 0.5em 0.4em;box-sizing: border-box;padding-bottom: 0.4em;background-color: white;position: relative;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-label label {font-family: monospace;font-weight: bold;background-color: white;display: inline-block;line-height: 1.2em;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-label-container {position: relative;z-index: 2;text-align: center;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-container {/* jupyter's `normalize.less` sets `[hidden] { display: none; }` but bootstrap.min.css set `[hidden] { display: none !important; }` so we also need the `!important` here to be able to override the default hidden behavior on the sphinx rendered scikit-learn.org. See: https://github.com/scikit-learn/scikit-learn/issues/21755 */display: inline-block !important;position: relative;}#sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65 div.sk-text-repr-fallback {display: none;}</style><div id="sk-26e338ff-9801-4c7e-90f3-5fdcd6ef2b65" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>BudgetOptimizer(constraints=[SharedBudgetConstraint()], objective=MaximizeKPI())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f5c5c4c9-190d-4d63-9fd6-ba5d5c98d61f')" type="checkbox"><label for="UUID('f5c5c4c9-190d-4d63-9fd6-ba5d5c98d61f')" class="sk-toggleable__label sk-toggleable__label-arrow">BudgetOptimizer</label><div class="sk-toggleable__content"><pre>BudgetOptimizer(constraints=[SharedBudgetConstraint()], objective=MaximizeKPI())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f591a7a0-f257-4094-9a77-20b77a48c339')" type="checkbox"><label for="UUID('f591a7a0-f257-4094-9a77-20b77a48c339')" class="sk-toggleable__label sk-toggleable__label-arrow">MaximizeKPI</label><div class="sk-toggleable__content"><pre>MaximizeKPI()</pre></div></div></div></div></div></div></div></div></div></div>
+</div>
+</div>
+<p>This is our optimization horizon:</p>
+<div id="a67f1c70" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>horizon <span class="op">=</span> pd.period_range(<span class="st">"2004-01-01"</span>, <span class="st">"2004-12-31"</span>, freq<span class="op">=</span><span class="st">"D"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>horizon</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>PeriodIndex(['2004-01-01', '2004-01-02', '2004-01-03', '2004-01-04',
+             '2004-01-05', '2004-01-06', '2004-01-07', '2004-01-08',
+             '2004-01-09', '2004-01-10',
+             ...
+             '2004-12-22', '2004-12-23', '2004-12-24', '2004-12-25',
+             '2004-12-26', '2004-12-27', '2004-12-28', '2004-12-29',
+             '2004-12-30', '2004-12-31'],
+            dtype='period[D]', length=366)</code></pre>
+</div>
+</div>
+<p>By default, <code>BudgetOptimizer</code> will optimize the daily spend for each channel. Let’s see it in action.</p>
+<div id="d95cf792" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>X_opt <span class="op">=</span> budget_optimizer.optimize(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>X,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    horizon<span class="op">=</span>horizon,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    columns<span class="op">=</span>[<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="baseline-vs.-optimized-spend" class="level4">
+<h4 class="anchored" data-anchor-id="baseline-vs.-optimized-spend">Baseline vs.&nbsp;optimized spend</h4>
+<p>We can call predict to get the baseline and optimized predictions.</p>
+<div id="8ad25c48" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>y_pred_baseline <span class="op">=</span> model.predict(X<span class="op">=</span>X, fh<span class="op">=</span>horizon)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>y_pred_opt <span class="op">=</span> model.predict(X<span class="op">=</span>X_opt, fh<span class="op">=</span>horizon)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="d6e32a03" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plot_spend_comparison(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    X,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    X_opt,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"2004"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>kpi_gain <span class="op">=</span> y_pred_opt.<span class="bu">sum</span>() <span class="op">/</span> y_pred_baseline.<span class="bu">sum</span>() <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>fig.suptitle(<span class="ss">f"KPI gain: +</span><span class="sc">{</span>kpi_gain<span class="sc">:.2%}</span><span class="ss">"</span>, fontsize<span class="op">=</span><span class="dv">16</span>,weight<span class="op">=</span><span class="st">"bold"</span>, y<span class="op">=</span><span class="fl">1.02</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="budget_allocation_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="reparametrization-optimizing-channel-share" class="level3">
+<h3 class="anchored" data-anchor-id="reparametrization-optimizing-channel-share">2.2. Reparametrization: Optimizing channel share</h3>
+<p>Instead of optimizing daily spend, we can optimize the share of budget for each channel. This is useful when you want to keep the spending pattern fixed (e.g.&nbsp;seasonal bursts) and usually converges faster because fewer parameters are free.</p>
+<div id="faaa1e45" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.experimental.budget_optimization <span class="im">import</span> InvestmentPerChannelTransform</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>budget_optimizer <span class="op">=</span> BudgetOptimizer(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    objective<span class="op">=</span>MaximizeKPI(),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    constraints<span class="op">=</span>[SharedBudgetConstraint()],</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    parametrization_transform<span class="op">=</span>InvestmentPerChannelTransform(),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    options<span class="op">=</span>{<span class="st">"disp"</span>: <span class="va">True</span>},</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>X_opt <span class="op">=</span> budget_optimizer.optimize(</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>X,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    horizon<span class="op">=</span>horizon,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    columns<span class="op">=</span>[<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Optimization terminated successfully    (Exit mode 0)
+            Current function value: -10236256579.3446
+            Iterations: 14
+            Function evaluations: 14
+            Gradient evaluations: 14</code></pre>
+</div>
+</div>
+<section id="baseline-vs.-optimized-spend-1" class="level4">
+<h4 class="anchored" data-anchor-id="baseline-vs.-optimized-spend-1">Baseline vs.&nbsp;optimized spend</h4>
+<div id="26739cb5" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>y_pred_baseline <span class="op">=</span> model.predict(X<span class="op">=</span>X, fh<span class="op">=</span>horizon)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>y_pred_opt <span class="op">=</span> model.predict(X<span class="op">=</span>X_opt, fh<span class="op">=</span>horizon)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plot_spend_comparison(</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    X,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    X_opt,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    horizon,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>),</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>kpi_gain <span class="op">=</span> y_pred_opt.<span class="bu">sum</span>() <span class="op">/</span> y_pred_baseline.<span class="bu">sum</span>() <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>fig.suptitle(<span class="ss">f"KPI gain: +</span><span class="sc">{</span>kpi_gain<span class="sc">:.2%}</span><span class="ss">"</span>, fontsize<span class="op">=</span><span class="dv">16</span>, weight<span class="op">=</span><span class="st">"bold"</span>, y<span class="op">=</span><span class="fl">1.02</span>)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="budget_allocation_files/figure-html/cell-12-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="minimizing-budget-to-reach-a-target" class="level3">
+<h3 class="anchored" data-anchor-id="minimizing-budget-to-reach-a-target">2.3. Minimizing budget to reach a target</h3>
+<p>How much should we invest to reach a 30 % increase in 2004?</p>
+<div id="e4532057" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.experimental.budget_optimization <span class="im">import</span> (</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    MinimizeBudget,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    MinimumTargetResponse,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>target <span class="op">=</span> y.loc[<span class="st">"2003"</span>].<span class="bu">sum</span>() <span class="op">*</span> <span class="fl">1.30</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>budget_optimizer <span class="op">=</span> BudgetOptimizer(</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    objective<span class="op">=</span>MinimizeBudget(),</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    constraints<span class="op">=</span>[MinimumTargetResponse(target_response<span class="op">=</span>target, constraint_type<span class="op">=</span><span class="st">"eq"</span>)],</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    options<span class="op">=</span>{<span class="st">"disp"</span>: <span class="va">True</span>, <span class="st">"maxiter"</span> : <span class="dv">300</span>},</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>X0 <span class="op">=</span> X.copy()</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>X_opt <span class="op">=</span> budget_optimizer.optimize(</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>X0,</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    horizon<span class="op">=</span>horizon,</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    columns<span class="op">=</span>[<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Iteration limit reached    (Exit mode 9)
+            Current function value: 15152954.726050854
+            Iterations: 300
+            Function evaluations: 300
+            Gradient evaluations: 300</code></pre>
+</div>
+</div>
+<section id="budget-comparison" class="level4">
+<h4 class="anchored" data-anchor-id="budget-comparison">Budget comparison</h4>
+<div id="2a048c03" class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>plot_spend_comparison(</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    X0,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    X_opt,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    indexer<span class="op">=</span>horizon,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="budget_allocation_files/figure-html/cell-14-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="predictions-comparison" class="level4">
+<h4 class="anchored" data-anchor-id="predictions-comparison">Predictions comparison</h4>
+<div id="ba655bb7" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>y_pred_baseline <span class="op">=</span> model.predict(X<span class="op">=</span>X0, fh<span class="op">=</span>horizon)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>y_pred_opt <span class="op">=</span> model.predict(X<span class="op">=</span>X_opt, fh<span class="op">=</span>horizon)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"MMM Predictions </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"Baseline KPI: </span><span class="sc">{</span>y_pred_baseline<span class="sc">.</span><span class="bu">sum</span>()<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.2f}</span><span class="ss"> B </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"Optimized KPI: </span><span class="sc">{</span>y_pred_opt<span class="sc">.</span><span class="bu">sum</span>()<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.2f}</span><span class="ss"> B </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"Target KPI: </span><span class="sc">{</span>target<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.2f}</span><span class="ss"> B </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Baseline spend: "</span>,</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    X0.loc[horizon, [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]].<span class="bu">sum</span>().<span class="bu">sum</span>(),</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>,</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Optimized spend: "</span>,</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    X_opt.loc[horizon, [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]].<span class="bu">sum</span>().<span class="bu">sum</span>(),</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>,</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>MMM Predictions 
+ Baseline KPI: 9.97 B 
+ Optimized KPI: 8.85 B 
+ Target KPI: 8.85 B 
+ Baseline spend:  29349153.831201974 
+ Optimized spend:  15152954.726050854 
+</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="reparametrization-optimizing-channel-share-1" class="level3">
+<h3 class="anchored" data-anchor-id="reparametrization-optimizing-channel-share-1">2.4. Reparametrization: optimizing channel share</h3>
+<p>Here we minimize budget again but let the optimizer search only for each channel’s share of the total investment instead of day-by-day dollar amounts.</p>
+<div id="a79d3146" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>budget_optimizer <span class="op">=</span> BudgetOptimizer(</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    objective<span class="op">=</span>MinimizeBudget(),</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    constraints<span class="op">=</span>[MinimumTargetResponse(target_response<span class="op">=</span>target, constraint_type<span class="op">=</span><span class="st">"eq"</span>)],</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    parametrization_transform<span class="op">=</span>InvestmentPerChannelTransform(),</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    bounds<span class="op">=</span>{<span class="st">"ad_spend_search"</span>: (<span class="dv">0</span>, <span class="fl">2e9</span>), <span class="st">"ad_spend_social_media"</span>: (<span class="dv">0</span>, <span class="fl">2e9</span>)},</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    options<span class="op">=</span>{<span class="st">"disp"</span>: <span class="va">True</span>, <span class="st">"maxiter"</span>: <span class="dv">300</span>},</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>X_opt <span class="op">=</span> budget_optimizer.optimize(</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span>model,</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    X<span class="op">=</span>X0,</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    horizon<span class="op">=</span>horizon,</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    columns<span class="op">=</span>[<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Optimization terminated successfully    (Exit mode 0)
+            Current function value: 17049867.216707308
+            Iterations: 44
+            Function evaluations: 69
+            Gradient evaluations: 43</code></pre>
+</div>
+</div>
+<section id="budget-comparison-1" class="level4">
+<h4 class="anchored" data-anchor-id="budget-comparison-1">Budget comparison</h4>
+<div id="3f6a8c07" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>plot_spend_comparison(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    X0,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    X_opt,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>],</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    horizon,</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="budget_allocation_files/figure-html/cell-17-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="predictions-comparison-1" class="level4">
+<h4 class="anchored" data-anchor-id="predictions-comparison-1">Predictions comparison</h4>
+<div id="ec7bc6aa" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>y_pred_baseline <span class="op">=</span> model.predict(X<span class="op">=</span>X0, fh<span class="op">=</span>horizon)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>y_pred_opt <span class="op">=</span> model.predict(X<span class="op">=</span>X_opt, fh<span class="op">=</span>horizon)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"MMM Predictions </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"Baseline KPI: </span><span class="sc">{</span>y_pred_baseline<span class="sc">.</span><span class="bu">sum</span>()<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.2f}</span><span class="ss"> B </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"Optimized KPI: </span><span class="sc">{</span>y_pred_opt<span class="sc">.</span><span class="bu">sum</span>()<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.2f}</span><span class="ss"> B </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"Target KPI: </span><span class="sc">{</span>target<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.2f}</span><span class="ss"> B </span><span class="ch">\n</span><span class="ss">"</span>,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Baseline spend: "</span>,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    X0.loc[horizon, [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]].<span class="bu">sum</span>().<span class="bu">sum</span>(),</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>,</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"Optimized spend: "</span>,</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    X_opt.loc[horizon, [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]].<span class="bu">sum</span>().<span class="bu">sum</span>(),</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>,</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>MMM Predictions 
+ Baseline KPI: 9.97 B 
+ Optimized KPI: 8.85 B 
+ Target KPI: 8.85 B 
+ Baseline spend:  29349153.831201974 
+ Optimized spend:  17049867.216707308 
+</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>We have seen some of the capabilities of the budget-optimization module. There are three key components, besides the optimizer itself:</p>
+<ul>
+<li>The objective function</li>
+<li>The constraints</li>
+<li>The parametrization transform</li>
+</ul>
+<p>You can also create your own objective functions and constraints, and use them in the optimizer. Budget optimization lets you and your team bring the company closer to data-driven decisions.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

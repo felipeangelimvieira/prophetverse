@@ -17,15 +17,17 @@ from prophetverse.effects.target.univariate import (
     NormalTargetLikelihood,
     NegativeBinomialTargetLikelihood,
     GammaTargetLikelihood,
+    BetaTargetLikelihood,
 )
 from prophetverse.utils.deprecation import deprecation_warning
 
-__all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
+__all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial", "ProphetBeta"]
 
 _LIKELIHOOD_MODEL_MAP = {
     "normal": NormalTargetLikelihood,
     "gamma": GammaTargetLikelihood,
     "negbinomial": NegativeBinomialTargetLikelihood,
+    "beta": BetaTargetLikelihood,
 }
 
 _DISCRETE_LIKELIHOODS = ["negbinomial"]
@@ -431,6 +433,47 @@ class ProphetNegBinomial(Prophetverse):
             trend=trend,
             exogenous_effects=exogenous_effects,
             likelihood="negbinomial",
+            default_effect=default_effect,
+            scale=scale,
+            rng_key=rng_key,
+            inference_engine=inference_engine,
+        )
+
+
+class ProphetBeta(Prophetverse):
+    """Prophet forecaster with a beta likelihood.
+
+    Parameters
+    ----------
+    noise_scale : float, optional
+        Scale parameter for observation noise. (default: 0.05)
+    trend : str, optional
+        Trend type, either "linear" or "logistic". (default: "logistic")
+    exogenous_effects : optional
+        List of exogenous effect objects.
+    default_effect : optional
+        Default effect for variables without a specified effect.
+    scale : optional
+        Scaling factor inferred from data.
+    rng_key : optional
+        A jax.random.PRNGKey instance, or None.
+    """
+
+    def __init__(
+        self,
+        noise_scale=0.05,
+        trend="logistic",
+        exogenous_effects=None,
+        default_effect=None,
+        scale=None,
+        rng_key=None,
+        inference_engine=None,
+    ):
+        super().__init__(
+            noise_scale=noise_scale,
+            trend=trend,
+            exogenous_effects=exogenous_effects,
+            likelihood="beta",
             default_effect=default_effect,
             scale=scale,
             rng_key=rng_key,

@@ -184,3 +184,57 @@ def _build_positive_smooth_clipper(
         )
 
     return _to_positive
+
+
+def _build_bounded_smooth_clipper(
+    smooth_threshold: float, threshold: float = 1e-10
+) -> jnp.ndarray:
+    """Force the values of x to be between 0 and 1.
+
+    Applies a smooth threshold to the values of x to force bounded outputs.
+    Further clips the values of x to avoid zeros and ones due to numerical precision.
+
+    Parameters
+    ----------
+    smooth_threshold : float
+        The threshold value for the sigmoid function.
+    threshold : float, optional
+        The threshold value for clipping, by default 1e-10.
+
+    Returns
+    -------
+    jnp.ndarray
+        The transformed array.
+    """
+
+    def _to_bounded(x):
+        return jnp.clip(
+            jnp.where(
+                x < smooth_threshold,
+                jnp.exp(x - smooth_threshold) * smooth_threshold,
+                jnp.where(
+                    x > 1 - smooth_threshold,
+                    1 - jnp.exp(-(x - (1 - smooth_threshold))) * smooth_threshold,
+                    x,
+                ),
+            ),
+            threshold,
+            1 - threshold,
+        )
+
+    return _to_bounded
+
+
+class BetaTargetLikelihood(TargetLikelihood):
+    def __init__(
+        self,
+        noise_scale=0.05,
+        epsilon=1e-5,
+    ):
+        self.epsilon = epsilon
+        link_function = _build_bounded_smooth_clipper(epsilon)
+        super().__init__(
+            noise_scale,
+            link_function=link_function,
+            likelihood_func=dist.Beta,
+        )

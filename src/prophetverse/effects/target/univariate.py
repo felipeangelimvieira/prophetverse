@@ -197,7 +197,7 @@ def _build_bounded_smooth_clipper(
     Parameters
     ----------
     smooth_threshold : float
-        The threshold value for the sigmoid function.
+        The threshold value for scaling the input before applying sigmoid.
     threshold : float, optional
         The threshold value for clipping, by default 1e-10.
 
@@ -208,10 +208,9 @@ def _build_bounded_smooth_clipper(
     """
 
     def _to_bounded(x):
-        # Apply logit (sigmoid) function: 1 / (1 + exp(-x))
-        # This maps any real number to (0,1)
+        x = x / smooth_threshold
+        # Apply sigmoid function: 1 / (1 + exp(-x))
         p = 1 / (1 + jnp.exp(-x))
-        # Clip to avoid numerical issues at boundaries
         return jnp.clip(p, threshold, 1 - threshold)
 
     return _to_bounded

@@ -188,11 +188,11 @@ def _build_positive_smooth_clipper(
 
 def _build_bounded_smooth_clipper(
     smooth_threshold: float, threshold: float = 1e-10
-) -> jnp.ndarray:
+) -> callable:
     """Force the values of x to be between 0 and 1.
 
-    Applies a smooth threshold to the values of x to force bounded outputs.
-    Further clips the values of x to avoid zeros and ones due to numerical precision.
+    Applies the sigmoid function to transform any real number to the interval (0,1).
+    Clips the values to avoid numerical issues at the boundaries.
 
     Parameters
     ----------
@@ -203,24 +203,16 @@ def _build_bounded_smooth_clipper(
 
     Returns
     -------
-    jnp.ndarray
-        The transformed array.
+    callable
+        A function that transforms real numbers to (0,1).
     """
 
     def _to_bounded(x):
-        return jnp.clip(
-            jnp.where(
-                x < smooth_threshold,
-                jnp.exp(x - smooth_threshold) * smooth_threshold,
-                jnp.where(
-                    x > 1 - smooth_threshold,
-                    1 - jnp.exp(-(x - (1 - smooth_threshold))) * smooth_threshold,
-                    x,
-                ),
-            ),
-            threshold,
-            1 - threshold,
-        )
+        # Apply logit (sigmoid) function: 1 / (1 + exp(-x))
+        # This maps any real number to (0,1)
+        p = 1 / (1 + jnp.exp(-x))
+        # Clip to avoid numerical issues at boundaries
+        return jnp.clip(p, threshold, 1 - threshold)
 
     return _to_bounded
 

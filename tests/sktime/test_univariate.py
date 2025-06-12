@@ -10,7 +10,6 @@ from prophetverse.sktime.univariate import (
     Prophet,
     ProphetGamma,
     ProphetNegBinomial,
-    ProphetBeta,
     Prophetverse,
 )
 
@@ -30,7 +29,6 @@ MODELS = [
     Prophet,
     ProphetGamma,
     ProphetNegBinomial,
-    ProphetBeta,
 ]
 
 SEASONAL_EFFECT = (
@@ -177,3 +175,24 @@ def test_prophetverse_likelihood_behaviour(likelihood):
 
     if likelihood in _DISCRETE_LIKELIHOODS:
         assert model._likelihood_is_discrete
+
+
+@pytest.mark.smoke
+def test_prophet_beta_fit():
+    """Test ProphetBeta with data in [0,1] range."""
+    hierarchy_levels = (1,)
+    hyperparams = HYPERPARAMS[0]
+    
+    # Generate data in [0,1] range
+    y = make_y(hierarchy_levels)
+    y = (y - y.min()) / (y.max() - y.min())  # Normalize to [0,1]
+    X = make_random_X(y)
+    
+    forecaster = ProphetBeta(
+        **hyperparams,
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        )
+    )
+
+    execute_fit_predict_test(forecaster, y, X, test_size=4)

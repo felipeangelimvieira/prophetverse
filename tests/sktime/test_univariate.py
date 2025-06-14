@@ -193,7 +193,7 @@ def test_prophetverse_hierarchical_with_series_with_zeros():
         inference_engine=MAPInferenceEngine(
             optimizer=AdamOptimizer(), num_steps=1, num_samples=1
         ),
-        panel_model=True,
+        broadcast_mode="effect",
     )
 
     forecaster.fit(y)
@@ -225,7 +225,7 @@ def test_panel_mode():
             )
         ],
         inference_engine=MAPInferenceEngine(),
-        panel_model=True,
+        broadcast_mode="effect",
     )
     model.fit(y=y)
 

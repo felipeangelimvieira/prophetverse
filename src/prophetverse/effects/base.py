@@ -90,6 +90,8 @@ class BaseEffect(BaseObject):
         # should this effect be applied to `y` (target) or
         # `X` (exogenous variables)?
         "applies_to": "X",
+        # Does this effect implement hyperpriors across panel?
+        "feature:panel_hyperpriors": False,
     }
 
     def __init__(self):

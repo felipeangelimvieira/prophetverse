@@ -1,5 +1,5 @@
 ---
-title: "Panel data"
+title: "Hierarchical Bayesian Model"
 description: "*A tutorial demonstrating how to leverage hierarchical bayesian models to forecast panel timeseries*"
 ---
 
@@ -151,8 +151,10 @@ from numpyro import distributions as dist
 
 model_hier = model.clone()
 model_hier.set_params(
-    seasonality__linear_effect=PanelBHLinearEffect(),
-    broadcast_mode="off",
+    seasonality__linear_effect=PanelBHLinearEffect(
+        scale_hyperprior=dist.HalfNormal(0.1)
+    ),
+    broadcast_mode="effect",
 )
 model_hier.fit(y=y)
 ```

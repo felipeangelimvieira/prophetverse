@@ -95,7 +95,7 @@ class Prophetverse(BaseProphetForecaster):
         scale=None,
         rng_key=None,
         inference_engine=None,
-        broadcast_mode="on",
+        broadcast_mode="estimator",
     ):
         """Initialize the Prophetverse model."""
         self.noise_scale = noise_scale
@@ -114,7 +114,7 @@ class Prophetverse(BaseProphetForecaster):
 
         self._validate_hyperparams()
 
-        if self.broadcast_mode != "on":
+        if self.broadcast_mode != "estimator":
             self.set_tags(
                 **{
                     "y_inner_mtype": [
@@ -190,7 +190,7 @@ class Prophetverse(BaseProphetForecaster):
                 f"or a base effect instance. Got '{self.likelihood}'."
             )
 
-        if not self.broadcast_mode in ["on", "off"]:
+        if not self.broadcast_mode in ["estimator", "effect"]:
             raise ValueError(
                 f"broadcast_mode must be either 'on' or 'off'. Got '{self.broadcast_mode}'."
             )
@@ -346,7 +346,7 @@ class Prophetverse(BaseProphetForecaster):
             },
             {
                 "trend": FlatTrend(),
-                "broadcast_mode": "off",
+                "broadcast_mode": "effect",
             },
         ]
 

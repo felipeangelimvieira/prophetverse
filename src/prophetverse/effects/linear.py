@@ -100,6 +100,7 @@ class PanelBHLinearEffect(BaseAdditiveOrMultiplicativeEffect):
         "hierarchical_prophet_compliant": True,
         "capability:panel": True,
         "capability:multivariate_input": False,
+        "feature:panel_hyperpriors": True,
     }
 
     def __init__(

@@ -7,7 +7,7 @@ class BaseTargetEffect(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "hierarchical_prophet_compliant": False,
+        "capability:panel": False,
         # If no columns are found, should
         # _predict be skipped?
         "requires_X": False,

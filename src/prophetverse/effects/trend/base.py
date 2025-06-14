@@ -23,7 +23,7 @@ class TrendEffectMixin:
 
     _tags = {
         "requires_X": False,
-        "hierarchical_prophet_compliant": True,
+        "capability:panel": True,
         "capability:multivariate_input": True,
     }
 

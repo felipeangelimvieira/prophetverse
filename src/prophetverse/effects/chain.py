@@ -21,7 +21,7 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
     """
 
     _tags = {
-        "hierarchical_prophet_compliant": True,
+        "capability:panel": True,
         "requires_X": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
         "named_object_parameters": "named_steps",

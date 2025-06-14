@@ -60,12 +60,12 @@ def test_not_fitted():
         EffectMustFit().transform(pd.DataFrame(), fh=pd.Index([]))
 
 
-def test_broadcasting_columns():
+def test_broadcasting():
 
     class SimpleEffect(BaseEffect):
 
         _tags = {
-            "hierarchical_prophet_compliant": False,
+            "capability:panel": False,
             "capability:multivariate_input": False,
         }
 
@@ -93,49 +93,6 @@ def test_broadcasting_columns():
         (-1, 1)
     )
     assert jnp.allclose(out, expected), "Broadcasting effect prediction failed."
-
-
-def test_broadcasting_panel():
-
-    class SimpleEffect(BaseEffect):
-
-        _tags = {
-            "hierarchical_prophet_compliant": False,
-            "capability:multivariate_input": False,
-        }
-
-        def _predict(self, data, predicted_effects, params):
-            factor = numpyro.sample("factor", dist.Normal(0, 1))
-            return data * factor
-
-    effect = SimpleEffect()
-    _X = pd.DataFrame(
-        data={"exog": [10, 20, 30, 40, 50, 60], "exog2": [1, 2, 3, 4, 5, 6]},
-        index=pd.date_range("2021-01-01", periods=6),
-    )
-    X = {}
-    for i, name in enumerate(["a", "b"]):
-        X[i] = _X.copy()
-        X[i] *= i + 1
-
-    X = pd.concat(X, axis=0)
-
-    Xt = effect.transform(X, fh=X.index.get_level_values(-1).unique())
-    assert isinstance(Xt, list)
-    assert len(Xt) == 2
-
-    with numpyro.handlers.trace() as trace, numpyro.handlers.seed(rng_seed=0):
-        out = effect.predict(data=Xt)
-
-    for i in X.index.get_level_values(0).unique():
-        factor0 = trace[f"exog/panel-{i}/factor"]["value"]
-        factor1 = trace[f"exog2/panel-{i}/factor"]["value"]
-
-        assert factor0 != factor1
-        expected = (
-            X.loc[i, "exog"].values * factor0 + X.loc[i, "exog2"].values * factor1
-        ).reshape((-1, 1))
-        assert jnp.allclose(out[i], expected), "Broadcasting effect prediction failed."
 
 
 def test_sample_params_warning():

@@ -75,8 +75,6 @@ class BaseEffect(BaseObject):
     _tags = {
         # Can handle panel data?
         "capability:panel": False,
-        # Can be used with hierarchical Prophet?
-        "capability:panel": False,
         # Can handle multiple input feature columns?
         "capability:multivariate_input": False,
         # If no columns are found, should
@@ -95,7 +93,7 @@ class BaseEffect(BaseObject):
     def __init__(self):
         self._is_fitted: bool = False
         super().__init__()
-        self._broadcasted = None
+        self._broadcasted = False
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -127,6 +125,12 @@ class BaseEffect(BaseObject):
             If the effect does not support multivariate data and the DataFrame has more
             than one level of index.
         """
+        if not self.get_tag("capability:panel", False):
+            if X is not None and X.index.nlevels > 1:
+                raise ValueError(
+                    f"The effect {self.__class__.__name__} does not "
+                    + "support multivariate data"
+                )
 
         self.columns_ = None
         if X is not None:
@@ -140,14 +144,6 @@ class BaseEffect(BaseObject):
             and not self.get_tag("capability:multivariate_input", False)
         ):
             self._set_broadcasting_attributes(data)
-            self._broadcast("fit", X=X, y=y, scale=scale)
-
-        elif (
-            data is not None
-            and data.index.nlevels > 1
-            and not self.get_tag("capability:panel", False)
-        ):
-            self._set_panel_broadcasting_attributes(data)
             self._broadcast("fit", X=X, y=y, scale=scale)
         else:
             self._fit(y=y, X=X, scale=scale)
@@ -221,25 +217,17 @@ class BaseEffect(BaseObject):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
-
-        if not self._is_fitted and X is not None:
-            if len(X.columns) > 1 and not self.get_tag(
-                "capability:multivariate_input", False
-            ):
-                if not self._is_fitted:
-                    # Since the broadcasting attributes are set during fit,
-                    # we need to set them
-                    self._set_broadcasting_attributes(X)
-
-            elif X.index.nlevels > 1 and not self.get_tag("capability:panel", False):
-
+        if (
+            X is not None
+            and len(X.columns) > 1
+            and not self.get_tag("capability:multivariate_input", False)
+        ):
+            if not self._is_fitted:
                 # Since the broadcasting attributes are set during fit,
                 # we need to set them
-                self._set_panel_broadcasting_attributes(X)
+                self._set_broadcasting_attributes(X)
 
-        if self._broadcasted is not None:
             return self._broadcast("transform", X=X, fh=fh)
-
         return self._transform(X, fh)
 
     def _broadcast(self, methodname: str, X, **kwargs):
@@ -259,75 +247,12 @@ class BaseEffect(BaseObject):
         -------
         jnp.ndarray
         """
-        if self._broadcasted == "panel":
-            return self._broadcast_panel(X, methodname, **kwargs)
-        if self._broadcasted == "columns":
-            return self._broadcast_columns(X, methodname, **kwargs)
-        raise ValueError(
-            f"Broadcasting not set for {self.__class__.__name__}. "
-            "Please call fit() before calling transform()."
-        )
 
-    def _broadcast_columns(self, X: pd.DataFrame, methodname: str, **kwargs):
-        """
-        Broadcasts a method to handle multiple columns of the input DataFrame.
-
-        This method iterates over the columns of the DataFrame and calls the
-        specified method on each column, collecting the results in a list.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The input DataFrame containing the exogenous variables.
-        methodname : str
-            The name of the method to be called on each column.
-        **kwargs : dict
-            Additional keyword arguments to be passed to the method.
-        Returns
-        -------
-        list
-            A list of outputs from the method applied to each column.
-        """
         outputs = []
-        for column in self.effects_.keys():
+        for column in self.columns_:
             X_ = X[[column]]
             effect_ = self.effects_[column]
             xt = getattr(effect_, methodname)(X=X_, **kwargs)
-            outputs.append(xt)
-        return outputs
-
-    def _broadcast_panel(self, X: pd.DataFrame, methodname: str, **kwargs):
-        """
-        Broadcasts a method to handle panel data of the input DataFrame.
-
-        This method iterates over the idx of the DataFrame and calls the
-        specified method on each idx, collecting the results in a list.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The input DataFrame containing the exogenous variables.
-        methodname : str
-            The name of the method to be called on each column.
-        **kwargs : dict
-            Additional keyword arguments to be passed to the method.
-        Returns
-        -------
-        list
-            A list of outputs from the method applied to each column.
-        """
-        outputs = []
-
-        for i, idx in enumerate(self.effects_.keys()):
-
-            X_ = None
-            if X is not None:
-                X_ = X.loc[idx]
-            new_kwargs = kwargs.copy()
-            if "y" in kwargs:
-                new_kwargs["y"] = kwargs["y"].loc[idx]
-            effect_ = self.effects_[idx]
-            xt = getattr(effect_, methodname)(X=X_, **new_kwargs)
             outputs.append(xt)
         return outputs
 
@@ -391,45 +316,16 @@ class BaseEffect(BaseObject):
             params = self.sample_params(data, predicted_effects)
 
         if isinstance(data, list):
-            if self._broadcasted == "columns":
-                x = 0
-                for i, _data in enumerate(data):
-                    effect_ = self.effects_[self.columns_[i]]
-                    with numpyro.handlers.scope(prefix=self.columns_[i]):
-                        out = effect_.predict(
-                            data=_data,
-                            predicted_effects=predicted_effects,
-                            params=params,
-                        )
-                    out = numpyro.deterministic(self.columns_[i], out)
-                    x += out
-            elif self._broadcasted == "panel":
-                x = []
-                for i, _data in enumerate(data):
-                    effect_ = self.effects_[self.idxs_[i]]
-                    idx = self.idxs_[i]
-                    if isinstance(idx, (tuple, list)):
-                        idx = ",".join(idx)
-                    else:
-                        idx = str(idx)
-                    prefix = f"panel-{i}"
-                    _predicted_effects = {k: v[i] for k, v in predicted_effects.items()}
-                    with numpyro.handlers.scope(prefix=prefix):
-                        out = effect_.predict(
-                            data=_data,
-                            predicted_effects=_predicted_effects,
-                            params=params,
-                        )
-                    x.append(out)
+            x = 0
+            for i, _data in enumerate(data):
+                effect_ = self.effects_[self.columns_[i]]
+                with numpyro.handlers.scope(prefix=self.columns_[i]):
+                    out = effect_.predict(
+                        data=_data, predicted_effects=predicted_effects, params=params
+                    )
+                out = numpyro.deterministic(self.columns_[i], out)
+                x += out
 
-                # If output is None, then the effect
-                # shouldn't output anything.
-                if x[0] is None:
-                    return None
-                # If out is of shape (N, T), x will be
-                # (D, N, T)
-                x = jnp.stack(x, axis=0)
-                x = numpyro.deterministic("panel_effects", x)
         else:
             x = self._predict(data, predicted_effects, params)
         return x
@@ -552,28 +448,10 @@ class BaseEffect(BaseObject):
         broadcasting attributes for the effect, or during `transform`
         of the method does not require fitting before transform.
         """
+
         self.effects_ = OrderedDict((column, self.clone()) for column in X.columns)
         self.columns_ = X.columns.tolist()
-        self._broadcasted = "columns"
-
-    def _set_panel_broadcasting_attributes(self, X):
-
-        if X.index.nlevels == 1:
-            return
-        elif self.get_tag("capability:panel", False):
-            return
-        # Else proceed to broadcasting by panel
-
-        if self._broadcasted == "columns":
-            raise ValueError(
-                "Cannot set panel broadcasting attributes when "
-                + "broadcasting by columns is already set."
-            )
-
-        idxs = X.index.droplevel(-1).unique().tolist()
-        self.effects_ = OrderedDict((idx, self.clone()) for idx in idxs)
-        self.idxs_ = idxs
-        self._broadcasted = "panel"
+        self._broadcasted = True
 
     # TODO: Remove in version 0.8.0
     def __init_subclass__(cls, **kwargs):

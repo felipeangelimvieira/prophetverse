@@ -313,7 +313,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         keys_to_delete = []
         for key in predictive_samples_.keys():
-            if key.endswith(":ignore"):
+            if ":ignore" in key:
                 keys_to_delete.append(key)
         for key in keys_to_delete:
             del predictive_samples_[key]

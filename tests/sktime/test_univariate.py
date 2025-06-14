@@ -200,7 +200,7 @@ def test_prophetverse_hierarchical_with_series_with_zeros():
     forecaster.predict(fh=[1, 2, 3])
 
 
-def test_panel_mode():
+def test_broadcast_does_not_raise_error():
     from prophetverse.datasets.loaders import load_tourism
 
     y = load_tourism(groupby="Purpose")
@@ -231,3 +231,6 @@ def test_panel_mode():
 
     forecast_horizon = pd.period_range("1997Q1", "2020Q4", freq="Q")
     preds = model.predict(fh=forecast_horizon)
+
+    # assert all values are finite
+    assert preds.isna().sum().sum() == 0

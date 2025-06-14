@@ -95,13 +95,13 @@ class Prophetverse(BaseProphetForecaster):
         scale=None,
         rng_key=None,
         inference_engine=None,
-        panel_model=False,
+        broadcast_mode="on",
     ):
         """Initialize the Prophetverse model."""
         self.noise_scale = noise_scale
         self.feature_transformer = feature_transformer
         self.likelihood = likelihood
-        self.panel_model = panel_model
+        self.broadcast_mode = broadcast_mode
 
         super().__init__(
             rng_key=rng_key,
@@ -114,7 +114,7 @@ class Prophetverse(BaseProphetForecaster):
 
         self._validate_hyperparams()
 
-        if self.panel_model:
+        if self.broadcast_mode != "on":
             self.set_tags(
                 **{
                     "y_inner_mtype": [
@@ -188,6 +188,11 @@ class Prophetverse(BaseProphetForecaster):
             raise ValueError(
                 f"likelihood must be one of {list(_LIKELIHOOD_MODEL_MAP.keys())}"
                 f"or a base effect instance. Got '{self.likelihood}'."
+            )
+
+        if not self.broadcast_mode in ["on", "off"]:
+            raise ValueError(
+                f"broadcast_mode must be either 'on' or 'off'. Got '{self.broadcast_mode}'."
             )
 
     def _get_fit_data(self, y, X, fh):
@@ -341,7 +346,7 @@ class Prophetverse(BaseProphetForecaster):
             },
             {
                 "trend": FlatTrend(),
-                "panel_model": True,
+                "broadcast_mode": "off",
             },
         ]
 

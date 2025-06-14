@@ -85,7 +85,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
         return data @ coefficients
 
 
-class PanelHierarchicalLinearEffect(BaseAdditiveOrMultiplicativeEffect):
+class PanelBHLinearEffect(BaseAdditiveOrMultiplicativeEffect):
     """Hierarchical linear effect.
 
     Parameters

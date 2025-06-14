@@ -8,7 +8,7 @@ from prophetverse.effects.trend import PiecewiseLinearTrend, PiecewiseLogisticTr
 from prophetverse.engine import MAPInferenceEngine
 from prophetverse.sktime.univariate import Prophetverse
 from prophetverse.utils import no_input_columns
-from prophetverse.effects.linear import PanelHierarchicalLinearEffect
+from prophetverse.effects.linear import PanelBayesHierarchicalLinearEffect
 
 # Load data
 y = load_tourism(groupby="Purpose")
@@ -64,6 +64,6 @@ model = Prophetverse(
 # Fit hierarchical Bayesian model
 model_hier = model.clone()
 model_hier.set_params(
-    seasonality__linear_effect=PanelHierarchicalLinearEffect(), panel_model=True
+    seasonality__linear_effect=PanelBayesHierarchicalLinearEffect(), panel_model=True
 )
 model_hier.fit(y=y)

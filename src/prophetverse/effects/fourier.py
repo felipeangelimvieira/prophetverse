@@ -1,6 +1,6 @@
 """Fourier effects for time series forecasting with seasonality."""
 
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -36,10 +36,11 @@ class LinearFourierSeasonality(BaseEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "capability:panel": True,
+        "hierarchical_prophet_compliant": True,
         # If no columns are found, should
         # _predict be skipped?
         "requires_X": False,
+        "capability:panel": True,
     }
 
     def __init__(
@@ -49,14 +50,35 @@ class LinearFourierSeasonality(BaseEffect):
         freq: Union[str, None],
         prior_scale: float = 1.0,
         effect_mode: EFFECT_APPLICATION_TYPE = "additive",
+        linear_effect: Optional[LinearEffect] = None,
     ):
         self.sp_list = sp_list
         self.fourier_terms_list = fourier_terms_list
         self.freq = freq
         self.prior_scale = prior_scale
         self.effect_mode = effect_mode
-        self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
+        self.linear_effect = linear_effect
+
         super().__init__()
+
+        self.expand_column_per_level_ = None  # type: Union[None,ExpandColumnPerLevel]
+
+        self._linear_effect = (
+            linear_effect
+            if linear_effect is not None
+            else LinearEffect(
+                prior=dist.Normal(0, self.prior_scale), effect_mode=self.effect_mode
+            )
+        )
+
+        self.set_tags(
+            **{
+                "capability:panel": self._linear_effect.get_tag("capability:panel"),
+                "capability:multivariate_input": self._linear_effect.get_tag(
+                    "capability:multivariate_input"
+                ),
+            }
+        )
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Customize the initialization of the effect.
@@ -88,9 +110,7 @@ class LinearFourierSeasonality(BaseEffect):
             self.expand_column_per_level_ = ExpandColumnPerLevel([".*"]).fit(X=X)
             X = self.expand_column_per_level_.transform(X)  # type: ignore
 
-        self.linear_effect_ = LinearEffect(
-            prior=dist.Normal(0, self.prior_scale), effect_mode=self.effect_mode
-        )
+        self.linear_effect_ = self._linear_effect.clone()
 
         self.linear_effect_.fit(X=X, y=y, scale=scale)
 
@@ -123,7 +143,7 @@ class LinearFourierSeasonality(BaseEffect):
 
         array = self.linear_effect_.transform(X, fh)
 
-        return array
+        return {"data": array}
 
     def _predict(
         self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
@@ -146,7 +166,7 @@ class LinearFourierSeasonality(BaseEffect):
             number of series.
         """
         return self.linear_effect_.predict(
-            data=data,
+            data=data["data"],
             predicted_effects=predicted_effects,
         )
 

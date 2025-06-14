@@ -6,6 +6,7 @@ class TestAllEffects(TestAllObjects):
 
     package_name = "prophetverse.effects"
     valid_tags = [
+        "hierarchical_prophet_compliant",
         "capability:panel",
         "capability:multivariate_input",
         "requires_X",

@@ -24,7 +24,7 @@ class GeometricAdstockEffect(BaseEffect):
     """
 
     _tags = {
-        "capability:panel": False,
+        "hierarchical_prophet_compliant": False,
         "requires_X": True,
         "requires_fit_before_transform": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,

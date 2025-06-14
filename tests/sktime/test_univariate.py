@@ -12,6 +12,13 @@ from prophetverse.sktime.univariate import (
     ProphetNegBinomial,
     Prophetverse,
 )
+import pandas as pd
+from prophetverse.effects import LinearFourierSeasonality
+from prophetverse.effects.trend import PiecewiseLogisticTrend
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.sktime.univariate import Prophetverse
+from prophetverse.utils import no_input_columns
+
 
 from prophetverse.engine import MAPInferenceEngine
 from prophetverse.engine.optimizer import AdamOptimizer
@@ -175,3 +182,52 @@ def test_prophetverse_likelihood_behaviour(likelihood):
 
     if likelihood in _DISCRETE_LIKELIHOODS:
         assert model._likelihood_is_discrete
+
+
+def test_prophetverse_hierarchical_with_series_with_zeros():
+    y = make_y((2, 2, 5))
+    # Set all values to 0
+    y.iloc[:, :] = 0
+
+    forecaster = Prophetverse(
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        ),
+        panel_model=True,
+    )
+
+    forecaster.fit(y)
+    forecaster.predict(fh=[1, 2, 3])
+
+
+def test_panel_mode():
+    from prophetverse.datasets.loaders import load_tourism
+
+    y = load_tourism(groupby="Purpose")
+
+    model = Prophetverse(
+        trend=PiecewiseLogisticTrend(
+            changepoint_prior_scale=0.1,
+            changepoint_interval=8,
+            changepoint_range=-8,
+        ),
+        exogenous_effects=[
+            (
+                "seasonality",
+                LinearFourierSeasonality(
+                    sp_list=["Y"],
+                    fourier_terms_list=[1],
+                    freq="Q",
+                    prior_scale=0.1,
+                    effect_mode="multiplicative",
+                ),
+                no_input_columns,
+            )
+        ],
+        inference_engine=MAPInferenceEngine(),
+        panel_model=True,
+    )
+    model.fit(y=y)
+
+    forecast_horizon = pd.period_range("1997Q1", "2020Q4", freq="Q")
+    preds = model.predict(fh=forecast_horizon)

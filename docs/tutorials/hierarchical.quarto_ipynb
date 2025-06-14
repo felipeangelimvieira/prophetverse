@@ -1,0 +1,244 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Hierarchical models\"\n",
+        "description: \"*A tutorial demonstrating how to leverage hierarchical bayesian models to forecast panel timeseries*\"\n",
+        "---\n",
+        "\n",
+        "\n",
+        "\n",
+        "In this example, we will show how to forecast panel timeseries with the `Prophetverse` model.\n",
+        "\n",
+        "The univariate Prophetverse model can seamlessly handle hierarchical timeseries due to the package's compatibility with sktime.\n"
+      ],
+      "id": "f33ba728"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import matplotlib.pyplot as plt\n",
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "from prophetverse.datasets.loaders import load_tourism"
+      ],
+      "id": "616010a2",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Import dataset\n",
+        "\n",
+        "Here we use the tourism dataset with purpose-level aggregation.\n"
+      ],
+      "id": "ee3266e6"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "y = load_tourism(groupby=\"Purpose\")\n",
+        "display(y)\n",
+        "````\n",
+        "\n",
+        "We define the helper function below to plot the predictions and the observations.\n",
+        "\n",
+        "```{python}\n",
+        "LEVELS = y.index.get_level_values(0).unique()\n",
+        "\n",
+        "\n",
+        "def plot_preds(y=None, preds={}, axs=None):\n",
+        "\n",
+        "    if axs is None:\n",
+        "        fig, axs = plt.subplots(\n",
+        "            figsize=(12, 8), nrows=int(np.ceil(len(LEVELS) / 2)), ncols=2\n",
+        "        )\n",
+        "    ax_generator = iter(axs.flatten())\n",
+        "    for level in LEVELS:\n",
+        "        ax = next(ax_generator)\n",
+        "        if y is not None:\n",
+        "            y.loc[level].iloc[:, 0].rename(\"Observation\").plot(\n",
+        "                ax=ax, label=\"truth\", color=\"black\"\n",
+        "            )\n",
+        "        for name, _preds in preds.items():\n",
+        "            _preds.loc[level].iloc[:, 0].rename(name).plot(ax=ax, legend=True)\n",
+        "        ax.set_title(level)\n",
+        "\n",
+        "    # Tight layout\n",
+        "    plt.tight_layout()\n",
+        "    return ax"
+      ],
+      "id": "73130b18",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Fit univariate model\n",
+        "\n",
+        "Because of sktime's amazing interface, we can use the univariate Prophet seamlessly with hierarchical data. \n"
+      ],
+      "id": "0f85b6c4"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import jax.numpy as jnp\n",
+        "\n",
+        "from prophetverse.effects import LinearFourierSeasonality\n",
+        "from prophetverse.effects.trend import PiecewiseLinearTrend, PiecewiseLogisticTrend\n",
+        "from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine\n",
+        "from prophetverse.sktime.univariate import Prophetverse\n",
+        "from prophetverse.utils import no_input_columns\n",
+        "from prophetverse.engine.optimizer import LBFGSSolver\n",
+        "\n",
+        "model = Prophetverse(\n",
+        "    trend=PiecewiseLogisticTrend(\n",
+        "        changepoint_prior_scale=0.1,\n",
+        "        changepoint_interval=8,\n",
+        "        changepoint_range=-8,\n",
+        "    ),\n",
+        "    exogenous_effects=[\n",
+        "        (\n",
+        "            \"seasonality\",\n",
+        "            LinearFourierSeasonality(\n",
+        "                sp_list=[\"Y\"],\n",
+        "                fourier_terms_list=[1],\n",
+        "                freq=\"Q\",\n",
+        "                prior_scale=0.1,\n",
+        "                effect_mode=\"multiplicative\",\n",
+        "            ),\n",
+        "            no_input_columns,\n",
+        "        )\n",
+        "    ],\n",
+        "    inference_engine=MCMCInferenceEngine(\n",
+        "        num_warmup=500,\n",
+        "        num_samples=1000,\n",
+        "    )\n",
+        ")\n",
+        "model.fit(y=y)"
+      ],
+      "id": "9438c79a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Forecasting with automatic upcasting\n",
+        "\n",
+        "To call the same methods we used in the univariate case, we do not need to change a single line of code. The only difference is that the output will be a pd.DataFrame with more rows and index levels.\n"
+      ],
+      "id": "7b0cf157"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "forecast_horizon = pd.period_range(\"1997Q1\",\n",
+        "                                   \"2020Q4\",\n",
+        "                                   freq=\"Q\")\n",
+        "preds = model.predict(fh=forecast_horizon)\n",
+        "display(preds.head())\n",
+        "\n",
+        "# Plot\n",
+        "plot_preds(y, {\"Prophet\": preds})\n",
+        "plt.show()"
+      ],
+      "id": "23a30d05",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The same applies to the decomposition method:\n"
+      ],
+      "id": "26c418f6"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "decomposition = model.predict_components(fh=forecast_horizon)\n",
+        "decomposition.head()"
+      ],
+      "id": "77c7454b",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Hierarchical Bayesian model\n",
+        "\n",
+        "Now, let's use the hierarchical prophet to forecast all of the series at once. The interface here is the same as the univariate case. The fit step can take a little longer since there are more parameters to estimate.\n"
+      ],
+      "id": "4a05f0e6"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "from prophetverse.effects.linear import PanelHierarchicalLinearEffect\n",
+        "from numpyro import distributions as dist\n",
+        "\n",
+        "model_hier = model.clone()\n",
+        "model_hier.set_params(\n",
+        "    seasonality__linear_effect=PanelHierarchicalLinearEffect(\n",
+        "\n",
+        "        loc_hyperprior=dist.Normal(0, .05),\n",
+        "        scale_hyperprior=dist.HalfNormal(0.05),\n",
+        "    ),\n",
+        "    panel_model=True\n",
+        "    \n",
+        ")\n",
+        "model_hier.fit(y=y)"
+      ],
+      "id": "be96d8ab",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "preds_hier = model_hier.predict(fh=forecast_horizon)\n",
+        "\n",
+        "plot_preds(\n",
+        "    y,\n",
+        "    preds={\n",
+        "        \"Prophet\": preds,\n",
+        "        \"HierarchicalProphet\": preds_hier,\n",
+        "    },\n",
+        ")"
+      ],
+      "id": "486abab0",
+      "execution_count": null,
+      "outputs": []
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "/Users/felipeangelim/Workspace/prophetverse/.venv/share/jupyter/kernels/python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}

@@ -24,6 +24,7 @@ class TestAllTargetEffects(TargetEffectFixtureGenerator, TestAllObjects):
         "fitted_named_object_parameters",
         "named_object_parameters",
         "feature:panel_hyperpriors",
+        "hierarchical_prophet_compliant",
     ]
 
     def test_applies_to_tag(self, object_instance):

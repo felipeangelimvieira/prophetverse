@@ -469,7 +469,19 @@ class BaseEffect(BaseObject):
             )
 
     def _get_distribution_params(self, params):
+        """
+        Get numpyro distribution parameters.
 
+        Parameters
+        ----------
+        params : dict
+            A dictionary containing the parameters of the effect.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the distribution parameters of the effect.
+        """
         distribution_params = {}
         for param_name, param_value in params.items():
             if isinstance(param_value, numpyro.distributions.Distribution):
@@ -482,6 +494,22 @@ class BaseEffect(BaseObject):
         return distribution_params
 
     def get_params(self, deep=True):
+        """
+        Override get_params to include distribution parameters.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            If True, will return the parameters of the effect and its sub-
+            estimators,
+            by default True.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the parameters of the effect, including
+            distribution parameters.
+        """
         params = super().get_params(deep=deep)
         if not deep:
             return params
@@ -489,10 +517,14 @@ class BaseEffect(BaseObject):
         return {**params, **new_params}
 
     def set_params(self, **params):
+        """
+        Extend set_params to handle distribution parameters.
+        """
 
         all_params = self.get_params(deep=False)
         distribution_params = self._get_distribution_params(all_params)
 
+        # We list all distribution parameters and their args
         distribution_params_to_update = defaultdict(dict)
         for param_name, param_value in params.items():
             if param_name in distribution_params:
@@ -502,10 +534,14 @@ class BaseEffect(BaseObject):
                     distribution_argname: param_value,
                 }
 
+        # We update the distribution parameters with the new values
+        # and set them to the effect
         for param_to_update, distribution_args in distribution_params_to_update.items():
+            # Create the distribution object
             distribution_obj = copy.deepcopy(getattr(self, param_to_update))
             for argname, value in distribution_args.items():
                 setattr(distribution_obj, argname, value)
+            # Update the distribution param
             self.set_params(**{param_to_update: distribution_obj})
 
         not_distribution_params = {

@@ -23,6 +23,7 @@ class TestAllTargetEffects(TargetEffectFixtureGenerator, TestAllObjects):
         "requires_fit_before_transform",
         "fitted_named_object_parameters",
         "named_object_parameters",
+        "feature:panel_hyperpriors",
     ]
 
     def test_applies_to_tag(self, object_instance):

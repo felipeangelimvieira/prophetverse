@@ -536,10 +536,15 @@ class BaseEffect(BaseObject):
             data = data.copy()
             data["data"] = arr
             return data
-        if isinstance(data, list):
+        if isinstance(data, list) and self._broadcasted == "columns":
             out = []
             for i, d in enumerate(data):
                 out.append(self._update_data(d, arr[:, i].reshape((-1, 1))))
+            return out
+        if isinstance(data, list) and self._broadcasted == "panel":
+            out = []
+            for i, d in enumerate(data):
+                out.append(self._update_data(d, arr[i]))
             return out
         raise ValueError(
             f"Unexpected data type {type(data)}. "

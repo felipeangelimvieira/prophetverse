@@ -23,6 +23,7 @@ from prophetverse.effects.target.univariate import (
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor, reindex_time_series
 from collections import defaultdict
+from prophetverse.utils import get_multiindex_loc
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
@@ -437,7 +438,46 @@ class Prophetverse(BaseProphetForecaster):
 
             return obs
 
-        return jax.jit(predictive)
+        return predictive
+
+    def optimize_predictive_callable(self, X, horizon, columns):
+
+        if not self._is_vectorized:
+            return self._optimizer_predictive_callable(
+                X=X, horizon=horizon, columns=columns
+            )
+
+        callables = []
+        for idx, data in self.forecasters_.iterrows():
+            forecaster = data[0]
+
+            if X is None:
+                _X = None
+            else:
+                _X = get_multiindex_loc(X, [idx])
+                # Keep only index level -1
+                for _ in range(_X.index.nlevels - 1):
+                    _X = _X.droplevel(0)
+
+            callable = forecaster.optimize_predictive_callable(
+                X=_X,
+                horizon=horizon,
+                columns=columns,
+            )
+
+            callables.append(callable)
+
+        def broadcasted_callable(new_x):
+            outs = []
+            for i in range(new_x.shape[0]):
+                callable = callables[i]
+                out = callable(new_x[i])
+                outs.append(out)
+
+            out = jnp.stack(outs, axis=0)
+            return out
+
+        return broadcasted_callable
 
 
 class Prophet(Prophetverse):

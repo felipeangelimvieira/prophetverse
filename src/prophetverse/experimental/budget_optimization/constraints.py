@@ -95,7 +95,8 @@ class MinimumTargetResponse(BaseConstraint):
             specified value.
             """
             obs = budget_optimizer.predictive_(x_array)
-            out = obs.mean(axis=0)[horizon_idx].sum()
+            out = obs.mean(axis=0).squeeze(-1)
+            out = out[..., budget_optimizer.horizon_idx_].sum()
             out = out - self.target_response
 
             return out

@@ -194,7 +194,7 @@ class Prophetverse(BaseProphetForecaster):
 
         if not self.broadcast_mode in ["estimator", "effect"]:
             raise ValueError(
-                f"broadcast_mode must be either 'on' or 'off'. Got '{self.broadcast_mode}'."
+                f"broadcast_mode must be either 'estimator' or 'effect'. Got '{self.broadcast_mode}'."
             )
 
     def _get_fit_data(self, y, X, fh):

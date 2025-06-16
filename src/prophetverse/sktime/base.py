@@ -33,6 +33,9 @@ from prophetverse.utils import get_multiindex_loc
 _VALID_TREND_STRINGS = ["linear", "logistic", "flat"]
 
 
+SAMPLE_LEVEL_FIRST = False
+
+
 class BaseBayesianForecaster(BaseForecaster):
     """
 
@@ -337,9 +340,14 @@ class BaseBayesianForecaster(BaseForecaster):
             A DataFrame containing the predicted samples for all sites.
         """
         if self._is_vectorized:
-            return self._vectorize_predict_method(
+            out = self._vectorize_predict_method(
                 "predict_component_samples", X=X, fh=fh
             )
+
+            if SAMPLE_LEVEL_FIRST:
+                sample_idx = out.index.get_loc("sample")
+                out = out.swaplevel(sample_idx, 0)
+            return out
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
@@ -744,7 +752,8 @@ class BaseBayesianForecaster(BaseForecaster):
             if not isinstance(idx, (tuple, list)):
                 idx = [idx]
             new_index = pd.MultiIndex.from_tuples(
-                [[*idx, *_coerce_to_tuple(dateidx)] for dateidx in out.index]
+                [[*idx, *_coerce_to_tuple(dateidx)] for dateidx in out.index],
+                names=[self.forecasters_.index.name, *out.index.names],
             )
             out.set_index(new_index, inplace=True)
             outs.append(out)

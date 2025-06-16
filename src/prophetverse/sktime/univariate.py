@@ -499,7 +499,8 @@ class Prophetverse(BaseProphetForecaster):
                 out = callable(new_x[i].flatten())
                 outs.append(out)
 
-            out = jnp.stack(outs, axis=0)
+            # Swap samples and panels dimensions
+            out = jnp.concatenate(outs, axis=0).transpose(1, 0, 2, 3)
             return out
 
         return broadcasted_callable

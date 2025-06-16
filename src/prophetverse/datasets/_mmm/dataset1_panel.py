@@ -75,6 +75,7 @@ def get_site_values():
 
     posterior_samples_path = Path(__file__).parent / Path(
         "dataset1_panel_posterior_samples.json"
+        # "dataset1_posterior_samples.json"
     )
     with open(posterior_samples_path, "r") as f:
         posterior_samples = json.load(f)
@@ -200,7 +201,8 @@ def get_y(samples, index):
     pd.DataFrame
         DataFrame containing observed sales data.
     """
-    return samples.loc[0, "obs"].to_frame("sales")
+    mask = samples.index.get_level_values("sample") == 0
+    return samples.loc[mask, "obs"].to_frame("sales")
 
 
 def get_simulated_lift_test(X, model, true_effect, rng, n=10):
@@ -236,7 +238,8 @@ def get_simulated_lift_test(X, model, true_effect, rng, n=10):
 
         samples_b = model.predict_component_samples(X=X_b, fh=fh)
 
-        true_effect_b = samples_b.loc[0, [col]]
+        mask = samples_b.index.get_level_values("sample") == 0
+        true_effect_b = samples_b.loc[mask, [col]].droplevel("sample")
 
         lift = true_effect_b / true_effect
 

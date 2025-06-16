@@ -46,7 +46,7 @@ plt.style.use("seaborn-v0_8-whitegrid")
 ### 1.1 Load synthetic data
 
 ```{python}
-from prophetverse.datasets._mmm.dataset1 import get_dataset
+from prophetverse.datasets._mmm.dataset1_panel import get_dataset
 
 y, X, lift_tests, true_components, model = get_dataset()
 ```
@@ -64,29 +64,35 @@ def plot_spend_comparison(
     optimized_title="Optimized Spend: Maximizing KPI",
     figsize=(12, 6),
 ):
-    fig, ax = plt.subplots(1, 2, figsize=figsize)
 
-    X_baseline.loc[indexer, channels].plot(ax=ax[0], linewidth=2)
-    X_optimized.loc[indexer, channels].plot(ax=ax[1], linewidth=2, linestyle="--")
+    series_idx = X_baseline.index.droplevel(-1).unique().tolist()
 
-    ax[0].set_title(baseline_title, fontsize=14, weight="bold")
-    ax[1].set_title(optimized_title, fontsize=14, weight="bold")
+    fig, axs = plt.subplots(len(series_idx), 2, figsize=figsize)
+    for i, series in enumerate(series_idx):
+        _X_baseline = X_baseline.loc[series]
+        _X_optimized = X_optimized.loc[series]
+        ax = axs[i]
+        _X_baseline.loc[indexer, channels].plot(ax=ax[0], linewidth=2)
+        _X_optimized.loc[indexer, channels].plot(ax=ax[1], linewidth=2, linestyle="--")
 
-    for a in ax:
-        a.set_ylabel("Spend")
-        a.set_xlabel("Date")
-        a.legend(loc="upper right", frameon=True)
-        a.grid(axis="x", visible=False)
-        a.grid(axis="y", linestyle="--", alpha=0.7)
-        a.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+        ax[0].set_title(baseline_title, fontsize=14, weight="bold")
+        ax[1].set_title(optimized_title, fontsize=14, weight="bold")
 
-    # Align y-axis
-    y_max = max(
-        X_baseline.loc[indexer, channels].max().max(),
-        X_optimized.loc[indexer, channels].max().max(),
-    )
-    for a in ax:
-        a.set_ylim(0, y_max * 1.05)
+        for a in ax:
+            a.set_ylabel("Spend")
+            a.set_xlabel("Date")
+            a.legend(loc="upper right", frameon=True)
+            a.grid(axis="x", visible=False)
+            a.grid(axis="y", linestyle="--", alpha=0.7)
+            a.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+
+        # Align y-axis
+        y_max = max(
+            _X_baseline.loc[indexer, channels].max().max(),
+            _X_optimized.loc[indexer, channels].max().max(),
+        )
+        for a in ax:
+            a.set_ylim(0, y_max * 1.05)
 
     plt.tight_layout()
     return fig, ax
@@ -124,8 +130,6 @@ from prophetverse.experimental.budget_optimization import (
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
     constraints=[SharedBudgetConstraint()],
-    options={"disp": True},
-
 )
 budget_optimizer
 ```
@@ -133,7 +137,7 @@ budget_optimizer
 This is our optimization horizon:
 
 ```{python}
-horizon = pd.period_range("2004-01-01", "2004-12-31", freq="D")
+horizon = pd.period_range("2004-12-01", "2004-12-31", freq="D")
 horizon
 ```
 
@@ -168,7 +172,7 @@ fig, ax = plot_spend_comparison(
     "2004",
 )
 
-kpi_gain = y_pred_opt.sum() / y_pred_baseline.sum() - 1
+kpi_gain = y_pred_opt.values.sum() / y_pred_baseline.values.sum() - 1
 fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16,weight="bold", y=1.02)
 fig.tight_layout()
 fig.show()
@@ -216,7 +220,7 @@ fig, ax = plot_spend_comparison(
     figsize=(12, 6),
 )
 
-kpi_gain = y_pred_opt.sum() / y_pred_baseline.sum() - 1
+kpi_gain = y_pred_opt.values.sum() / y_pred_baseline.values.sum() - 1
 fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16, weight="bold", y=1.02)
 fig.tight_layout()
 fig.show()
@@ -232,12 +236,14 @@ from prophetverse.experimental.budget_optimization import (
     MinimumTargetResponse,
 )
 
-target = y.loc["2003"].sum() * 1.30
+target = y.loc[pd.IndexSlice[:, horizon],].values.sum()*0.9
+
+import numpy as np
 
 budget_optimizer = BudgetOptimizer(
     objective=MinimizeBudget(),
     constraints=[MinimumTargetResponse(target_response=target, constraint_type="eq")],
-    options={"disp": True, "maxiter" : 300},
+    options={"disp": True, "maxiter": 300},
 )
 
 X0 = X.copy()
@@ -270,14 +276,14 @@ y_pred_opt = model.predict(X=X_opt, fh=horizon)
 
 print(
     f"MMM Predictions \n",
-    f"Baseline KPI: {y_pred_baseline.sum()/1e9:.2f} B \n",
-    f"Optimized KPI: {y_pred_opt.sum()/1e9:.2f} B \n",
+    f"Baseline KPI: {y_pred_baseline.values.sum()/1e9:.2f} B \n",
+    f"Optimized KPI: {y_pred_opt.values.sum()/1e9:.2f} B \n",
     f"Target KPI: {target/1e9:.2f} B \n",
     "Baseline spend: ",
-    X0.loc[horizon, ["ad_spend_search", "ad_spend_social_media"]].sum().sum(),
+    X0.loc[pd.IndexSlice[:, horizon], ["ad_spend_search", "ad_spend_social_media"]].sum().sum(),
     "\n",
     "Optimized spend: ",
-    X_opt.loc[horizon, ["ad_spend_search", "ad_spend_social_media"]].sum().sum(),
+    X_opt.loc[pd.IndexSlice[:, horizon], ["ad_spend_search", "ad_spend_social_media"]].sum().sum(),
     "\n",
 )
 ```

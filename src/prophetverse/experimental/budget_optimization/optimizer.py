@@ -103,7 +103,7 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             columns=columns,
         )
 
-        x0 = X.loc[horizon, columns].values.flatten()
+        x0 = X.loc[X.index.get_level_values(-1).isin(horizon), columns].values.flatten()
         # Transform decision variable
         self._parametrization_transform.fit(X, horizon, columns)
         x0 = self._parametrization_transform.transform(x0)
@@ -112,12 +112,18 @@ class BudgetOptimizer(BaseBudgetOptimizer):
         self.bounds_ = []
         if isinstance(self._bounds, list):
             self.bounds_ = self._bounds
-        else:
+        elif len(x0) % len(columns) == 0:
             size_per_column = len(x0) // len(columns)
             for col in columns:
                 self.bounds_.extend(
                     [self._bounds.get(col, (0, np.inf))] * size_per_column
                 )
+        else:
+            if self._bounds is not None:
+                warnings.warn(
+                    "Bounds are not set correctly. Using default bounds (0, np.inf) for each decision variable."
+                )
+            self.bounds_ = [(0, np.inf)] * len(x0)
 
         self.objective_fun_ = self.wrap_func_with_inv_transform(self.objective_fun_)
         self.jac_ = grad(self.objective_fun_)
@@ -164,7 +170,8 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
         X_opt = X.copy()
         x_opt = self._parametrization_transform.inverse_transform(res.x)
-        X_opt.loc[horizon, columns] = x_opt.reshape(-1, len(columns))
+        mask = X_opt.index.get_level_values(-1).isin(horizon)
+        X_opt.loc[mask, columns] = x_opt.reshape(-1, len(columns))
         return X_opt
 
     def set_predictive_attr(self, model, X, horizon, columns):
@@ -202,27 +209,39 @@ class BudgetOptimizer(BaseBudgetOptimizer):
         )
         from prophetverse.experimental.budget_optimization.parametrization_transformations import (
             InvestmentPerChannelTransform,
+            TotalInvestmentTransform,
         )
 
-        return [
-            {
-                "objective": MaximizeROI(),
-                "constraints": [
-                    SharedBudgetConstraint(),
-                    MinimumTargetResponse(0.5),
-                ],
-            },
-            {
-                "objective": MaximizeKPI(),
-                "constraints": [
-                    SharedBudgetConstraint(),
-                ],
-                "parametrization_transform": InvestmentPerChannelTransform(),
-            },
-            {
-                "objective": MinimizeBudget(),
-                "constraints": [
-                    MinimumTargetResponse(0.5),
-                ],
-            },
-        ]
+        params = []
+
+        for parametrization in [
+            None,
+            InvestmentPerChannelTransform(),
+            TotalInvestmentTransform(),
+        ]:
+
+            params.extend(
+                [
+                    {
+                        "objective": MaximizeROI(),
+                        "constraints": [
+                            SharedBudgetConstraint(),
+                            MinimumTargetResponse(0.5),
+                        ],
+                    },
+                    {
+                        "objective": MaximizeKPI(),
+                        "constraints": [
+                            SharedBudgetConstraint(),
+                        ],
+                        "parametrization_transform": parametrization,
+                    },
+                    {
+                        "objective": MinimizeBudget(),
+                        "constraints": [
+                            MinimumTargetResponse(0.5),
+                        ],
+                    },
+                ]
+            )
+        return params

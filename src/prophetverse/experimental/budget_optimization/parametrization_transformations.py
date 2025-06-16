@@ -39,7 +39,9 @@ class InvestmentPerChannelTransform(BaseParametrizationTransformation):
     """
 
     def _fit(self, X, horizon, columns):
-        X = X.loc[horizon, columns]
+
+        mask = X.index.get_level_values(-1).isin(horizon)
+        X = X.loc[mask, columns]
 
         x_array = jnp.array(X.values)
 
@@ -74,7 +76,8 @@ class TotalInvestmentTransform(BaseParametrizationTransformation):
     """
 
     def _fit(self, X, horizon, columns):
-        X = X.loc[horizon, columns]
+        mask = X.index.get_level_values(-1).isin(horizon)
+        X = X.loc[mask, columns]
 
         x_array = jnp.array(X.values)
 

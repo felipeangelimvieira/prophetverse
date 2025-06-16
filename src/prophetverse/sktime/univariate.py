@@ -24,6 +24,7 @@ from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor, reindex_time_series
 from collections import defaultdict
 from prophetverse.utils import get_multiindex_loc
+from prophetverse.utils.frame_to_array import series_to_tensor
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
@@ -390,7 +391,8 @@ class Prophetverse(BaseProphetForecaster):
         inference_engine = model.inference_engine_
 
         # Get the indexes of `horizon` in fh
-        horizon_idx = jnp.array([fh.get_loc(h) for h in horizon])
+
+        horizon_idx = jnp.array(X.index.get_level_values(-1).isin(horizon))
 
         # Prepare exogenous effects -
         # we need to transform them on every call to check the
@@ -417,24 +419,46 @@ class Prophetverse(BaseProphetForecaster):
                 )
             )
 
-        x_array = jnp.array(X.values)
+        x_array = series_to_tensor(X)
+
+        if not isinstance(self._scale, (pd.Series, pd.DataFrame)):
+            scale = self._scale
+        else:
+            scale = self._scale.values.reshape((-1, 1, 1))
 
         def predictive(new_x):
             """
             Update predict data and call self._predict
             """
-            new_x = new_x.reshape(-1, len(columns))
+            if x_array.ndim <= 2:
+                new_x = new_x.reshape(len(horizon), len(columns))
+            else:
+                new_x = new_x.reshape((x_array.shape[0], len(horizon), len(columns)))
             for effect_name, effect, effect_column_idx in exogenous_effects_to_update:
-                _data = x_array[:, effect_column_idx]
-                _data = _data.at[horizon_idx].set(new_x[:, effect_column_idx])
+                _data = x_array[..., effect_column_idx]
+                shape = _data.shape
+                _data = _data.flatten()
+                _data = _data.at[horizon_idx].set(
+                    new_x[..., effect_column_idx].flatten()
+                )
+                _data = _data.reshape(shape)
                 # Update the effect data
                 predict_data["data"][effect_name] = effect._update_data(
                     predict_data["data"][effect_name], _data
                 )
 
             predictive_samples = inference_engine.predict(**predict_data)
+            panel_samples = {
+                k: v for k, v in predictive_samples.items() if k.startswith("panel-")
+            }
+            predictive_samples.update(group_by_suffix(panel_samples))
             obs = predictive_samples["obs"]
-            obs = obs * model._scale
+
+            # TODO: there may be a better place to place this
+            # This is a workaround
+            # if obs.ndim == 4:
+            #    obs = obs.squeeze(0)
+            obs = obs * scale
 
             return obs
 
@@ -468,10 +492,11 @@ class Prophetverse(BaseProphetForecaster):
             callables.append(callable)
 
         def broadcasted_callable(new_x):
+            new_x = new_x.reshape((-1, len(horizon), len(columns)))
             outs = []
             for i in range(new_x.shape[0]):
                 callable = callables[i]
-                out = callable(new_x[i])
+                out = callable(new_x[i].flatten())
                 outs.append(out)
 
             out = jnp.stack(outs, axis=0)

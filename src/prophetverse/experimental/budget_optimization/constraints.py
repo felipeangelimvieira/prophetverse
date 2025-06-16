@@ -45,7 +45,8 @@ class SharedBudgetConstraint(BaseConstraint):
 
         total = self.total
         if total is None:
-            total = X.loc[horizon, columns].sum(axis=0).sum()
+            mask = X.index.get_level_values(-1).isin(horizon)
+            total = X.loc[mask, columns].sum(axis=0).sum()
 
         channel_idx = [columns.index(ch) for ch in channels]
 

@@ -21,13 +21,14 @@ class TargetLikelihood(BaseTargetEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
-        "capability:panel": False,
+        "hierarchical_prophet_compliant": True,
         # If no columns are found, should
         # _predict be skipped?
         "requires_X": False,
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
+        # "capability:panel": True,
     }
 
     def __init__(
@@ -79,12 +80,24 @@ class TargetLikelihood(BaseTargetEffect):
         mean = numpyro.deterministic("mean", mean)
         noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(self.noise_scale))
 
-        with numpyro.plate("data", len(mean), dim=-2):
-            numpyro.sample(
-                "obs",
-                self.likelihood_distribution_(mean.reshape((-1, 1)), noise_scale),
-                obs=data,
-            )
+        if mean.ndim <= 2:
+            mean = mean.reshape((-1, 1))
+
+            with numpyro.plate("data", len(mean), dim=-2):
+                numpyro.sample(
+                    "obs",
+                    self.likelihood_distribution_(mean, noise_scale),
+                    obs=data,
+                )
+        else:
+            with numpyro.plate("series", mean.shape[0], dim=-3):
+                with numpyro.plate("data", mean.shape[1], dim=-2):
+                    numpyro.sample(
+                        "obs",
+                        self.likelihood_distribution_(mean, noise_scale),
+                        obs=data,
+                    )
+        return jnp.zeros_like(mean)
 
     def _compute_mean(self, predicted_effects: Dict[str, jnp.ndarray]) -> jnp.ndarray:
         mean = 0

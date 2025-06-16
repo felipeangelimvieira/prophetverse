@@ -6,6 +6,7 @@ class TestAllEffects(TestAllObjects):
 
     package_name = "prophetverse.effects"
     valid_tags = [
+        "hierarchical_prophet_compliant",
         "capability:panel",
         "capability:multivariate_input",
         "requires_X",
@@ -14,6 +15,7 @@ class TestAllEffects(TestAllObjects):
         "requires_fit_before_transform",
         "fitted_named_object_parameters",
         "named_object_parameters",
+        "feature:panel_hyperpriors",
     ]
 
     object_type_filter = BaseEffect

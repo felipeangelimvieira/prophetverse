@@ -88,10 +88,10 @@ def test_piecewise_compute_trend(
 
     for trend_model in [piecewise_linear_trend, piecewise_logistic_trend]:
         trend_model.fit(df, df)
-        period_index = pd.period_range(start="2020-01-01", periods=100, freq="D")
-        changepoint_matrix = trend_model.get_changepoint_matrix(period_index)
+        fh = pd.date_range(start="2020-01-01", periods=100, freq="D")
+        data = trend_model.transform(X=df, fh=fh)
         with numpyro.handlers.seed(rng_seed=0):
-            trend = trend_model.predict(changepoint_matrix, predicted_effects={})
+            trend = trend_model.predict(data, predicted_effects={})
         assert (
             trend.ndim == expected_ndim
         ), f"Dimensions are incorrect for trend_model {trend_model.__class__.__name__}"

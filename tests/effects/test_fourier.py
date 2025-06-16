@@ -50,8 +50,8 @@ def test_linear_fourier_seasonality_transform(fourier_effect_instance, exog_data
     transformed = fourier_effect_instance.transform(X=exog_data, fh=fh)
 
     fourier_transformed = fourier_effect_instance.fourier_features_.transform(exog_data)
-    assert isinstance(transformed, jnp.ndarray)
-    assert transformed.shape == fourier_transformed.shape
+    assert isinstance(transformed["data"], jnp.ndarray)
+    assert transformed["data"].shape == fourier_transformed.shape
 
 
 def test_linear_fourier_seasonality_predict(fourier_effect_instance, exog_data):

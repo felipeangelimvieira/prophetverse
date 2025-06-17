@@ -28,7 +28,7 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
     """
 
     _tags = {
-        "capability:panel": True,
+        "hierarchical_prophet_compliant": True,
         "capability:multivariate_input": True,
     }
 
@@ -83,3 +83,94 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
             coefficients = jnp.expand_dims(coefficients, axis=0)
 
         return data @ coefficients
+
+
+class PanelBHLinearEffect(BaseAdditiveOrMultiplicativeEffect):
+    """Hierarchical linear effect.
+
+    Parameters
+    ----------
+    prior : Distribution, optional
+        A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
+    effect_mode : effects_application, optional
+        Either "multiplicative" or "additive" by default "multiplicative".
+    """
+
+    _tags = {
+        "hierarchical_prophet_compliant": True,
+        "capability:panel": True,
+        "capability:multivariate_input": False,
+        "feature:panel_hyperpriors": True,
+    }
+
+    def __init__(
+        self,
+        effect_mode: EFFECT_APPLICATION_TYPE = "multiplicative",
+        loc_hyperprior: Optional[Distribution] = None,
+        scale_hyperprior: Optional[Distribution] = None,
+        prior_callable: Optional[Distribution] = None,
+    ):
+        self.loc_hyperprior = loc_hyperprior
+        self.scale_hyperprior = scale_hyperprior
+        self.prior_callable = prior_callable
+
+        super().__init__(
+            effect_mode=effect_mode,
+        )
+
+        self._loc_hyperprior = (
+            loc_hyperprior if loc_hyperprior is not None else dist.Normal(0, 1)
+        )
+        self._scale_hyperprior = (
+            scale_hyperprior if scale_hyperprior is not None else dist.HalfNormal(1)
+        )
+        self._prior_callable = (
+            prior_callable if prior_callable is not None else dist.Normal
+        )
+
+    def _predict(
+        self,
+        data: Any,
+        predicted_effects: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs,
+    ) -> jnp.ndarray:
+        """Apply and return the effect values.
+
+        Parameters
+        ----------
+        data : Any
+            Data obtained from the transformed method.
+
+        predicted_effects : Dict[str, jnp.ndarray]
+            A dictionary containing the predicted effects
+
+        Returns
+        -------
+        jnp.ndarray
+            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
+            multivariate timeseries, where T is the number of timepoints and N is the
+            number of series.
+        """
+
+        loc_hyperprior = numpyro.sample(
+            "loc_hyperprior",
+            self._loc_hyperprior,
+        )
+
+        scale_hyperprior = numpyro.sample(
+            "scale_hyperprior",
+            self._scale_hyperprior,
+        )
+
+        args = (loc_hyperprior, scale_hyperprior)
+
+        prior = self._prior_callable(*args)
+
+        with numpyro.handlers.plate("panel_plate", data.shape[0], dim=-1):
+            coefficients = numpyro.sample(
+                "coefs",
+                prior,
+            )
+
+        return data @ coefficients.reshape((-1, 1, 1))

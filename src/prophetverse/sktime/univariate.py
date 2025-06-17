@@ -4,10 +4,12 @@ This module implements the Univariate Prophet model, similar to the one implemen
 the `prophet` library.
 """
 
+import warnings
 from typing import List, Optional, Union, Dict
 
 import numpyro
 import jax.numpy as jnp
+import jax
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -19,6 +21,8 @@ from prophetverse.effects.target.univariate import (
     GammaTargetLikelihood,
 )
 from prophetverse.utils.deprecation import deprecation_warning
+from prophetverse.utils import series_to_tensor, reindex_time_series
+from collections import defaultdict
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
@@ -91,11 +95,13 @@ class Prophetverse(BaseProphetForecaster):
         scale=None,
         rng_key=None,
         inference_engine=None,
+        broadcast_mode="estimator",
     ):
         """Initialize the Prophetverse model."""
         self.noise_scale = noise_scale
         self.feature_transformer = feature_transformer
         self.likelihood = likelihood
+        self.broadcast_mode = broadcast_mode
 
         super().__init__(
             rng_key=rng_key,
@@ -107,6 +113,22 @@ class Prophetverse(BaseProphetForecaster):
         )
 
         self._validate_hyperparams()
+
+        if self.broadcast_mode != "estimator":
+            self.set_tags(
+                **{
+                    "y_inner_mtype": [
+                        "pd.DataFrame",
+                        "pd-multiindex",
+                        "pd_multiindex_hier",
+                    ],
+                    "X_inner_mtype": [
+                        "pd.DataFrame",
+                        "pd-multiindex",
+                        "pd_multiindex_hier",
+                    ],
+                }
+            )
 
     @property
     def _likelihood(self):
@@ -168,6 +190,11 @@ class Prophetverse(BaseProphetForecaster):
                 f"or a base effect instance. Got '{self.likelihood}'."
             )
 
+        if not self.broadcast_mode in ["estimator", "effect"]:
+            raise ValueError(
+                f"broadcast_mode must be either 'on' or 'off'. Got '{self.broadcast_mode}'."
+            )
+
     def _get_fit_data(self, y, X, fh):
         """Prepare data for fitting the Numpyro model.
 
@@ -186,7 +213,8 @@ class Prophetverse(BaseProphetForecaster):
             Dictionary containing prepared data for model fitting.
         """
         fh = y.index.get_level_values(-1).unique()
-
+        if X is None:
+            X = pd.DataFrame(index=y.index)
         self.trend_model_ = self._trend.clone()
         self.likelihood_model_ = self._likelihood.clone()
 
@@ -214,7 +242,11 @@ class Prophetverse(BaseProphetForecaster):
         self._fit_effects(X, y)
         exogenous_data = self._transform_effects(X, fh=fh)
 
-        y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
+        if y.index.nlevels > 1:
+            # Panel data
+            y_array = series_to_tensor(y)
+        else:
+            y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
 
         # Data used in both fitting and prediction.
         self.fit_and_predict_data_ = {
@@ -254,7 +286,8 @@ class Prophetverse(BaseProphetForecaster):
         fh_as_index = pd.Index(list(fh_dates.to_numpy()))
 
         if X is None:
-            X = pd.DataFrame(index=fh_as_index)
+            idx = reindex_time_series(self._y, fh_as_index).index
+            X = pd.DataFrame(index=idx)
 
         if self.feature_transformer is not None:
             X = self.feature_transformer.transform(X)
@@ -271,6 +304,14 @@ class Prophetverse(BaseProphetForecaster):
             target_data=target_data,
             **self.fit_and_predict_data_,
         )
+
+    def _get_predictive_samples_dict(self, fh, X=None):
+        samples = super()._get_predictive_samples_dict(fh, X)
+        panel_samples = {k: v for k, v in samples.items() if k.startswith("panel-")}
+        for key in panel_samples:
+            del samples[key]
+        samples.update(group_by_suffix(panel_samples))
+        return samples
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):  # pragma: no cover
@@ -302,6 +343,10 @@ class Prophetverse(BaseProphetForecaster):
                     num_chains=1, num_samples=1, num_warmup=1
                 ),
                 "trend": FlatTrend(),
+            },
+            {
+                "trend": FlatTrend(),
+                "broadcast_mode": "effect",
             },
         ]
 
@@ -436,3 +481,31 @@ class ProphetNegBinomial(Prophetverse):
             rng_key=rng_key,
             inference_engine=inference_engine,
         )
+
+
+def group_by_suffix(data_dict):
+    """
+    Given a dict whose keys are like "panel-<i>/<suffix>",
+    returns a new dict mapping each suffix to a list of values
+    ordered by the panel index i.
+    """
+    temp = defaultdict(list)
+    for key, value in data_dict.items():
+        try:
+            split = key.split("/", 1)
+            panel, suffix = split[0], split[-1]
+            # extract the integer index from "panel-<i>"
+            idx = int(panel.split("-", 1)[1])
+        except (ValueError, IndexError) as e:
+            # skip keys that don’t match the expected pattern
+            warnings.warn(
+                f"Key '{key}' does not match expected pattern 'panel-<i>/<suffix>': {e}"
+            )
+            continue
+        temp[suffix].append((idx, value))
+
+    # sort each list by index and strip off the index
+    return {
+        suffix: jnp.stack([val for idx, val in sorted(lst, key=lambda x: x[0])], axis=1)
+        for suffix, lst in temp.items()
+    }

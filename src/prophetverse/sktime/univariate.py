@@ -330,15 +330,13 @@ class Prophetverse(BaseProphetForecaster):
             A list of dictionaries containing test parameters.
         """
         from prophetverse.effects.trend import FlatTrend
-        from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine
+        from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine, prior
         from prophetverse.engine.optimizer import AdamOptimizer
 
         params = [
             {
                 "trend": FlatTrend(),
-                "inference_engine": MAPInferenceEngine(
-                    num_steps=1, optimizer=AdamOptimizer()
-                ),
+                "inference_engine": prior.PriorPredictiveInferenceEngine(num_samples=2),
             },
             {
                 "inference_engine": MCMCInferenceEngine(
@@ -500,7 +498,14 @@ class Prophetverse(BaseProphetForecaster):
                 outs.append(out)
 
             # Swap samples and panels dimensions
-            out = jnp.concatenate(outs, axis=0).transpose(1, 0, 2, 3)
+
+            # out can be of shape (Samples, time, 1)
+            # or (1, Samples, time, 1)
+            if outs[0].ndim == 3:
+                outs = jnp.stack(outs, axis=0)
+            else:
+                outs = jnp.concatenate(outs, axis=0)
+            out = outs.transpose(1, 0, 2, 3)
             return out
 
         return broadcasted_callable

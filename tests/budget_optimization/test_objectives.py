@@ -22,8 +22,8 @@ def test_maximize_roi_basic():
     # predictive returns two samples over three horizons
     pred = jnp.array(
         [
-            [1.0, 2.0, 3.0],
-            [1.0, 2.0, 3.0],
+            [[1.0], [2.0], [3.0]],
+            [[1.0], [2.0], [3.0]],
         ]
     )
     optimizer = DummyOptimizer(pred, jnp.array([1, 2]))
@@ -38,8 +38,8 @@ def test_maximize_kpi_basic():
     # two samples over two horizons
     pred = jnp.array(
         [
-            [2.0, 4.0],
-            [2.0, 4.0],
+            [[2.0], [4.0]],
+            [[2.0], [4.0]],
         ]
     )
     optimizer = DummyOptimizer(pred, jnp.array([0, 1]))

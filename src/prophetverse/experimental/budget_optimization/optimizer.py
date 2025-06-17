@@ -210,6 +210,7 @@ class BudgetOptimizer(BaseBudgetOptimizer):
         from prophetverse.experimental.budget_optimization.parametrization_transformations import (
             InvestmentPerChannelTransform,
             TotalInvestmentTransform,
+            InvestmentPerChannelAndSeries,
         )
 
         params = []
@@ -218,6 +219,7 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             None,
             InvestmentPerChannelTransform(),
             TotalInvestmentTransform(),
+            InvestmentPerChannelAndSeries(),
         ]:
 
             params.extend(

@@ -12,9 +12,12 @@ import pandas as pd
 
 plt.style.use("seaborn-v0_8-whitegrid")
 
-from prophetverse.datasets._mmm.dataset1 import get_dataset
+from prophetverse.datasets._mmm.dataset1_panel import get_dataset
 
 y, X, lift_tests, true_components, model = get_dataset()
+
+# model.set_params(broadcast_mode="estimator")
+# model.fit(y=y, X=X)
 
 
 def plot_spend_comparison(
@@ -66,6 +69,29 @@ horizon = pd.period_range("2004-01-01", "2004-12-31", freq="D")
 X_opt = budget_optimizer.optimize(
     model=model,
     X=X,
+    horizon=horizon,
+    columns=["ad_spend_search", "ad_spend_social_media"],
+)
+
+from prophetverse.experimental.budget_optimization import (
+    MinimizeBudget,
+    MinimumTargetResponse,
+)
+
+target = y.loc[pd.IndexSlice[:, horizon],].values.sum() * 0.9
+
+import numpy as np
+
+budget_optimizer = BudgetOptimizer(
+    objective=MinimizeBudget(),
+    constraints=[MinimumTargetResponse(target_response=target, constraint_type="eq")],
+    options={"disp": True, "maxiter": 300},
+)
+
+X0 = X.copy()
+X_opt = budget_optimizer.optimize(
+    model=model,
+    X=X0,
     horizon=horizon,
     columns=["ad_spend_search", "ad_spend_social_media"],
 )

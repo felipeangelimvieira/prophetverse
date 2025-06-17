@@ -753,7 +753,7 @@ class BaseBayesianForecaster(BaseForecaster):
                 idx = [idx]
             new_index = pd.MultiIndex.from_tuples(
                 [[*idx, *_coerce_to_tuple(dateidx)] for dateidx in out.index],
-                names=[self.forecasters_.index.name, *out.index.names],
+                names=[*self.forecasters_.index.names, *out.index.names],
             )
             out.set_index(new_index, inplace=True)
             outs.append(out)

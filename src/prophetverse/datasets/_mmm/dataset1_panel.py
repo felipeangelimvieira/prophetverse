@@ -54,7 +54,6 @@ def get_X(index, rng):
     X = pd.DataFrame(
         {
             "ad_spend_search": np.cumsum(rng.normal(0, 1, size=len(index))),
-            # "ad_spend_social_media": np.cumsum(rng.normal(0, 1, size=len(index))),
         },
         index=index,
     )
@@ -75,7 +74,6 @@ def get_site_values():
 
     posterior_samples_path = Path(__file__).parent / Path(
         "dataset1_panel_posterior_samples.json"
-        # "dataset1_posterior_samples.json"
     )
     with open(posterior_samples_path, "r") as f:
         posterior_samples = json.load(f)

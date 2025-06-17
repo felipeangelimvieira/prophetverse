@@ -1,25 +1,15 @@
 ---
-title: "Budget Optimization"
-description: "*Use Prophetverse to optimize media budget allocation across channels.*"
+title: "Budget Optimization for multiple time series"
+description: "*Optimize media budget allocation across channels and geographies/aggregations using Prophetverse.*"
 ---
 
-In this tutorial, you’ll learn how to use Prophetverse’s budget-optimization module to:
+In previous tutorial, we saw how we can, for a single timeseries with multiple channels, optimize the media budget allocation across channels to maximize a key performance indicator (KPI) or minimize the total spend required to achieve a target KPI.
 
-- **Allocate daily spend across channels** to maximize a key performance indicator (KPI).
-- **Minimize total spend** required to achieve a target KPI.
-
-You’ll also see how to switch between two parametrizations without hassle:
-
-- **Daily-spend mode**: Optimize the exact dollar amount for each day and channel.
-- **Share-of-budget mode**: Fix your overall spending pattern and optimize only the channel shares.
-
-By the end, you’ll know how to pick the right setup for your campaign goals and make adjustments in seconds.
+In this tutorial, we will see that, without any changes to the code, we can extend this optimization to multiple time series, such as different geographies or aggregations.
 
 ## 1. Setting Up the Problem
 
-In this example, we will load the same dataset as in the previous tutorial,
-and use the complete model, including the calibration with lift tests and
-attribution models.
+We will load a similar dataset as in the previous tutorial, that provides a fitted model, and historical data `y` and `X`
 
 ```{python}
 # | echo: false
@@ -49,6 +39,8 @@ plt.style.use("seaborn-v0_8-whitegrid")
 from prophetverse.datasets._mmm.dataset1_panel import get_dataset
 
 y, X, lift_tests, true_components, model = get_dataset()
+
+#model.set_params(broadcast_mode="estimator")
 ```
 
 ### 1.2 Utility plotting functions
@@ -130,6 +122,7 @@ from prophetverse.experimental.budget_optimization import (
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
     constraints=[SharedBudgetConstraint()],
+    options={"disp": True},
 )
 budget_optimizer
 ```
@@ -236,7 +229,7 @@ from prophetverse.experimental.budget_optimization import (
     MinimumTargetResponse,
 )
 
-target = y.loc[pd.IndexSlice[:, horizon],].values.sum()*0.9
+target = y.loc[pd.IndexSlice[:, horizon],].values.sum() * 1.2
 
 import numpy as np
 
@@ -330,18 +323,42 @@ y_pred_opt = model.predict(X=X_opt, fh=horizon)
 
 print(
     f"MMM Predictions \n",
-    f"Baseline KPI: {y_pred_baseline.sum()/1e9:.2f} B \n",
-    f"Optimized KPI: {y_pred_opt.sum()/1e9:.2f} B \n",
+    f"Baseline KPI: {y_pred_baseline.values.sum()/1e9:.2f} B \n",
+    f"Optimized KPI: {y_pred_opt.values.sum()/1e9:.2f} B \n",
     f"Target KPI: {target/1e9:.2f} B \n",
-
     "Baseline spend: ",
-    X0.loc[horizon, ["ad_spend_search", "ad_spend_social_media"]].sum().sum(),
+    X0.loc[pd.IndexSlice[:, horizon], ["ad_spend_search", "ad_spend_social_media"]]
+    .sum()
+    .sum(),
     "\n",
     "Optimized spend: ",
-    X_opt.loc[horizon, ["ad_spend_search", "ad_spend_social_media"]].sum().sum(),
+    X_opt.loc[pd.IndexSlice[:, horizon], ["ad_spend_search", "ad_spend_social_media"]]
+    .sum()
+    .sum(),
     "\n",
 )
 plt.show()
+```
+
+
+```{python}
+from prophetverse.experimental.budget_optimization.parametrization_transformations import InvestmentPerChannelAndSeries
+
+# Reparametrization: optimizing channel share for each series
+
+budget_optimizer = BudgetOptimizer(
+    objective=MinimizeBudget(),
+    constraints=[MinimumTargetResponse(target_response=target, constraint_type="eq")],
+    parametrization_transform=InvestmentPerChannelAndSeries(),
+    options={"disp": True, "maxiter": 300},
+)
+
+X_opt = budget_optimizer.optimize(
+    model=model,
+    X=X0,
+    horizon=horizon,
+    columns=["ad_spend_search", "ad_spend_social_media"]
+)
 ```
 
 ## Conclusion

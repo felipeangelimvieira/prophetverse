@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.31">
+<meta name="generator" content="quarto-1.7.32">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -73,7 +73,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e1a5c8363afafaef2c763b6775fbf3ca.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-f2b1ffb2c002503e75678245303c6e51.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -173,6 +173,10 @@ window.Quarto = {
         <li>
     <a class="dropdown-item" href="../tutorials/tuning.html">
  <span class="dropdown-text">Hyperparameter tuning</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../tutorials/hierarchical.html">
+ <span class="dropdown-text">Hierarchical Bayesian Model</span></a>
   </li>  
     </ul>
   </li>
@@ -404,7 +408,7 @@ Note
 <p>This dataset was obtained from https://github.com/emanuelef/daily-stars-explorer</p>
 </div>
 </div>
-<div id="b2e55c0a" class="cell" data-execution_count="1">
+<div id="a9c36193" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -463,7 +467,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 \end{align*}
 \]</span></p>
 <p>That curve can be used as trend to model a diffusion process. Below, we plot it for a combination of parameters</p>
-<div id="19d8298b" class="cell" data-execution_count="2">
+<div id="adf5075a" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -536,12 +540,12 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <section id="splitting-the-dataset" class="level2">
 <h2 class="anchored" data-anchor-id="splitting-the-dataset">Splitting the dataset</h2>
 <p>We leave 7 years to forecast, and 1.5 year to train. Note that, without the prior information on the nature of the curve, a model could simply forecast a linear growth of the number of stars, which would be a very poor forecast.</p>
-<div id="78174fef" class="cell" data-execution_count="3">
+<div id="0d9ba671" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>split_at <span class="op">=</span> <span class="op">-</span><span class="bu">int</span>(<span class="dv">365</span> <span class="op">*</span> <span class="dv">5</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> y.iloc[<span class="dv">20</span>:]</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>y_train, y_test <span class="op">=</span> y.iloc[:split_at], y.iloc[split_at:]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="eda597ec" class="cell" data-execution_count="4">
+<div id="42fd7aae" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(nrows<span class="op">=</span><span class="dv">2</span>, sharex<span class="op">=</span><span class="va">True</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> axs[<span class="dv">0</span>]</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> y_train[<span class="st">"day-stars"</span>].rename(<span class="st">"Train"</span>).plot.line(legend<span class="op">=</span><span class="va">True</span>, ax<span class="op">=</span>ax)</span>
@@ -589,7 +593,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <section id="step-1-define-helper-functions" class="level3">
 <h3 class="anchored" data-anchor-id="step-1-define-helper-functions">Step 1: Define helper functions</h3>
 <p>The GenLogisticTrend class will use the following helper functions:</p>
-<div id="c93be306" class="cell" data-execution_count="5">
+<div id="ba5e5f42" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -621,7 +625,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <section id="step-2-define-the-custom-trend-model-class" class="level3">
 <h3 class="anchored" data-anchor-id="step-2-define-the-custom-trend-model-class">Step 2: Define the Custom Trend Model Class</h3>
 <p>Create a new class that extends the TrendModel abstract base class. Implement the abstract methods initialize, prepare_input_data, and compute_trend.</p>
-<div id="f512778a" class="cell" data-execution_count="6">
+<div id="e2225683" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> numpyro <span class="im">import</span> distributions <span class="im">as</span> dist</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -758,7 +762,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </section>
 <section id="fit-the-model-and-make-predictions" class="level2">
 <h2 class="anchored" data-anchor-id="fit-the-model-and-make-predictions">Fit the model and make predictions</h2>
-<div id="d79d13b5" class="cell" data-execution_count="7">
+<div id="f7045f1e" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.transformations.series.fourier <span class="im">import</span> FourierFeatures</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -800,15 +804,17 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>model.fit(y_train)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:126: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+<pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(
-/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:126: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(
-/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:214: UserWarning: No columns match the regex ^$
+/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+  deprecation_warning(
+/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:242: UserWarning: No columns match the regex ^$
   self._fit_effects(X, y)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="7">
-<style>#sk-d698588e-869a-4571-8ab6-2caaec19a0cb {
+<style>#sk-0a045dbd-b422-4e29-8e16-f7453161ebcd {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -833,15 +839,15 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     }
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd {
     color: var(--sklearn-color-text);
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb pre {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd pre {
     padding: 0;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb input.sk-hidden--visually {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -853,7 +859,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     width: 1px;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-dashed-wrapped {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -861,7 +867,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-container {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -871,7 +877,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     position: relative;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-text-repr-fallback {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -887,14 +893,14 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 
   /* Parallel-specific style estimator block */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-parallel-item::after {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-parallel {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -902,28 +908,28 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     position: relative;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-parallel-item {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-parallel-item:first-child::after {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-parallel-item:last-child::after {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-parallel-item:only-child::after {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-serial {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -941,14 +947,14 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-toggleable {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb label.sk-toggleable__label {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -958,7 +964,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     text-align: center;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb label.sk-toggleable__label-arrow:before {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -966,13 +972,13 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     color: var(--sklearn-color-icon);
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb label.sk-toggleable__label-arrow:hover:before {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-toggleable__content {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -980,27 +986,27 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-toggleable__content pre {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1008,38 +1014,38 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-label label.sk-toggleable__label,
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-label label {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-label label.sk-toggleable__label,
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-label:hover label.sk-toggleable__label {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-label label {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-label-container {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-estimator {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1049,7 +1055,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   }
 
   /* on hover */
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb div.sk-estimator:hover {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1106,7 +1112,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb a.estimator_doc_link {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1121,12 +1127,12 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   }
 
   /* On hover */
-  #sk-d698588e-869a-4571-8ab6-2caaec19a0cb a.estimator_doc_link:hover {
+  #sk-0a045dbd-b422-4e29-8e16-f7453161ebcd a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-d698588e-869a-4571-8ab6-2caaec19a0cb" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+</style><div id="sk-0a045dbd-b422-4e29-8e16-f7453161ebcd" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               8],
@@ -1137,7 +1143,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
              inference_engine=MCMCInferenceEngine(num_samples=500,
                                                   num_warmup=1000),
              likelihood='negbinomial', noise_scale=10, scale=1,
-             trend=GenLogisticTrend())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('531e7279-27f3-4e8c-ada4-23de2f4f7c97')" type="checkbox"><label for="UUID('531e7279-27f3-4e8c-ada4-23de2f4f7c97')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+             trend=GenLogisticTrend())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4d9abcc4-ebe7-42b3-a33f-bf12a132ca65')" type="checkbox"><label for="UUID('4d9abcc4-ebe7-42b3-a33f-bf12a132ca65')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               8],
@@ -1148,12 +1154,12 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
              inference_engine=MCMCInferenceEngine(num_samples=500,
                                                   num_warmup=1000),
              likelihood='negbinomial', noise_scale=10, scale=1,
-             trend=GenLogisticTrend())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2e7e21b5-043e-43bb-8c2d-383e535450a6')" type="checkbox"><label for="UUID('2e7e21b5-043e-43bb-8c2d-383e535450a6')" class="sk-toggleable__label sk-toggleable__label-arrow">GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ce310ca6-b71b-4c82-9701-6d08941a51f2')" type="checkbox"><label for="UUID('ce310ca6-b71b-4c82-9701-6d08941a51f2')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
+             trend=GenLogisticTrend())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b8083c97-541e-41ff-ab0c-867a5c4cb27f')" type="checkbox"><label for="UUID('b8083c97-541e-41ff-ab0c-867a5c4cb27f')" class="sk-toggleable__label sk-toggleable__label-arrow">GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('1a71910e-b097-4c62-ac63-b74290658f95')" type="checkbox"><label for="UUID('1a71910e-b097-4c62-ac63-b74290658f95')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
                          fourier_terms_list=[3, 8], freq='D', prior_scale=0.1,
-                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ea2046ad-cd65-4236-96b6-bd6e975f1bf9')" type="checkbox"><label for="UUID('ea2046ad-cd65-4236-96b6-bd6e975f1bf9')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine(num_samples=500, num_warmup=1000)</pre></div></div></div></div></div></div></div></div></div></div>
+                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('e8121887-1671-4513-81d8-fecf09f0d08f')" type="checkbox"><label for="UUID('e8121887-1671-4513-81d8-fecf09f0d08f')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine(num_samples=500, num_warmup=1000)</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="0de2f050" class="cell" data-execution_count="8">
+<div id="8287efb3" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1165,9 +1171,9 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>display(preds.head())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:126: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+<pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(
-/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:126: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(</code></pre>
 </div>
 <div class="cell-output cell-output-display">
@@ -1208,7 +1214,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="c814af69" class="cell" data-execution_count="9">
+<div id="2b8aaaa0" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>interval.columns <span class="op">=</span> interval.columns.droplevel([<span class="dv">0</span>, <span class="dv">1</span>])</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>interval.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
@@ -1258,7 +1264,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </section>
 <section id="plotting-the-results" class="level2">
 <h2 class="anchored" data-anchor-id="plotting-the-results">Plotting the results</h2>
-<div id="14d9c676" class="cell" data-execution_count="10">
+<div id="585b6b55" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Just the scatter of y, without lines</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">5</span>))</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> (</span>
@@ -1298,19 +1304,19 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="477a9f91" class="cell" data-execution_count="11">
+<div id="dfec6fa2" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Forecast samples</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>yhat_samples <span class="op">=</span> model.predict_samples(fh<span class="op">=</span>fh)</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Samples of all sites (capacity, for example, that we had set as deterministic with numpyro.deterministic)</span></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>site_samples <span class="op">=</span> model.predict_component_samples(fh<span class="op">=</span>fh)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:126: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+<pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(
-/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:126: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
+/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:148: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(</code></pre>
 </div>
 </div>
-<div id="6df36453" class="cell" data-execution_count="12">
+<div id="93049d58" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Set number of columns to display to 4 temporarily</span></span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>pd.set_option(<span class="st">"display.max_columns"</span>, <span class="dv">4</span>)</span>
@@ -1378,7 +1384,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="03240af6" class="cell" data-execution_count="13">
+<div id="67f9be8e" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get quantile 0.25, 0.75 and mean</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
@@ -1401,7 +1407,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>site_quantiles.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_4433/2904010725.py:14: FutureWarning: The provided callable &lt;function mean at 0x7fb2a0175260&gt; is currently using SeriesGroupBy.mean. In a future version of pandas, the provided callable will be used directly. To keep current behavior pass the string "mean" instead.
+<pre><code>/tmp/ipykernel_4534/2904010725.py:14: FutureWarning: The provided callable &lt;function mean at 0x7fb028291260&gt; is currently using SeriesGroupBy.mean. In a future version of pandas, the provided callable will be used directly. To keep current behavior pass the string "mean" instead.
   site_quantiles = site_samples.groupby(level=[-1]).agg(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="13">
@@ -1473,7 +1479,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="a761f030" class="cell" data-execution_count="14">
+<div id="061fe26f" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>

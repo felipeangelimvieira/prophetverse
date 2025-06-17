@@ -16,6 +16,19 @@ class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
         return jnp.mean(data, axis=1, keepdims=True)
 
 
+DEFAULT_DIST = dist.Normal(0, 1)
+
+
+class EffectWithDistribution(BaseEffect):
+
+    def __init__(self, dist=None):
+        """Initialize effect with a distribution."""
+        self.dist = dist
+        super().__init__()
+
+        self._dist = self.dist if dist is not None else DEFAULT_DIST
+
+
 @pytest.fixture(name="effect_with_regex")
 def effect_with_regex():
     """Most simple class of abstracteffect with optional regex."""
@@ -190,3 +203,24 @@ def test_update_data():
 
     with pytest.raises(ValueError):
         effect._update_data("error", data_out)
+
+
+def test_get_params():
+    """
+    Test get params with distribution params
+    """
+
+    effect = EffectWithDistribution()
+    assert len(effect.get_params(True)) == 1
+
+    laplace = dist.Laplace(0, 1)
+    effect.set_params(**{"dist": laplace})
+    assert len(effect.get_params()) == 5
+
+    effect.set_params(**{"dist__loc": 10, "dist__scale": 2})
+    params = effect.get_params()
+    assert effect.dist != laplace
+    assert params["dist__loc"] == 10
+    assert params["dist__scale"] == 2
+    assert effect.dist.loc == 10
+    assert effect.dist.scale == 2

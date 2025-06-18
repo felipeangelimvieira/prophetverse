@@ -81,16 +81,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create 'latest' alias for version
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      - name: Create 'latest' alias for stable release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
         run: |
           version="${GITHUB_REF#refs/tags/}"
           echo "Detected version: $version"
           mkdir -p ./latest
           cp -r ./docs/_site/* ./latest/
       
-      - name: Publish Versioned Site to latest
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      - name: Publish stable release to 'latest'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -98,4 +98,3 @@ jobs:
           destination_dir: latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      

@@ -115,15 +115,17 @@ The `BudgetOptimizer` class is the main entry point for the budget-optimization 
 It takes these three components as input and uses them to optimize the budget allocation.
 
 ```{python}
-from prophetverse.experimental.budget_optimization import (
+from prophetverse.budget_optimization import (
     BudgetOptimizer,
-    SharedBudgetConstraint,
+    TotalBudgetConstraint,
     MaximizeKPI,
 )
 
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
-    constraints=[SharedBudgetConstraint()],
+    constraints=[TotalBudgetConstraint()],
+    options={"disp": True},
+
 )
 budget_optimizer
 ```
@@ -131,7 +133,7 @@ budget_optimizer
 This is our optimization horizon:
 
 ```{python}
-horizon = pd.period_range("2004-01-01", "2004-12-31", freq="D")
+horizon = pd.period_range("2004-12-01", "2004-12-31", freq="D")
 horizon
 ```
 
@@ -180,11 +182,11 @@ This is useful when you want to keep the spending pattern fixed (e.g. seasonal b
 and usually converges faster because fewer parameters are free.
 
 ```{python}
-from prophetverse.experimental.budget_optimization import InvestmentPerChannelTransform
+from prophetverse.budget_optimization import InvestmentPerChannelTransform
 
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
-    constraints=[SharedBudgetConstraint()],
+    constraints=[TotalBudgetConstraint()],
     parametrization_transform=InvestmentPerChannelTransform(),
     options={"disp": True},
 )
@@ -225,7 +227,7 @@ fig.show()
 How much should we invest to reach a 30 % increase in 2004?
 
 ```{python}
-from prophetverse.experimental.budget_optimization import (
+from prophetverse.budget_optimization import (
     MinimizeBudget,
     MinimumTargetResponse,
 )

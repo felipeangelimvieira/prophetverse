@@ -23,6 +23,8 @@ from prophetverse.effects.target.univariate import (
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor, reindex_time_series
 from collections import defaultdict
+from prophetverse.utils import get_multiindex_loc
+from prophetverse.utils.frame_to_array import series_to_tensor
 
 __all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
 
@@ -192,7 +194,7 @@ class Prophetverse(BaseProphetForecaster):
 
         if not self.broadcast_mode in ["estimator", "effect"]:
             raise ValueError(
-                f"broadcast_mode must be either 'on' or 'off'. Got '{self.broadcast_mode}'."
+                f"broadcast_mode must be either 'estimator' or 'effect'. Got '{self.broadcast_mode}'."
             )
 
     def _get_fit_data(self, y, X, fh):
@@ -328,15 +330,13 @@ class Prophetverse(BaseProphetForecaster):
             A list of dictionaries containing test parameters.
         """
         from prophetverse.effects.trend import FlatTrend
-        from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine
+        from prophetverse.engine import MCMCInferenceEngine, MAPInferenceEngine, prior
         from prophetverse.engine.optimizer import AdamOptimizer
 
         params = [
             {
                 "trend": FlatTrend(),
-                "inference_engine": MAPInferenceEngine(
-                    num_steps=1, optimizer=AdamOptimizer()
-                ),
+                "inference_engine": prior.PriorPredictiveInferenceEngine(num_samples=2),
             },
             {
                 "inference_engine": MCMCInferenceEngine(
@@ -347,10 +347,171 @@ class Prophetverse(BaseProphetForecaster):
             {
                 "trend": FlatTrend(),
                 "broadcast_mode": "effect",
+                "inference_engine": MAPInferenceEngine(
+                    optimizer=AdamOptimizer(step_size=0.01), num_steps=1
+                ),
             },
         ]
 
         return params
+
+    def _optimizer_predictive_callable(self, X, horizon, columns):
+        """
+        Return predictive callable for budget optimization.
+
+        Budget optimization requires calling predictive function
+        with new values for the exogenous effects, more specifically,
+        specific colummns and specific horizons.
+
+        This function returns a callable that can be used
+        to predict the model's output given new values for the
+        (horizon,columns) pair.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            DataFrame containing the exogenous variables.
+        horizon : pd.Index
+            Index of the forecast horizon.
+        columns : List[str]
+            List of columns to be used in the prediction.
+
+        Returns
+        -------
+        Callable
+            A callable that takes new values for the exogenous effects
+            and returns the predicted values for the model.
+        """
+
+        model = self
+
+        fh: pd.Index = X.index.get_level_values(-1).unique()
+        X = X.copy()
+
+        predict_data = model.get_predict_data(X=X, fh=fh)
+        inference_engine = model.inference_engine_
+
+        # Get the indexes of `horizon` in fh
+
+        horizon_idx = jnp.array(X.index.get_level_values(-1).isin(horizon))
+
+        # Prepare exogenous effects -
+        # we need to transform them on every call to check the
+        # objective function and gradient.
+        # We save a triplet (effect_name, effect, effect_columns)
+        # where effect_columns is a set of indexes of the columns
+        # in the `columns` list that are used by the effect.
+        exogenous_effects_to_update = []
+        for effect_name, effect, effect_columns in model.exogenous_effects_:
+            # If no columns are found, skip
+            if effect_columns is None or len(effect_columns) == 0:
+                continue
+
+            intersection = effect_columns.intersection(columns)
+            if len(intersection) == 0:
+                continue
+
+            exogenous_effects_to_update.append(
+                (
+                    effect_name,
+                    effect,
+                    # index of effect_columns in columns
+                    [columns.index(col) for col in intersection],
+                )
+            )
+
+        x_array = series_to_tensor(X)
+
+        if not isinstance(self._scale, (pd.Series, pd.DataFrame)):
+            scale = self._scale
+        else:
+            scale = self._scale.values.reshape((-1, 1, 1))
+
+        def predictive(new_x):
+            """
+            Update predict data and call self._predict
+            """
+            if x_array.ndim <= 2:
+                new_x = new_x.reshape(len(horizon), len(columns))
+            else:
+                new_x = new_x.reshape((x_array.shape[0], len(horizon), len(columns)))
+            for effect_name, effect, effect_column_idx in exogenous_effects_to_update:
+                _data = x_array[..., effect_column_idx]
+                shape = _data.shape
+                _data = _data.flatten()
+                _data = _data.at[horizon_idx].set(
+                    new_x[..., effect_column_idx].flatten()
+                )
+                _data = _data.reshape(shape)
+                # Update the effect data
+                predict_data["data"][effect_name] = effect._update_data(
+                    predict_data["data"][effect_name], _data
+                )
+
+            predictive_samples = inference_engine.predict(**predict_data)
+            panel_samples = {
+                k: v for k, v in predictive_samples.items() if k.startswith("panel-")
+            }
+            predictive_samples.update(group_by_suffix(panel_samples))
+            obs = predictive_samples["obs"]
+
+            # TODO: there may be a better place to place this
+            # This is a workaround
+            # if obs.ndim == 4:
+            #    obs = obs.squeeze(0)
+            obs = obs * scale
+
+            return obs
+
+        return predictive
+
+    def optimize_predictive_callable(self, X, horizon, columns):
+
+        if not self._is_vectorized:
+            return self._optimizer_predictive_callable(
+                X=X, horizon=horizon, columns=columns
+            )
+
+        callables = []
+        for idx, data in self.forecasters_.iterrows():
+            forecaster = data[0]
+
+            if X is None:
+                _X = None
+            else:
+                _X = get_multiindex_loc(X, [idx])
+                # Keep only index level -1
+                for _ in range(_X.index.nlevels - 1):
+                    _X = _X.droplevel(0)
+
+            callable = forecaster.optimize_predictive_callable(
+                X=_X,
+                horizon=horizon,
+                columns=columns,
+            )
+
+            callables.append(callable)
+
+        def broadcasted_callable(new_x):
+            new_x = new_x.reshape((-1, len(horizon), len(columns)))
+            outs = []
+            for i in range(new_x.shape[0]):
+                callable = callables[i]
+                out = callable(new_x[i].flatten())
+                outs.append(out)
+
+            # Swap samples and panels dimensions
+
+            # out can be of shape (Samples, time, 1)
+            # or (1, Samples, time, 1)
+            if outs[0].ndim == 3:
+                outs = jnp.stack(outs, axis=0)
+            else:
+                outs = jnp.concatenate(outs, axis=0)
+            out = outs.transpose(1, 0, 2, 3)
+            return out
+
+        return broadcasted_callable
 
 
 class Prophet(Prophetverse):

@@ -151,25 +151,6 @@ def test_broadcasting_panel():
         assert jnp.allclose(out[i], expected), "Broadcasting effect prediction failed."
 
 
-def test_sample_params_warning():
-    import warnings
-
-    warnings.simplefilter("default", FutureWarning)
-    with warnings.catch_warnings(record=True) as caught:
-
-        class EffectWithSampleParams(BaseEffect):
-
-            def _sample_params(self, data, predicted_effects):
-                return {}
-
-            def _predict(self, data, predicted_effects, params):
-                return 0
-
-    assert len(caught) == 1, "Expected exactly one warning"
-    w = caught[0]
-    assert issubclass(w.category, FutureWarning)
-
-
 def test_update_data():
 
     effect = BaseEffect()
@@ -185,6 +166,7 @@ def test_update_data():
     assert jnp.array_equal(out[0], data_out), "Data update failed"
     assert out[1] is None, "Data update failed"
 
+    effect._broadcasted = "columns"
     # List
     data_in_list = [jnp.array([[1.0, 2.0]]), jnp.array([[3.0, 4.0]])]
     data_out_list = jnp.array([[5.0, 6.0], [7.0, 8.0]])
@@ -192,6 +174,13 @@ def test_update_data():
     assert len(out) == 2, "Data update failed"
     assert jnp.array_equal(out[0], data_out_list[:, [0]]), "Data update failed"
     assert jnp.array_equal(out[1], data_out_list[:, [1]]), "Data update failed"
+
+    effect._broadcasted = "panel"
+    data_out_list = jnp.array([[[5.0], [6.0]], [[7.0], [8.0]]])
+    out = effect._update_data(data_in_list, data_out_list)
+    assert len(out) == 2, "Data update failed"
+    assert jnp.array_equal(out[0], data_out_list[0]), "Data update failed"
+    assert jnp.array_equal(out[1], data_out_list[1]), "Data update failed"
 
     with pytest.raises(ValueError):
         effect._update_data("error", data_out)

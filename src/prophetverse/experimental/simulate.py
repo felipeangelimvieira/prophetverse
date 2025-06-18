@@ -72,7 +72,13 @@ def simulate(
     """
     # Fit model, creating a dummy y if it is not provided
     if y is None:
-        y = pd.DataFrame(index=fh, data=np.random.rand(len(fh)) * 10, columns=["dummy"])
+        if X is None:
+            index = fh
+        else:
+            index, _ = X.index.reindex(fh, level=-1)
+        y = pd.DataFrame(
+            index=index, data=np.random.rand(len(index)) * 10, columns=["dummy"]
+        )
 
     model = model.clone()
     model.fit(X=X, y=y)

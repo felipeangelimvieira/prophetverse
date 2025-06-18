@@ -4,11 +4,17 @@ from .objectives import (
     MaximizeKPI,
     MaximizeROI,
 )
-from .constraints import SharedBudgetConstraint, MinimumTargetResponse
+from .constraints import (
+    TotalBudgetConstraint,
+    MinimumTargetResponse,
+    SharedBudgetConstraint,
+)
 from .parametrization_transformations import (
     IdentityTransform,
     InvestmentPerChannelTransform,
     TotalInvestmentTransform,
+    InvestmentPerChannelAndSeries,
+    InvestmentPerSeries,
 )
 
 __all__ = [
@@ -16,9 +22,12 @@ __all__ = [
     "MinimizeBudget",
     "MaximizeKPI",
     "MaximizeROI",
-    "SharedBudgetConstraint",
+    "TotalBudgetConstraint",
     "MinimumTargetResponse",
     "IdentityTransform",
     "InvestmentPerChannelTransform",
     "TotalInvestmentTransform",
+    "SharedBudgetConstraint",
+    "InvestmentPerChannelAndSeries",
+    "InvestmentPerSeries",
 ]

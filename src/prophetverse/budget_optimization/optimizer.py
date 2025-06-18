@@ -213,6 +213,7 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             InvestmentPerChannelTransform,
             TotalInvestmentTransform,
             InvestmentPerChannelAndSeries,
+            InvestmentPerSeries,
         )
 
         params = []
@@ -222,6 +223,7 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             InvestmentPerChannelTransform(),
             TotalInvestmentTransform(),
             InvestmentPerChannelAndSeries(),
+            InvestmentPerSeries(),
         ]:
 
             if not isinstance(parametrization, TotalInvestmentTransform):

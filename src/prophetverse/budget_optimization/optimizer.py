@@ -226,7 +226,9 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             InvestmentPerSeries(),
         ]:
 
-            if not isinstance(parametrization, TotalInvestmentTransform):
+            if not isinstance(
+                parametrization, (TotalInvestmentTransform, InvestmentPerSeries)
+            ):
                 params.extend(
                     [
                         {

@@ -52,15 +52,15 @@ def plot_spend_comparison(
     return fig, ax
 
 
-from prophetverse.experimental.budget_optimization import (
+from prophetverse.budget_optimization import (
     BudgetOptimizer,
-    SharedBudgetConstraint,
+    TotalBudgetConstraint,
     MaximizeKPI,
 )
 
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
-    constraints=[SharedBudgetConstraint()],
+    constraints=[TotalBudgetConstraint()],
     options={"disp": True},
 )
 
@@ -73,7 +73,7 @@ X_opt = budget_optimizer.optimize(
     columns=["ad_spend_search", "ad_spend_social_media"],
 )
 
-from prophetverse.experimental.budget_optimization import (
+from prophetverse.budget_optimization import (
     MinimizeBudget,
     MinimumTargetResponse,
 )

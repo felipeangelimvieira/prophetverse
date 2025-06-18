@@ -1,4 +1,4 @@
-from prophetverse.experimental.budget_optimization.constraints import (
+from prophetverse.budget_optimization.constraints import (
     SharedBudgetConstraint,
     MinimumTargetResponse,
 )

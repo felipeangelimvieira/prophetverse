@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 import pytest
-from prophetverse.experimental.budget_optimization.objectives import (
+from prophetverse.budget_optimization.objectives import (
     MaximizeROI,
     MaximizeKPI,
     MinimizeBudget,

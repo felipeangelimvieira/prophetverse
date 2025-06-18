@@ -1,4 +1,4 @@
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseOptimizationObjective,
 )
 import jax.numpy as jnp

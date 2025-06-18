@@ -1,7 +1,7 @@
 """Constraints for Budget Optimizer"""
 
 import numpy as np
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseConstraint,
 )
 import jax
@@ -10,11 +10,11 @@ import pandas as pd
 from jax import grad
 
 __all__ = [
-    "SharedBudgetConstraint",
+    "TotalBudgetConstraint",
 ]
 
 
-class SharedBudgetConstraint(BaseConstraint):
+class TotalBudgetConstraint(BaseConstraint):
     """Shared budget constraint.
 
     This constraint ensures that the sum of the budgets for the specified
@@ -60,6 +60,10 @@ class SharedBudgetConstraint(BaseConstraint):
             return val
 
         return {"type": self.constraint_type, "fun": func, "jac": grad(func)}
+
+
+# TODO: remove in future version
+SharedBudgetConstraint = TotalBudgetConstraint
 
 
 class MinimumTargetResponse(BaseConstraint):

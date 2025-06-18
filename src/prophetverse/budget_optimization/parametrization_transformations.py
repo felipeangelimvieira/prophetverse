@@ -1,4 +1,4 @@
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseParametrizationTransformation,
 )
 import jax.numpy as jnp
@@ -7,6 +7,9 @@ from prophetverse.utils.frame_to_array import series_to_tensor
 __all__ = [
     "IdentityTransform",
     "InvestmentPerChannelTransform",
+    "TotalInvestmentTransform",
+    "InvestmentPerChannelAndSeries",
+    "InvestmentPerSeries",
 ]
 
 
@@ -43,23 +46,24 @@ class InvestmentPerChannelTransform(BaseParametrizationTransformation):
         mask = X.index.get_level_values(-1).isin(horizon)
         X = X.loc[mask, columns]
 
-        x_array = jnp.array(X.values)
+        x_array = series_to_tensor(X)
 
+        self.n_series_ = x_array.shape[0]
         # get daily share
-        self.daily_share_ = x_array / x_array.sum(axis=0)
+        self.daily_share_ = x_array / x_array.sum(axis=(0, 1), keepdims=True)
 
     def _transform(self, x: jnp.ndarray):
         # get share per column
         # x is a (N*M) array
-        x = x.reshape((-1, len(self.columns_)))
+        x = x.reshape((self.n_series_, -1, len(self.columns_)))
         # get the sum of each row
-        x_sum = jnp.sum(x, axis=0)
+        x_sum = jnp.sum(x, axis=(0, 1)).flatten()
         # get the share of each column
         return x_sum
 
     def _inverse_transform(self, xt):
         # Multiply each column share by the daily share
-        xt = xt.reshape((-1, len(self.columns_)))
+        xt = xt.reshape((1, 1, len(self.columns_)))
 
         xt = xt * self.daily_share_
         xt = xt.flatten()
@@ -79,7 +83,7 @@ class TotalInvestmentTransform(BaseParametrizationTransformation):
         mask = X.index.get_level_values(-1).isin(horizon)
         X = X.loc[mask, columns]
 
-        x_array = jnp.array(X.values)
+        x_array = series_to_tensor(X)
 
         # get daily share
         self.daily_share_ = x_array / x_array.sum()
@@ -128,6 +132,37 @@ class InvestmentPerChannelAndSeries(BaseParametrizationTransformation):
     def _inverse_transform(self, xt):
         # Multiply each column share by the daily share
         xt = xt.reshape((self.n_series_, 1, len(self.columns_)))
+
+        xt = xt * self.daily_share_
+        xt = xt.flatten()
+        return xt
+
+
+class InvestmentPerSeries(BaseParametrizationTransformation):
+
+    def _fit(self, X, horizon, columns):
+
+        mask = X.index.get_level_values(-1).isin(horizon)
+        X = X.loc[mask, columns]
+
+        x_array = series_to_tensor(X)
+
+        self.n_series_ = x_array.shape[0]
+        # get daily share
+        self.daily_share_ = x_array / x_array.sum(axis=(1, 2), keepdims=True)
+
+    def _transform(self, x: jnp.ndarray):
+        # get share per column
+        # x is a (N*M) array
+        x = x.reshape((self.n_series_, -1, len(self.columns_)))
+        # get the sum of each row
+        x_sum = jnp.sum(x, axis=(1, 2)).flatten()
+
+        return x_sum
+
+    def _inverse_transform(self, xt):
+        # Multiply each column share by the daily share
+        xt = xt.reshape((self.n_series_, 1, 1))
 
         xt = xt * self.daily_share_
         xt = xt.flatten()

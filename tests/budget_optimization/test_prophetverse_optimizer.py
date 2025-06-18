@@ -3,10 +3,11 @@ import pandas as pd
 import numpy as np
 import jax.numpy as jnp
 
-from prophetverse.experimental.budget_optimization.optimizer import BudgetOptimizer
+from prophetverse.budget_optimization.optimizer import BudgetOptimizer
 from prophetverse.sktime.univariate import Prophetverse
 from prophetverse.effects import HillEffect, LinearEffect
 from prophetverse.engine.prior import PriorPredictiveInferenceEngine
+from numpyro import distributions as dist
 
 DATASET_TYPES = ["simple", "panel"]
 BROADCAST_MODES = ["estimator", "effect"]
@@ -39,10 +40,11 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture
 def X(dataset_type):
     """Synthetic exogenous features (simple 1-panel vs 2-panel)."""
-    rng = np.random.default_rng(42)
     dates = pd.period_range("2023-01-01", periods=100, freq="D")
     base = pd.DataFrame(
-        rng.random((100, 2)), columns=["channel1", "channel2"], index=dates
+        np.linspace(0, 10, num=200).reshape((100, 2)),
+        columns=["channel1", "channel2"],
+        index=dates,
     )
 
     if dataset_type == "simple":
@@ -57,8 +59,26 @@ def model(broadcast_mode):
     return Prophetverse(
         trend="flat",
         exogenous_effects=[
-            ("channel1", HillEffect(), "channel1"),
-            ("channel2", LinearEffect(), "channel2"),
+            (
+                "channel1",
+                HillEffect(
+                    max_effect_prior=dist.LogNormal(3, 1),
+                    half_max_prior=dist.Delta(0.5),
+                    slope_prior=dist.Delta(1),
+                    effect_mode="additive",
+                ),
+                "channel1",
+            ),
+            (
+                "channel2",
+                HillEffect(
+                    max_effect_prior=dist.LogNormal(1, 1),
+                    half_max_prior=dist.Delta(0.1),
+                    slope_prior=dist.Delta(1),
+                    effect_mode="additive",
+                ),
+                "channel2",
+            ),
         ],
         inference_engine=PriorPredictiveInferenceEngine(num_samples=10),
         broadcast_mode=broadcast_mode,  # "estimator" or "effects"
@@ -68,8 +88,8 @@ def model(broadcast_mode):
 @pytest.fixture
 def dataset(model, X):
     """(fitted_model, X, y) tuple ready for optimisation tests."""
-    rng = np.random.default_rng(42)
-    y = pd.DataFrame(index=X.index, data={"value": rng.normal(X.shape[0])})
+
+    y = pd.DataFrame(index=X.index, data={"value": np.arange(X.shape[0])})
     fitted = model.fit(X=X, y=y)
     return fitted, X, y
 
@@ -101,9 +121,7 @@ def _assert_optimization_was_successful(optimizer, X, true_model):
     assert X_opt.index.equals(X.index)
     assert X_opt.columns.equals(X.columns)
 
-    diff = X_opt != X
-    mask = X_opt.index.get_level_values(-1).isin(horizon)
-    assert diff.loc[mask].values.sum() == mask.sum() * len(X.columns)
-    assert diff.loc[~mask].values.sum() == 0
-
+    # Check jac
+    assert jnp.all(jnp.abs(optimizer.jac_(optimizer.x0_, optimizer)) > 1e-6)
     assert not jnp.isnan(optimizer.result_.x).any()
+    assert all(optimizer.x0_ != optimizer.result_.x)

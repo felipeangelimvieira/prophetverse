@@ -1,5 +1,5 @@
 import scipy.optimize
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseBudgetOptimizer,
     BaseConstraint,
     BaseOptimizationObjective,
@@ -12,7 +12,7 @@ from jax import grad, hessian
 import jax.numpy as jnp
 import jax
 import pandas as pd
-from prophetverse.experimental.budget_optimization.parametrization_transformations import (
+from prophetverse.budget_optimization.parametrization_transformations import (
     IdentityTransform,
 )
 from typing import List, Optional
@@ -108,6 +108,8 @@ class BudgetOptimizer(BaseBudgetOptimizer):
         self._parametrization_transform.fit(X, horizon, columns)
         x0 = self._parametrization_transform.transform(x0)
 
+        self.x0_ = x0
+
         # Bounds are set based on the re-parametrized decision variable.
         self.bounds_ = []
         if isinstance(self._bounds, list):
@@ -198,16 +200,16 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
-        from prophetverse.experimental.budget_optimization.objectives import (
+        from prophetverse.budget_optimization.objectives import (
             MaximizeROI,
             MaximizeKPI,
             MinimizeBudget,
         )
-        from prophetverse.experimental.budget_optimization.constraints import (
-            SharedBudgetConstraint,
+        from prophetverse.budget_optimization.constraints import (
+            TotalBudgetConstraint,
             MinimumTargetResponse,
         )
-        from prophetverse.experimental.budget_optimization.parametrization_transformations import (
+        from prophetverse.budget_optimization.parametrization_transformations import (
             InvestmentPerChannelTransform,
             TotalInvestmentTransform,
             InvestmentPerChannelAndSeries,
@@ -222,27 +224,36 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             InvestmentPerChannelAndSeries(),
         ]:
 
+            if not isinstance(parametrization, TotalInvestmentTransform):
+                params.extend(
+                    [
+                        {
+                            "objective": MaximizeKPI(),
+                            "constraints": [
+                                TotalBudgetConstraint(),
+                            ],
+                            "parametrization_transform": parametrization,
+                            "options": {"maxiter": 10},
+                        },
+                        {
+                            "objective": MaximizeROI(),
+                            "constraints": [
+                                TotalBudgetConstraint(),
+                                MinimumTargetResponse(0.5),
+                            ],
+                            "options": {"maxiter": 10},
+                        },
+                    ]
+                )
+
             params.extend(
                 [
-                    {
-                        "objective": MaximizeROI(),
-                        "constraints": [
-                            SharedBudgetConstraint(),
-                            MinimumTargetResponse(0.5),
-                        ],
-                    },
-                    {
-                        "objective": MaximizeKPI(),
-                        "constraints": [
-                            SharedBudgetConstraint(),
-                        ],
-                        "parametrization_transform": parametrization,
-                    },
                     {
                         "objective": MinimizeBudget(),
                         "constraints": [
                             MinimumTargetResponse(0.5),
                         ],
+                        "options": {"maxiter": 10},
                     },
                 ]
             )

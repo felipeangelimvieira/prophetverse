@@ -3,9 +3,18 @@ title: "Budget Optimization for multiple time series"
 description: "*Optimize media budget allocation across channels and geographies/aggregations using Prophetverse.*"
 ---
 
-In previous tutorial, we saw how we can, for a single timeseries with multiple channels, optimize the media budget allocation across channels to maximize a key performance indicator (KPI) or minimize the total spend required to achieve a target KPI.
+In previous tutorial, we saw how we can, for a single timeseries, optimize the media budget allocation across channels, aiming at maximizing a KPI or minimizing the total spend required.
 
 In this tutorial, we will see that, without any changes to the code, we can extend this optimization to multiple time series, such as different geographies or aggregations.
+
+Because of the re-parametrization API, we can optimize any free parameter we want, such as
+
+* Daily spend for each channel and geography/aggregation
+* Share of budget for each channel (keeping the overall spending pattern fixed)
+* Share of budget for each channel and geography/aggregation 
+  
+
+ 
 
 ## 1. Setting Up the Problem
 
@@ -35,17 +44,25 @@ plt.style.use("seaborn-v0_8-whitegrid")
 
 ### 1.1 Load synthetic data
 
+The key thing to notice here is the structure of the dataframe. Following `sktime` convention, we have a multi-index dataframe, where the first level is the series identifier (e.g. geography or aggregation), and the second level is the date.
+
 ```{python}
 from prophetverse.datasets._mmm.dataset1_panel import get_dataset
 
-y, X, lift_tests, true_components, model = get_dataset()
+y, X, lift_tests, true_components, fitted_model = get_dataset()
 
-#model.set_params(broadcast_mode="estimator")
+y
 ```
+
+
 
 ### 1.2 Utility plotting functions
 
+Here we define some utility functions to plot the spend comparison between the baseline and optimized spend.
 ```{python}
+# | code-fold: true
+
+
 def plot_spend_comparison(
     X_baseline,
     X_optimized,
@@ -54,7 +71,7 @@ def plot_spend_comparison(
     *,
     baseline_title="Baseline Spend: Pre-Optimization",
     optimized_title="Optimized Spend: Maximizing KPI",
-    figsize=(12, 6),
+    figsize=(8, 4),
 ):
 
     series_idx = X_baseline.index.droplevel(-1).unique().tolist()
@@ -93,35 +110,23 @@ def plot_spend_comparison(
 ## 2. Budget Optimization
 
 Once we have our model to predict the KPI, we can use it to optimize our
-budget-allocation strategy.
-
-You can use this feature to provide not only a descriptive analysis of the
-channels’ contributions, but also a prescriptive analysis of the budget allocation.
-
-The budget-optimization module is designed to be flexible and extensible.
-It is composed of three main components:
-
-* **The objective function** – what you want to optimize.
-* **The constraints** – e.g. budget caps, channel-share rules, or any custom rule.
-* **The parametrization transform** – optionally, how you want to parameterize the problem.
-
-For example, instead of optimizing the daily spend for each channel, you can optimize the share of budget for each channel while keeping the overall spending pattern fixed.
+budget-allocation strategy. We consider in this tutorial an already fitted model, that you can train following the other tutorials in this documentation.
 
 ### 2.1 Maximizing a KPI
 
-The `BudgetOptimizer` class is the main entry point for the budget-optimization module.
+For multiple series, we still use the `BudgetOptimizer` class is the main entry point for the budget-optimization module.
 It takes these three components as input and uses them to optimize the budget allocation.
 
 ```{python}
-from prophetverse.experimental.budget_optimization import (
+from prophetverse.budget_optimization import (
     BudgetOptimizer,
-    SharedBudgetConstraint,
+    TotalBudgetConstraint,
     MaximizeKPI,
 )
 
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
-    constraints=[SharedBudgetConstraint()],
+    constraints=[TotalBudgetConstraint()],
     options={"disp": True},
 )
 budget_optimizer
@@ -139,7 +144,7 @@ Let's see it in action.
 
 ```{python}
 X_opt = budget_optimizer.optimize(
-    model=model,
+    model=fitted_model,
     X=X,
     horizon=horizon,
     columns=["ad_spend_search", "ad_spend_social_media"],
@@ -152,8 +157,8 @@ We can call predict to get the baseline and optimized predictions.
 
 ```{python}
 
-y_pred_baseline = model.predict(X=X, fh=horizon)
-y_pred_opt = model.predict(X=X_opt, fh=horizon)
+y_pred_baseline = fitted_model.predict(X=X, fh=horizon)
+y_pred_opt = fitted_model.predict(X=X_opt, fh=horizon)
 
 ```
 
@@ -179,42 +184,124 @@ This is useful when you want to keep the spending pattern fixed (e.g. seasonal b
 and usually converges faster because fewer parameters are free.
 
 ```{python}
-from prophetverse.experimental.budget_optimization import InvestmentPerChannelTransform
+from prophetverse.budget_optimization import InvestmentPerChannelTransform
 
 budget_optimizer = BudgetOptimizer(
     objective=MaximizeKPI(),
-    constraints=[SharedBudgetConstraint()],
+    constraints=[TotalBudgetConstraint()],
     parametrization_transform=InvestmentPerChannelTransform(),
     options={"disp": True},
 )
 
 
 X_opt = budget_optimizer.optimize(
-    model=model,
+    model=fitted_model,
     X=X,
     horizon=horizon,
     columns=["ad_spend_search", "ad_spend_social_media"],
 )
 ```
 
-#### Baseline vs. optimized spend
+Notice how the total investment per channel, for both series, is the same as before:
+
+```{python}
+X_opt.loc[:, "ad_spend_search"].values.sum(), X.loc[: , "ad_spend_search"].values.sum()
+```
+
+
+### 2.3. Reparametrization: optimizing investment per series
+
+We can also reparametrize to optimize the investment per series, which is useful when we want to keep the channel share fixed but need to choose how much to invest in each series.
 
 ```{python}
 
-y_pred_baseline = model.predict(X=X, fh=horizon)
-y_pred_opt = model.predict(X=X_opt, fh=horizon)
+from prophetverse.budget_optimization.parametrization_transformations import (
+    InvestmentPerSeries
+)
 
+budget_optimizer = BudgetOptimizer(
+    objective=MaximizeKPI(),
+    constraints=[TotalBudgetConstraint()],
+    parametrization_transform=InvestmentPerSeries(),
+    options={"disp": True},
+)
 
+X_opt = budget_optimizer.optimize(
+    model=fitted_model,
+    X=X,
+    horizon=horizon,
+    columns=["ad_spend_search", "ad_spend_social_media"],
+)
+
+```
+
+You can verify how the before and after optimization the total spend per channel is the same (up to a numerical precision):
+
+```{python}
+diff = X_opt.loc[:, "ad_spend_search"].values.sum() / X.loc[: , "ad_spend_search"].values.sum() - 1
+print(
+    f"Difference in total spend for search channel: {diff:.2%}"
+)
+```
+
+Here are the plots:
+
+```{python}
 fig, ax = plot_spend_comparison(
     X,
     X_opt,
     ["ad_spend_search", "ad_spend_social_media"],
     horizon,
-    figsize=(12, 6),
 )
 
+y_pred_opt = fitted_model.predict(X=X_opt, fh=horizon)
+
 kpi_gain = y_pred_opt.values.sum() / y_pred_baseline.values.sum() - 1
-fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16, weight="bold", y=1.02)
+fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16,weight="bold", y=1.02)
+fig.tight_layout()
+fig.show()
+```
+
+### 2.4. Reparametrization: optimizing share per channel-series
+
+Now, we show another reparametrization that allows us to optimize the share of budget for each channel and series (total of channels * series parameters).
+
+```{python}
+
+from prophetverse.budget_optimization.parametrization_transformations import (
+    InvestmentPerChannelAndSeries
+)
+
+budget_optimizer = BudgetOptimizer(
+    objective=MaximizeKPI(),
+    constraints=[TotalBudgetConstraint()],
+    parametrization_transform=InvestmentPerChannelAndSeries(),
+    options={"disp": True},
+)
+
+X_opt = budget_optimizer.optimize(
+    model=fitted_model,
+    X=X,
+    horizon=horizon,
+    columns=["ad_spend_search", "ad_spend_social_media"],
+)
+
+```
+
+
+```{python}
+# | code-fold: true
+fig, ax = plot_spend_comparison(
+    X,
+    X_opt,
+    ["ad_spend_search", "ad_spend_social_media"],
+    horizon,
+)
+
+y_pred_opt = fitted_model.predict(X=X_opt, fh=horizon)
+
+kpi_gain = y_pred_opt.values.sum() / y_pred_baseline.values.sum() - 1
+fig.suptitle(f"KPI gain: +{kpi_gain:.2%}", fontsize=16,weight="bold", y=1.02)
 fig.tight_layout()
 fig.show()
 ```
@@ -224,14 +311,12 @@ fig.show()
 How much should we invest to reach a 30 % increase in 2004?
 
 ```{python}
-from prophetverse.experimental.budget_optimization import (
+from prophetverse.budget_optimization import (
     MinimizeBudget,
     MinimumTargetResponse,
 )
 
 target = y.loc[pd.IndexSlice[:, horizon],].values.sum() * 1.2
-
-import numpy as np
 
 budget_optimizer = BudgetOptimizer(
     objective=MinimizeBudget(),
@@ -241,7 +326,7 @@ budget_optimizer = BudgetOptimizer(
 
 X0 = X.copy()
 X_opt = budget_optimizer.optimize(
-    model=model,
+    model=fitted_model,
     X=X0,
     horizon=horizon,
     columns=["ad_spend_search", "ad_spend_social_media"],
@@ -263,8 +348,8 @@ plt.show()
 #### Predictions comparison
 
 ```{python}
-y_pred_baseline = model.predict(X=X0, fh=horizon)
-y_pred_opt = model.predict(X=X_opt, fh=horizon)
+y_pred_baseline = fitted_model.predict(X=X0, fh=horizon)
+y_pred_opt = fitted_model.predict(X=X_opt, fh=horizon)
 
 
 print(
@@ -296,7 +381,7 @@ budget_optimizer = BudgetOptimizer(
 )
 
 X_opt = budget_optimizer.optimize(
-    model=model,
+    model=fitted_model,
     X=X0,
     horizon=horizon,
     columns=["ad_spend_search", "ad_spend_social_media"],
@@ -318,8 +403,8 @@ plt.show()
 #### Predictions comparison
 
 ```{python}
-y_pred_baseline = model.predict(X=X0, fh=horizon)
-y_pred_opt = model.predict(X=X_opt, fh=horizon)
+y_pred_baseline = fitted_model.predict(X=X0, fh=horizon)
+y_pred_opt = fitted_model.predict(X=X_opt, fh=horizon)
 
 print(
     f"MMM Predictions \n",
@@ -342,7 +427,7 @@ plt.show()
 
 
 ```{python}
-from prophetverse.experimental.budget_optimization.parametrization_transformations import InvestmentPerChannelAndSeries
+from prophetverse.budget_optimization.parametrization_transformations import InvestmentPerChannelAndSeries
 
 # Reparametrization: optimizing channel share for each series
 
@@ -354,7 +439,7 @@ budget_optimizer = BudgetOptimizer(
 )
 
 X_opt = budget_optimizer.optimize(
-    model=model,
+    model=fitted_model,
     X=X0,
     horizon=horizon,
     columns=["ad_spend_search", "ad_spend_social_media"]

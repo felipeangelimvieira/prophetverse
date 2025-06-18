@@ -93,7 +93,7 @@ class MyEffectName(BaseEffect):
     Steps to implement a new effect:
       1. Override `_fit` (optional) to compute static quantities from `y` and `X`.
       2. Override `_transform` (optional) to prepare `X` as JAX arrays.
-      3. Within `_predict`, sample any parameters via `numpyro.sample` (legacy `_sample_params` is deprecated).
+      3. Within `_predict`, sample any parameters via `numpyro.sample`
       4. Implement `_predict` (required) using `data`, `predicted_effects`, and samples.
 
     Parameters

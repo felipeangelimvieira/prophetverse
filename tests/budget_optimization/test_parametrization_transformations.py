@@ -3,7 +3,7 @@ import pandas as pd
 import jax.numpy as jnp
 import pytest
 
-from prophetverse.experimental.budget_optimization.parametrization_transformations import (
+from prophetverse.budget_optimization.parametrization_transformations import (
     IdentityTransform,
     InvestmentPerChannelTransform,
     TotalInvestmentTransform,

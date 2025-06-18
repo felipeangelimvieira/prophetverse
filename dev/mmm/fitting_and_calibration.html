@@ -268,6 +268,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Budget Optimization</span></a>
   </div>
 </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../mmm/budget_allocation_panel.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Budget Optimization - Multiple Series</span></a>
+  </div>
+</li>
     </ul>
     </div>
 </nav>
@@ -336,7 +342,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>👉 <strong>Why this matters</strong>: MMMs are foundational for budget allocation. But good predictions are not enough — we need <strong>credible effect estimates</strong> to make real-world decisions.</p>
 <p>Let’s get started!</p>
 <p>Setting up some libraries, float64 precision, and plot style:</p>
-<div id="eca01470" class="cell" data-execution_count="2">
+<div id="94c9b9f5" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
@@ -346,7 +352,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>plt.style.use(<span class="st">"seaborn-v0_8-whitegrid"</span>)</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>numpyro.enable_x64()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="06035ec8" class="cell" data-execution_count="3">
+<div id="46c12ade" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.datasets._mmm.dataset1 <span class="im">import</span> get_dataset</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>y, X, lift_tests, true_components, _ <span class="op">=</span> get_dataset()</span>
@@ -415,7 +421,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>🔎 <strong>Why this matters</strong>:<br>
 Raw spend is <strong>not immediately effective</strong>, and it <strong>doesn’t convert linearly</strong>.<br>
 Capturing these dynamics is essential to make ROI estimates realistic.</p>
-<div id="8bf36c9e" class="cell" data-execution_count="4">
+<div id="742464a5" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects <span class="im">import</span> (</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    PiecewiseLinearTrend,</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    LinearFourierSeasonality,</span>
@@ -458,7 +464,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>    <span class="st">"ad_spend_social_media"</span>,</span>
 <span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="12942dc6" class="cell" data-execution_count="5">
+<div id="641dee7f" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>baseline_model <span class="op">=</span> Prophetverse(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    trend<span class="op">=</span>PiecewiseLinearTrend(changepoint_interval<span class="op">=</span><span class="dv">100</span>),</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    exogenous_effects<span class="op">=</span>[yearly, weekly, chained_search, chained_social],</span>
@@ -469,7 +475,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>baseline_model.fit(y<span class="op">=</span>y, X<span class="op">=</span>X)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
-<style>#sk-90e24969-6c89-453c-8c94-e6abb3eb302f {
+<style>#sk-5a037273-3785-4508-ba62-a895de370465 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -494,15 +500,15 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     }
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f {
+  #sk-5a037273-3785-4508-ba62-a895de370465 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f pre {
+  #sk-5a037273-3785-4508-ba62-a895de370465 pre {
     padding: 0;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f input.sk-hidden--visually {
+  #sk-5a037273-3785-4508-ba62-a895de370465 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -514,7 +520,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     width: 1px;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-dashed-wrapped {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -522,7 +528,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-container {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -532,7 +538,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     position: relative;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-text-repr-fallback {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -548,14 +554,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* Parallel-specific style estimator block */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-parallel-item::after {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-parallel {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -563,28 +569,28 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     position: relative;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-parallel-item {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-parallel-item:first-child::after {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-parallel-item:last-child::after {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-parallel-item:only-child::after {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-serial {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -602,14 +608,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-toggleable {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f label.sk-toggleable__label {
+  #sk-5a037273-3785-4508-ba62-a895de370465 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -619,7 +625,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     text-align: center;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f label.sk-toggleable__label-arrow:before {
+  #sk-5a037273-3785-4508-ba62-a895de370465 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -627,13 +633,13 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     color: var(--sklearn-color-icon);
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f label.sk-toggleable__label-arrow:hover:before {
+  #sk-5a037273-3785-4508-ba62-a895de370465 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-toggleable__content {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -641,27 +647,27 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-toggleable__content pre {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-5a037273-3785-4508-ba62-a895de370465 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-5a037273-3785-4508-ba62-a895de370465 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -669,38 +675,38 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-label label.sk-toggleable__label,
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-label label {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-label label.sk-toggleable__label,
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-label:hover label.sk-toggleable__label {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-label label {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-label-container {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-estimator {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -710,7 +716,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   }
 
   /* on hover */
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f div.sk-estimator:hover {
+  #sk-5a037273-3785-4508-ba62-a895de370465 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -767,7 +773,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f a.estimator_doc_link {
+  #sk-5a037273-3785-4508-ba62-a895de370465 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -782,12 +788,12 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   }
 
   /* On hover */
-  #sk-90e24969-6c89-453c-8c94-e6abb3eb302f a.estimator_doc_link:hover {
+  #sk-5a037273-3785-4508-ba62-a895de370465 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-90e24969-6c89-453c-8c94-e6abb3eb302f" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+</style><div id="sk-5a037273-3785-4508-ba62-a895de370465" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -803,13 +809,13 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
                                  None),
                                 ('ad_spend_search',
                                  Chained...
-                                                                   max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                                                   slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))]),
+                                                                   max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                                                   slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))]),
                                  'ad_spend_social_media')],
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('818d711a-0c11-4c9b-8059-50af2be0afba')" type="checkbox"><label for="UUID('818d711a-0c11-4c9b-8059-50af2be0afba')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('83ba42f9-6eda-40cf-870f-d513e66429e3')" type="checkbox"><label for="UUID('83ba42f9-6eda-40cf-870f-d513e66429e3')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -825,40 +831,40 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
                                  None),
                                 ('ad_spend_search',
                                  Chained...
-                                                                   max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                                                   slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))]),
+                                                                   max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                                                   slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))]),
                                  'ad_spend_social_media')],
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c9be1595-e37d-44f0-a489-282978dd4a32')" type="checkbox"><label for="UUID('c9be1595-e37d-44f0-a489-282978dd4a32')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2bd8e160-6973-48de-99cf-20b14ea66bce')" type="checkbox"><label for="UUID('2bd8e160-6973-48de-99cf-20b14ea66bce')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
-                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2085cd9b-a43f-45cc-9be9-8f9c9bf95b42')" type="checkbox"><label for="UUID('2085cd9b-a43f-45cc-9be9-8f9c9bf95b42')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
-                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('347de6ee-9498-4ab8-951c-17ee56091352')" type="checkbox"><label for="UUID('347de6ee-9498-4ab8-951c-17ee56091352')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_search</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
+             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('9d5fa4bb-0961-469a-87d5-70071ce713c1')" type="checkbox"><label for="UUID('9d5fa4bb-0961-469a-87d5-70071ce713c1')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('1799dec3-85a9-4997-9469-937b3477b34e')" type="checkbox"><label for="UUID('1799dec3-85a9-4997-9469-937b3477b34e')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
+                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('37532810-e618-4ffd-83e3-088cf5d03c9c')" type="checkbox"><label for="UUID('37532810-e618-4ffd-83e3-088cf5d03c9c')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
+                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('7f67971d-b4ee-4532-a445-c0832c9a9fbe')" type="checkbox"><label for="UUID('7f67971d-b4ee-4532-a445-c0832c9a9fbe')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_search</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
                       ('saturation',
                        HillEffect(effect_mode='additive',
-                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                   input_scale=1000000.0,
-                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('76e8003e-8a47-4490-a45b-a2ce970c1c9e')" type="checkbox"><label for="UUID('76e8003e-8a47-4490-a45b-a2ce970c1c9e')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('99c0227e-328c-4bc9-b621-974f82c07aa4')" type="checkbox"><label for="UUID('99c0227e-328c-4bc9-b621-974f82c07aa4')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('cdd3acea-2429-4b0f-9338-687585ce4074')" type="checkbox"><label for="UUID('cdd3acea-2429-4b0f-9338-687585ce4074')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('65df844a-e29b-4995-bf77-2ba6336efc76')" type="checkbox"><label for="UUID('65df844a-e29b-4995-bf77-2ba6336efc76')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4d373ad3-64eb-48bb-993e-5abca858d99f')" type="checkbox"><label for="UUID('4d373ad3-64eb-48bb-993e-5abca858d99f')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_social_media</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('65257b06-a4b3-4943-8ac4-2d9ed84110d1')" type="checkbox"><label for="UUID('65257b06-a4b3-4943-8ac4-2d9ed84110d1')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_social_media</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
                       ('saturation',
                        HillEffect(effect_mode='additive',
-                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                   input_scale=1000000.0,
-                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('5292ede5-e9db-4d0f-b3bd-fe806f3ea5cc')" type="checkbox"><label for="UUID('5292ede5-e9db-4d0f-b3bd-fe806f3ea5cc')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3dbbff1b-36f4-4c5f-8baa-3dac9e2451fc')" type="checkbox"><label for="UUID('3dbbff1b-36f4-4c5f-8baa-3dac9e2451fc')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f6be103a-01c2-46bb-84fd-d443a97ce204')" type="checkbox"><label for="UUID('f6be103a-01c2-46bb-84fd-d443a97ce204')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ea67fb2c-21dd-4ae0-ac71-7655109d50c3')" type="checkbox"><label for="UUID('ea67fb2c-21dd-4ae0-ac71-7655109d50c3')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6b7e9949-1686-4f7a-9fbd-5a02e849d09e')" type="checkbox"><label for="UUID('6b7e9949-1686-4f7a-9fbd-5a02e849d09e')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('09ff8c55-96c1-40bc-9372-755ea92083d8')" type="checkbox"><label for="UUID('09ff8c55-96c1-40bc-9372-755ea92083d8')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
                    optimizer=LBFGSSolver(max_linesearch_steps=300,
                                          memory_size=300))</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="ccb897e7" class="cell" data-execution_count="6">
+<div id="a5544081" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> baseline_model.predict(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">4</span>))</span>
@@ -878,7 +884,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <section id="component-level-diagnostics" class="level3">
 <h3 class="anchored" data-anchor-id="component-level-diagnostics">1.1 Component-Level Diagnostics</h3>
 <p>With <code>predict_components</code>, we can obtain the model’s components.</p>
-<div id="1ab0717b" class="cell" data-execution_count="7">
+<div id="cc40f8e4" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>y_pred_components <span class="op">=</span> baseline_model.predict_components(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>y_pred_components.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
@@ -901,53 +907,53 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2000-01-01</td>
-<td>8.161476e+06</td>
-<td>1.664523e+06</td>
-<td>1.012765e+07</td>
-<td>1.010706e+07</td>
-<td>325449.404330</td>
-<td>13942.625002</td>
-<td>-37740.084970</td>
+<td>0.002693</td>
+<td>9.938529e+06</td>
+<td>1.013302e+07</td>
+<td>1.011237e+07</td>
+<td>209458.372546</td>
+<td>9018.422707</td>
+<td>-23987.487265</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2000-01-02</td>
-<td>8.617554e+06</td>
-<td>2.036452e+06</td>
-<td>1.094884e+07</td>
-<td>1.090472e+07</td>
-<td>332155.610339</td>
-<td>595.330901</td>
-<td>-37919.190729</td>
+<td>0.002693</td>
+<td>1.076268e+07</td>
+<td>1.095673e+07</td>
+<td>1.091248e+07</td>
+<td>218279.587437</td>
+<td>353.904795</td>
+<td>-24581.852109</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2000-01-03</td>
-<td>8.690136e+06</td>
-<td>2.208220e+06</td>
-<td>1.120360e+07</td>
-<td>1.126168e+07</td>
-<td>338861.816348</td>
-<td>4380.082415</td>
-<td>-37996.265789</td>
+<td>0.002693</td>
+<td>1.099999e+07</td>
+<td>1.120483e+07</td>
+<td>1.126308e+07</td>
+<td>227100.802328</td>
+<td>2826.341271</td>
+<td>-25092.137603</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2000-01-04</td>
-<td>8.703747e+06</td>
-<td>2.319479e+06</td>
-<td>1.131426e+07</td>
-<td>1.127394e+07</td>
-<td>345568.022357</td>
-<td>-16571.055708</td>
-<td>-37967.600806</td>
+<td>0.002693</td>
+<td>1.113403e+07</td>
+<td>1.133325e+07</td>
+<td>1.129282e+07</td>
+<td>235922.017219</td>
+<td>-11179.482736</td>
+<td>-25513.204119</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2000-01-05</td>
-<td>8.687538e+06</td>
-<td>2.357812e+06</td>
-<td>1.135758e+07</td>
-<td>1.130910e+07</td>
-<td>352274.228366</td>
-<td>-2218.488271</td>
-<td>-37829.727440</td>
+<td>0.002693</td>
+<td>1.113046e+07</td>
+<td>1.134788e+07</td>
+<td>1.129927e+07</td>
+<td>244743.232110</td>
+<td>-1478.500296</td>
+<td>-25840.126691</td>
 </tr>
 </tbody>
 </table>
@@ -956,7 +962,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 </div>
 </div>
 <p>In a real use-casee, you would not have access to the ground truth of the components. We use them here to show how the model behaves, and how incorporing extra information can improve it.</p>
-<div id="0efa466f" class="cell" data-execution_count="8">
+<div id="916e984e" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">12</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, name <span class="kw">in</span> <span class="bu">enumerate</span>(</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    [<span class="st">"trend"</span>, <span class="st">"yearly_seasonality"</span>, <span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]</span>
@@ -980,7 +986,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <h3 class="anchored" data-anchor-id="backtesting-with-cross-validation">1.2 Backtesting with Cross-Validation</h3>
 <p>We use rolling-window CV to assess out-of-sample accuracy using <strong>MAPE</strong>.</p>
 <p>🧠 <strong>Caution</strong>: Low error ≠ correct attribution. But high error often indicates a bad model.</p>
-<div id="dee69218" class="cell" data-execution_count="9">
+<div id="101d784e" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.split <span class="im">import</span> ExpandingWindowSplitter</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.performance_metrics.forecasting <span class="im">import</span> MeanAbsolutePercentageError</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.forecasting.model_evaluation <span class="im">import</span> evaluate</span>
@@ -1014,47 +1020,47 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">0</td>
-<td>0.067652</td>
-<td>49.270301</td>
-<td>0.672628</td>
+<td>0.066920</td>
+<td>32.280389</td>
+<td>0.705505</td>
 <td>1095</td>
 <td>2002-12-30</td>
 <td>2000-01-01 1.081551e+07 2000-01-02 1.112...</td>
 <td>2002-12-31 1.306520e+07 2003-01-01 1.429...</td>
-<td>2002-12-31 1.115623e+07 2003-01-01 1.168...</td>
+<td>2002-12-31 1.116013e+07 2003-01-01 1.167...</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">1</td>
-<td>0.061527</td>
-<td>90.230588</td>
-<td>0.597366</td>
+<td>0.060970</td>
+<td>27.093965</td>
+<td>0.620572</td>
 <td>1275</td>
 <td>2003-06-28</td>
 <td>2000-01-01 1.081551e+07 2000-01-02 1.112...</td>
 <td>2003-06-29 1.725815e+07 2003-06-30 1.696...</td>
-<td>2003-06-29 1.621810e+07 2003-06-30 1.648...</td>
+<td>2003-06-29 1.619931e+07 2003-06-30 1.646...</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2</td>
-<td>0.052956</td>
-<td>21.256811</td>
-<td>0.606542</td>
+<td>0.052211</td>
+<td>21.414806</td>
+<td>0.623730</td>
 <td>1455</td>
 <td>2003-12-25</td>
 <td>2000-01-01 1.081551e+07 2000-01-02 1.112...</td>
 <td>2003-12-26 2.511414e+07 2003-12-27 2.496...</td>
-<td>2003-12-26 2.447007e+07 2003-12-27 2.485...</td>
+<td>2003-12-26 2.437842e+07 2003-12-27 2.476...</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
-<td>0.057308</td>
-<td>27.198253</td>
-<td>0.644468</td>
+<td>0.057364</td>
+<td>22.584358</td>
+<td>1.004872</td>
 <td>1635</td>
 <td>2004-06-22</td>
 <td>2000-01-01 1.081551e+07 2000-01-02 1.112...</td>
 <td>2004-06-23 2.913561e+07 2004-06-24 2.878...</td>
-<td>2004-06-23 3.046709e+07 2004-06-24 3.017...</td>
+<td>2004-06-23 3.045813e+07 2004-06-24 3.016...</td>
 </tr>
 </tbody>
 </table>
@@ -1063,14 +1069,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 </div>
 </div>
 <p>The average error across folds is:</p>
-<div id="4e3b8089" class="cell" data-execution_count="10">
+<div id="31ab2754" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>cv_results[<span class="st">"test_MeanAbsolutePercentageError"</span>].mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
-<pre><code>np.float64(0.05986078808051365)</code></pre>
+<pre><code>np.float64(0.05936623435215211)</code></pre>
 </div>
 </div>
 <p>We can visualize them by iterating the dataframe:</p>
-<div id="91a5716a" class="cell" data-execution_count="11">
+<div id="95742cf7" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> idx, row <span class="kw">in</span> cv_results.iterrows():</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">2</span>))</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    observed <span class="op">=</span> pd.concat([row[<span class="st">"y_train"</span>].iloc[<span class="op">-</span><span class="dv">100</span>:], row[<span class="st">"y_test"</span>]])</span>
@@ -1117,7 +1123,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <p>🔍 <strong>Insight</strong>: This shape helps guide budget allocation decisions (e.g.&nbsp;where additional spend will have little return).</p>
 <p>Note how the model captures a saturation effect, but it is still far from the correct shape.</p>
 <p>This is why, in many situations, you will need calibration to correct the model’s behavior. This is what we will do in the next section.</p>
-<div id="b97f4f0f" class="cell" data-execution_count="12">
+<div id="b15804f6" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>), nrows<span class="op">=</span><span class="dv">1</span>, ncols<span class="op">=</span><span class="dv">2</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, channel <span class="kw">in</span> <span class="bu">zip</span>(axs, [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]):</span>
@@ -1157,7 +1163,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <h2 class="anchored" data-anchor-id="part-2-calibration-with-causal-evidence">Part 2: Calibration with Causal Evidence</h2>
 <p>Time-series alone <strong>cannot disentangle</strong> correlated channels.</p>
 <p>We integrate <strong>lift tests</strong> (local experiments) and <strong>attribution models</strong> (high-resolution signal) to correct this.</p>
-<div id="8bea5788" class="cell" data-execution_count="13">
+<div id="af19fe40" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>lift_test_search</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
 <div>
@@ -1362,7 +1368,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <section id="visualizing-lift-tests" class="level3">
 <h3 class="anchored" data-anchor-id="visualizing-lift-tests">2.1 Visualizing Lift Tests</h3>
 <p>Each experiment records: pre-spend (<code>x_start</code>), post-spend (<code>x_end</code>), and measured <code>lift</code>. These give us <strong>causal “ground truth” deltas</strong>.</p>
-<div id="b5c0849e" class="cell" data-execution_count="14">
+<div id="1a8f8dcd" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Scatter plot for pre-spend and observed lift</span></span>
@@ -1404,7 +1410,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <p>This adds a new <strong>likelihood term</strong> that makes the model match lift observations.</p>
 <p>🔁 <strong>Still Bayesian</strong>: It incorporates test variance and model uncertainty.</p>
 <p>Since we use <code>sktime</code> interface, we have access to <code>get_params()</code> and <code>set_params(**kwargs)</code> methods. This allows us to <strong>easily swap</strong> effects and likelihoods. When we define our model, the effect’s name become a key in the model’s <code>get_params()</code> dictionary. We can use this to set the effect’s parameters directly.</p>
-<div id="5c4e496b" class="cell" data-execution_count="15">
+<div id="3b8f809e" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.lift_likelihood <span class="im">import</span> LiftExperimentLikelihood</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>model_lift <span class="op">=</span> baseline_model.clone()</span>
@@ -1423,7 +1429,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>model_lift.fit(y<span class="op">=</span>y, X<span class="op">=</span>X)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="15">
-<style>#sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd {
+<style>#sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -1448,15 +1454,15 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     }
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd pre {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 pre {
     padding: 0;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd input.sk-hidden--visually {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -1468,7 +1474,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     width: 1px;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-dashed-wrapped {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -1476,7 +1482,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-container {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -1486,7 +1492,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     position: relative;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-text-repr-fallback {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -1502,14 +1508,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* Parallel-specific style estimator block */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-parallel-item::after {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-parallel {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -1517,28 +1523,28 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     position: relative;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-parallel-item {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-parallel-item:first-child::after {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-parallel-item:last-child::after {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-parallel-item:only-child::after {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-serial {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1556,14 +1562,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-toggleable {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd label.sk-toggleable__label {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -1573,7 +1579,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     text-align: center;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd label.sk-toggleable__label-arrow:before {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -1581,13 +1587,13 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     color: var(--sklearn-color-icon);
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd label.sk-toggleable__label-arrow:hover:before {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-toggleable__content {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -1595,27 +1601,27 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-toggleable__content pre {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1623,38 +1629,38 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-label label.sk-toggleable__label,
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-label label {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-label label.sk-toggleable__label,
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-label:hover label.sk-toggleable__label {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-label label {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-label-container {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-estimator {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1664,7 +1670,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   }
 
   /* on hover */
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd div.sk-estimator:hover {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1721,7 +1727,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd a.estimator_doc_link {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1736,12 +1742,12 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   }
 
   /* On hover */
-  #sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd a.estimator_doc_link:hover {
+  #sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-0b77c26e-2dc8-4b5e-ba7e-2c9f21b490cd" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+</style><div id="sk-58b5dc59-af0f-4056-bd49-a79ddfda4cd1" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -1766,7 +1772,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('de2f5e45-b05f-4b49-9e89-1adf46b1237a')" type="checkbox"><label for="UUID('de2f5e45-b05f-4b49-9e89-1adf46b1237a')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6a62907e-a930-4f0c-b758-309ca25f065a')" type="checkbox"><label for="UUID('6a62907e-a930-4f0c-b758-309ca25f065a')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -1791,15 +1797,15 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('9c81039b-c996-4fdc-9249-5547ba036ff7')" type="checkbox"><label for="UUID('9c81039b-c996-4fdc-9249-5547ba036ff7')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ff47fb4c-b748-4147-9917-b2882ee3d9d0')" type="checkbox"><label for="UUID('ff47fb4c-b748-4147-9917-b2882ee3d9d0')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
-                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a9992dfb-484e-4c1f-82c7-3e0b133cfd4c')" type="checkbox"><label for="UUID('a9992dfb-484e-4c1f-82c7-3e0b133cfd4c')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
-                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('8a043e2b-62b9-4da0-a3b0-5ab17a00e3d0')" type="checkbox"><label for="UUID('8a043e2b-62b9-4da0-a3b0-5ab17a00e3d0')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_search</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
+             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a08b739e-1f3d-4d3a-b113-b29ddb76dbdc')" type="checkbox"><label for="UUID('a08b739e-1f3d-4d3a-b113-b29ddb76dbdc')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('dba67324-55a7-4543-9837-6eb499be6e31')" type="checkbox"><label for="UUID('dba67324-55a7-4543-9837-6eb499be6e31')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
+                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0d0d9afe-f69e-425f-b4af-d4f2475116df')" type="checkbox"><label for="UUID('0d0d9afe-f69e-425f-b4af-d4f2475116df')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
+                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('83a52ae3-4ebc-4792-80a8-1fb6de9883c0')" type="checkbox"><label for="UUID('83a52ae3-4ebc-4792-80a8-1fb6de9883c0')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_search</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
                                                        GeometricAdstockEffect()),
                                                       ('saturation',
                                                        HillEffect(effect_mode='additive',
-                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                                                   input_scale=1000000.0,
-                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f54...
+                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4...
 2001-02-02  1.212479   67857.642170   88071.282712
 2001-05-21  1.178636   71337.927880   93445.016948
 2003-05-06  0.644814   25609.287364   21843.082411
@@ -1808,23 +1814,23 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 2004-09-27  1.369890   41546.443755   50176.823146
 2000-10-25  0.985062   72757.343228   70195.986606
 2002-11-02  0.834577   19043.272758   18373.397899,
-                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6ee940c9-4a77-4c2e-9cd6-9f5d2ad90e37')" type="checkbox"><label for="UUID('6ee940c9-4a77-4c2e-9cd6-9f5d2ad90e37')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
+                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('338ae5ce-b5f0-4550-87a5-ffa001df4898')" type="checkbox"><label for="UUID('338ae5ce-b5f0-4550-87a5-ffa001df4898')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
                       ('saturation',
                        HillEffect(effect_mode='additive',
-                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                   input_scale=1000000.0,
-                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('41d6b37b-e478-48f8-b826-584b60854cc6')" type="checkbox"><label for="UUID('41d6b37b-e478-48f8-b826-584b60854cc6')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('57e8bd49-785b-4a7e-a872-d1c7b0a425c7')" type="checkbox"><label for="UUID('57e8bd49-785b-4a7e-a872-d1c7b0a425c7')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b69f02c9-fbc5-4e24-8683-27b0f9cd56e8')" type="checkbox"><label for="UUID('b69f02c9-fbc5-4e24-8683-27b0f9cd56e8')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4a97ce11-cd97-40b6-b339-a204d61cc551')" type="checkbox"><label for="UUID('4a97ce11-cd97-40b6-b339-a204d61cc551')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('abe57600-869d-4925-a67e-10b6b5034102')" type="checkbox"><label for="UUID('abe57600-869d-4925-a67e-10b6b5034102')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_social_media</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a3ea1759-fc48-4517-baf5-435b954f7405')" type="checkbox"><label for="UUID('a3ea1759-fc48-4517-baf5-435b954f7405')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_social_media</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
                                                        GeometricAdstockEffect()),
                                                       ('saturation',
                                                        HillEffect(effect_mode='additive',
-                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                                                   input_scale=1000000.0,
-                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f54...
+                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4...
 2001-02-02  1.085461   38129.336619   47626.107330
 2001-05-21  0.961702   50010.574434   73721.957893
 2003-05-06  1.099837    2893.044038    2702.425237
@@ -1833,22 +1839,22 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 2004-09-27  1.010456    8523.749415   11037.466255
 2000-10-25  0.980559   50964.957119   65038.733878
 2002-11-02  1.355164    1195.765141    1603.253926,
-                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a2b8cbb7-3047-44ba-b76d-3177a6fb08c9')" type="checkbox"><label for="UUID('a2b8cbb7-3047-44ba-b76d-3177a6fb08c9')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
+                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('edf4d9ab-66ee-41ca-b563-5f1f61365904')" type="checkbox"><label for="UUID('edf4d9ab-66ee-41ca-b563-5f1f61365904')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
                       ('saturation',
                        HillEffect(effect_mode='additive',
-                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                   input_scale=1000000.0,
-                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('85b73c3d-03dd-4bc5-932f-e205cf3cae40')" type="checkbox"><label for="UUID('85b73c3d-03dd-4bc5-932f-e205cf3cae40')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('e5437b83-0648-4235-8fca-a015209a0584')" type="checkbox"><label for="UUID('e5437b83-0648-4235-8fca-a015209a0584')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('724abf43-cbf2-4d55-84b9-c0cda3cc28e5')" type="checkbox"><label for="UUID('724abf43-cbf2-4d55-84b9-c0cda3cc28e5')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('66bbb030-eeba-48c4-832e-7fb29cb21adb')" type="checkbox"><label for="UUID('66bbb030-eeba-48c4-832e-7fb29cb21adb')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('320ccc86-839f-4c03-81a9-511d3155fb81')" type="checkbox"><label for="UUID('320ccc86-839f-4c03-81a9-511d3155fb81')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('cfa0c887-38b6-417f-a2b2-4c0776bbd5c8')" type="checkbox"><label for="UUID('cfa0c887-38b6-417f-a2b2-4c0776bbd5c8')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
                    optimizer=LBFGSSolver(max_linesearch_steps=300,
                                          memory_size=300))</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="7bb4d08f" class="cell" data-execution_count="16">
+<div id="12734692" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>components_lift <span class="op">=</span> model_lift.predict_components(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>components_lift.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
@@ -1871,53 +1877,53 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2000-01-01</td>
-<td>6.895926e+06</td>
+<td>6.895925e+06</td>
 <td>3.175476e+06</td>
 <td>1.048024e+07</td>
 <td>1.045962e+07</td>
-<td>440291.172370</td>
-<td>18676.808288</td>
-<td>-50131.842088</td>
+<td>440291.175338</td>
+<td>18676.808198</td>
+<td>-50131.842539</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2000-01-02</td>
 <td>7.567479e+06</td>
-<td>3.223349e+06</td>
+<td>3.223350e+06</td>
 <td>1.119076e+07</td>
 <td>1.114657e+07</td>
-<td>449462.465750</td>
-<td>793.117604</td>
-<td>-50328.536834</td>
+<td>449462.465614</td>
+<td>793.116131</td>
+<td>-50328.536885</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2000-01-03</td>
 <td>7.681069e+06</td>
-<td>3.232674e+06</td>
+<td>3.232675e+06</td>
 <td>1.132772e+07</td>
 <td>1.138588e+07</td>
-<td>458633.759129</td>
-<td>5733.192492</td>
-<td>-50386.346798</td>
+<td>458633.755891</td>
+<td>5733.192117</td>
+<td>-50386.346453</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2000-01-04</td>
-<td>7.702443e+06</td>
+<td>7.702442e+06</td>
 <td>3.238811e+06</td>
 <td>1.133666e+07</td>
 <td>1.129629e+07</td>
-<td>467805.052509</td>
-<td>-22094.870119</td>
-<td>-50300.475298</td>
+<td>467805.046168</td>
+<td>-22094.868553</td>
+<td>-50300.474564</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2000-01-05</td>
-<td>7.675579e+06</td>
-<td>3.235107e+06</td>
+<td>7.675578e+06</td>
+<td>3.235108e+06</td>
 <td>1.133469e+07</td>
 <td>1.128614e+07</td>
-<td>476976.345889</td>
-<td>-2907.823977</td>
-<td>-50066.466824</td>
+<td>476976.336445</td>
+<td>-2907.821727</td>
+<td>-50066.465709</td>
 </tr>
 </tbody>
 </table>
@@ -1925,7 +1931,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 </div>
 </div>
 </div>
-<div id="6a7e01be" class="cell" data-execution_count="17">
+<div id="667a78ab" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>), ncols<span class="op">=</span><span class="dv">2</span>)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, channel <span class="kw">in</span> <span class="bu">zip</span>(axs, [<span class="st">"ad_spend_search"</span>, <span class="st">"ad_spend_social_media"</span>]):</span>
@@ -1974,7 +1980,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <h3 class="anchored" data-anchor-id="add-attribution-signals-with-exactlikelihood">2.3 Add Attribution Signals with ExactLikelihood</h3>
 <p>Attribution models can provide <strong>daily signals</strong>. If available, you can incorporate them by adding another likelihood term via <code>ExactLikelihood</code>.</p>
 <p>We create a synthetic attribution signal by multiplying the true effect with a random noise factor.</p>
-<div id="fdeff572" class="cell" data-execution_count="18">
+<div id="6d54fde5" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects <span class="im">import</span> ExactLikelihood</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
@@ -2027,7 +2033,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 </div>
 </div>
 </div>
-<div id="8ee148b5" class="cell" data-execution_count="19">
+<div id="7cbb70d9" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>model_umm <span class="op">=</span> model_lift.clone()</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>model_umm.set_params(</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    exogenous_effects<span class="op">=</span>model_lift.get_params()[<span class="st">"exogenous_effects"</span>]</span>
@@ -2046,7 +2052,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 <span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>model_umm.fit(y<span class="op">=</span>y, X<span class="op">=</span>X)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="19">
-<style>#sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 {
+<style>#sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -2071,15 +2077,15 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     }
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 pre {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 pre {
     padding: 0;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 input.sk-hidden--visually {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -2091,7 +2097,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     width: 1px;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-dashed-wrapped {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -2099,7 +2105,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-container {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -2109,7 +2115,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     position: relative;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-text-repr-fallback {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -2125,14 +2131,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* Parallel-specific style estimator block */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-parallel-item::after {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-parallel {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -2140,28 +2146,28 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     position: relative;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-parallel-item {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-parallel-item:first-child::after {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-parallel-item:last-child::after {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-parallel-item:only-child::after {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-serial {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2179,14 +2185,14 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-toggleable {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 label.sk-toggleable__label {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -2196,7 +2202,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     text-align: center;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 label.sk-toggleable__label-arrow:before {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -2204,13 +2210,13 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     color: var(--sklearn-color-icon);
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 label.sk-toggleable__label-arrow:hover:before {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-toggleable__content {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -2218,27 +2224,27 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-toggleable__content pre {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -2246,38 +2252,38 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-label label.sk-toggleable__label,
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-label label {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-label label.sk-toggleable__label,
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-label:hover label.sk-toggleable__label {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-label label {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-label-container {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-estimator {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -2287,7 +2293,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   }
 
   /* on hover */
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 div.sk-estimator:hover {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -2344,7 +2350,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 a.estimator_doc_link {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -2359,12 +2365,12 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
   }
 
   /* On hover */
-  #sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9 a.estimator_doc_link:hover {
+  #sk-526062b1-fefe-43cd-9bea-ec24e8e16d06 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-1540123b-0d07-4f0b-bd37-04e8f595e3e9" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+</style><div id="sk-526062b1-fefe-43cd-9bea-ec24e8e16d06" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -2394,7 +2400,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('94bc233f-faba-4a46-aa92-e91d6da023f6')" type="checkbox"><label for="UUID('94bc233f-faba-4a46-aa92-e91d6da023f6')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c17194eb-058e-4e2b-a684-2afbbaf5c088')" type="checkbox"><label for="UUID('c17194eb-058e-4e2b-a684-2afbbaf5c088')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -2424,15 +2430,15 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f8452f0c-5920-4c2f-87f3-69b80a5d9637')" type="checkbox"><label for="UUID('f8452f0c-5920-4c2f-87f3-69b80a5d9637')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('42acce5b-f712-4333-a981-caebf7921d03')" type="checkbox"><label for="UUID('42acce5b-f712-4333-a981-caebf7921d03')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
-                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('8fb3dfcb-486e-4427-84e8-472a7f3b30d0')" type="checkbox"><label for="UUID('8fb3dfcb-486e-4427-84e8-472a7f3b30d0')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
-                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('76859f09-b1c9-45d8-a2a3-b7f71a5b386b')" type="checkbox"><label for="UUID('76859f09-b1c9-45d8-a2a3-b7f71a5b386b')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_search</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
+             trend=PiecewiseLinearTrend(changepoint_interval=100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a540bde3-b399-466c-a577-355e8f18be8f')" type="checkbox"><label for="UUID('a540bde3-b399-466c-a577-355e8f18be8f')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3d415ca4-a472-402b-95b2-a1e25c8cb82a')" type="checkbox"><label for="UUID('3d415ca4-a472-402b-95b2-a1e25c8cb82a')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
+                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('32f577cb-0e09-4e05-a465-035ef7362bcc')" type="checkbox"><label for="UUID('32f577cb-0e09-4e05-a465-035ef7362bcc')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
+                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('41c45666-05ab-465d-8448-3c36b625b00b')" type="checkbox"><label for="UUID('41c45666-05ab-465d-8448-3c36b625b00b')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_search</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
                                                        GeometricAdstockEffect()),
                                                       ('saturation',
                                                        HillEffect(effect_mode='additive',
-                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                                                   input_scale=1000000.0,
-                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f54...
+                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4...
 2001-02-02  1.212479   67857.642170   88071.282712
 2001-05-21  1.178636   71337.927880   93445.016948
 2003-05-06  0.644814   25609.287364   21843.082411
@@ -2441,23 +2447,23 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 2004-09-27  1.369890   41546.443755   50176.823146
 2000-10-25  0.985062   72757.343228   70195.986606
 2002-11-02  0.834577   19043.272758   18373.397899,
-                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2be99ca1-d9b6-48bb-a2a4-eab8bdc00a93')" type="checkbox"><label for="UUID('2be99ca1-d9b6-48bb-a2a4-eab8bdc00a93')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
+                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2e9fcad5-1bcc-46f4-a9ff-7f2c3a3b6999')" type="checkbox"><label for="UUID('2e9fcad5-1bcc-46f4-a9ff-7f2c3a3b6999')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
                       ('saturation',
                        HillEffect(effect_mode='additive',
-                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                   input_scale=1000000.0,
-                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2092c8f2-841e-432d-8b91-a7f6a6ea3693')" type="checkbox"><label for="UUID('2092c8f2-841e-432d-8b91-a7f6a6ea3693')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('54f6157a-ecd9-4397-801f-676447aff7aa')" type="checkbox"><label for="UUID('54f6157a-ecd9-4397-801f-676447aff7aa')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0948be56-c65e-4fbf-a0d7-37a543bd0ba0')" type="checkbox"><label for="UUID('0948be56-c65e-4fbf-a0d7-37a543bd0ba0')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('91d3da28-49fb-4f90-b9f3-5bd46566cdc3')" type="checkbox"><label for="UUID('91d3da28-49fb-4f90-b9f3-5bd46566cdc3')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('7bc3de7c-1c0a-465f-b6d7-f2650e2ca85f')" type="checkbox"><label for="UUID('7bc3de7c-1c0a-465f-b6d7-f2650e2ca85f')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_social_media</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ae53a252-3a55-407b-81e0-8543c7ca1524')" type="checkbox"><label for="UUID('ae53a252-3a55-407b-81e0-8543c7ca1524')" class="sk-toggleable__label sk-toggleable__label-arrow">ad_spend_social_media</label><div class="sk-toggleable__content"><pre>LiftExperimentLikelihood(effect=ChainedEffects(steps=[('adstock',
                                                        GeometricAdstockEffect()),
                                                       ('saturation',
                                                        HillEffect(effect_mode='additive',
-                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                                                   input_scale=1000000.0,
-                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f54...
+                                                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4...
 2001-02-02  1.085461   38129.336619   47626.107330
 2001-05-21  0.961702   50010.574434   73721.957893
 2003-05-06  1.099837    2893.044038    2702.425237
@@ -2466,17 +2472,17 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 2004-09-27  1.010456    8523.749415   11037.466255
 2000-10-25  0.980559   50964.957119   65038.733878
 2002-11-02  1.355164    1195.765141    1603.253926,
-                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('7da4be39-526b-4a1f-b0b8-e5297a28ca34')" type="checkbox"><label for="UUID('7da4be39-526b-4a1f-b0b8-e5297a28ca34')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
+                         prior_scale=0.05)</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('52c1e55f-8c8f-4390-8da4-56e2f4fc42c1')" type="checkbox"><label for="UUID('52c1e55f-8c8f-4390-8da4-56e2f4fc42c1')" class="sk-toggleable__label sk-toggleable__label-arrow">effect: ChainedEffects</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('adstock', GeometricAdstockEffect()),
                       ('saturation',
                        HillEffect(effect_mode='additive',
-                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
                                   input_scale=1000000.0,
-                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('01ae6730-3101-44b6-ab12-aa0bdfce3f3f')" type="checkbox"><label for="UUID('01ae6730-3101-44b6-ab12-aa0bdfce3f3f')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('51139f4d-95de-485b-b0c5-bee4cefde461')" type="checkbox"><label for="UUID('51139f4d-95de-485b-b0c5-bee4cefde461')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f5424a4e1d0 with batch shape () and event shape ()&gt;,
+                                  max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+                                  slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('43f50b2a-3e09-4336-bbee-e7cfbc8dd904')" type="checkbox"><label for="UUID('43f50b2a-3e09-4336-bbee-e7cfbc8dd904')" class="sk-toggleable__label sk-toggleable__label-arrow">GeometricAdstockEffect</label><div class="sk-toggleable__content"><pre>GeometricAdstockEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('639e1055-1fb7-436e-af8d-3a68e21f5968')" type="checkbox"><label for="UUID('639e1055-1fb7-436e-af8d-3a68e21f5968')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff42c1ede90 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f542c0fa490 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f5424a4e310 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('5bf09f33-c272-4a59-9be6-7e7c5fce6818')" type="checkbox"><label for="UUID('5bf09f33-c272-4a59-9be6-7e7c5fce6818')" class="sk-toggleable__label sk-toggleable__label-arrow">ExactLikelihood</label><div class="sk-toggleable__content"><pre>ExactLikelihood(effect_name='ad_spend_search', prior_scale=0.01,
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7ff4341b1910 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7ff4341fa490 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('52fb9b6d-dfc5-4633-838e-5d86d2bb6b48')" type="checkbox"><label for="UUID('52fb9b6d-dfc5-4633-838e-5d86d2bb6b48')" class="sk-toggleable__label sk-toggleable__label-arrow">ExactLikelihood</label><div class="sk-toggleable__content"><pre>ExactLikelihood(effect_name='ad_spend_search', prior_scale=0.01,
                 reference_df=            ad_spend_search
 2000-01-01     8.682649e+06
 2000-01-02     7.542228e+06
@@ -2490,7 +2496,7 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 2004-12-31     3.226681e+06
 2005-01-01     3.605501e+06
 
-[1828 rows x 1 columns])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b27b7c49-bb39-49ba-86e3-fb9104d56de5')" type="checkbox"><label for="UUID('b27b7c49-bb39-49ba-86e3-fb9104d56de5')" class="sk-toggleable__label sk-toggleable__label-arrow">ExactLikelihood</label><div class="sk-toggleable__content"><pre>ExactLikelihood(effect_name='ad_spend_social_media', prior_scale=0.01,
+[1828 rows x 1 columns])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0d35ff74-63f5-4341-81c2-8c09e3c86468')" type="checkbox"><label for="UUID('0d35ff74-63f5-4341-81c2-8c09e3c86468')" class="sk-toggleable__label sk-toggleable__label-arrow">ExactLikelihood</label><div class="sk-toggleable__content"><pre>ExactLikelihood(effect_name='ad_spend_social_media', prior_scale=0.01,
                 reference_df=            ad_spend_social_media
 2000-01-01           2.171846e+06
 2000-01-02           2.625088e+06
@@ -2504,12 +2510,12 @@ Capturing these dynamics is essential to make ROI estimates realistic.</p>
 2004-12-31           1.027756e+06
 2005-01-01           1.012141e+06
 
-[1828 rows x 1 columns])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a303325d-a98f-45a2-9090-7e174006ac56')" type="checkbox"><label for="UUID('a303325d-a98f-45a2-9090-7e174006ac56')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
+[1828 rows x 1 columns])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('89c08da7-b0e2-4340-82d0-a83967fdbcd6')" type="checkbox"><label for="UUID('89c08da7-b0e2-4340-82d0-a83967fdbcd6')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
                    optimizer=LBFGSSolver(max_linesearch_steps=300,
                                          memory_size=300))</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="80a46375" class="cell" data-execution_count="20">
+<div id="387361af" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>components_umm <span class="op">=</span> model_umm.predict_components(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">10</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>

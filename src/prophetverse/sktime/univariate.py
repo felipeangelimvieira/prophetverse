@@ -347,7 +347,9 @@ class Prophetverse(BaseProphetForecaster):
             {
                 "trend": FlatTrend(),
                 "broadcast_mode": "effect",
-                "inference_engine": prior.PriorPredictiveInferenceEngine(num_samples=2),
+                "inference_engine": MAPInferenceEngine(
+                    optimizer=AdamOptimizer(step_size=0.01), num_steps=1
+                ),
             },
         ]
 

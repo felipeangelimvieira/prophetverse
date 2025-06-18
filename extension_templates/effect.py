@@ -1,16 +1,91 @@
-"""Extension template for creating a new effect in Prophetverse."""
+"""
+Extension template for creating custom effects in Prophetverse.
+
+This template provides comprehensive examples and guidance for creating your own effects.
+Effects are the building blocks of Prophetverse models, allowing you to incorporate
+various components like trend, seasonality, and exogenous regressors.
+
+Key Methods to Understand:
+--------------------------
+1. `_fit(self, y, X, scale)`: (Optional) Called once during the forecaster's `fit`.
+   Use this to perform pre-computations or fit objects needed later.
+
+2. `_transform(self, X, fh)`: (Optional) Called during both `fit` and `predict`.
+   Converts pandas DataFrame to a format suitable for `_predict` (typically JAX arrays).
+   The default implementation converts selected columns to JAX arrays.
+
+3. `_predict(self, data, predicted_effects, **kwargs)`: (Mandatory) Core effect logic.
+   Receives data from `_transform` and returns the computed effect as a JAX array.
+   Use `numpyro.sample` here to define prior distributions for parameters.
+
+Effect Tags (Control Behavior):
+-------------------------------
+- `capability:panel`: Can handle multiple time series at once.
+- `capability:multivariate_input`: Can process multiple columns simultaneously.
+- `requires_X`: Skip if no matching columns found in X.
+- `applies_to`: Whether effect uses 'X' (exogenous) or 'y' (target) data.
+- `filter_indexes_with_forecating_horizon_at_transform`: Pre-filter data to forecast horizon.
+- `requires_fit_before_transform`: Require fit() before transform().
+- `feature:panel_hyperpriors`: Uses hyperpriors for hierarchical modeling.
+
+How Tags Modify Behavior:
+-------------------------
+Tags are metadata that control how Prophetverse handles your effect. Here's a
+deeper dive into how they influence the `_fit`, `_transform`, and `_predict` methods:
+
+- `capability:panel` (bool):
+  - If `True`, your effect is expected to handle panel data (multiple time series) directly. `_fit` and `_transform` receive the full DataFrame with a MultiIndex.
+  - If `False` (default), and panel data is provided, Prophetverse automatically broadcasts the effect, applying it to each time series individually.
+
+- `capability:multivariate_input` (bool):
+  - If `True`, your effect is expected to handle a DataFrame with multiple columns as input. `_fit` and `_transform` receive all matching columns at once.
+  - If `False` (default), and a multi-column DataFrame is provided, Prophetverse broadcasts the effect, applying it to each column individually.
+
+- `requires_X` (bool):
+  - If `True` (default), the effect depends on exogenous variables (`X`).
+  - If no columns in `X` match the effect's `regex`, the entire effect is
+    skipped (`_transform` and `_predict` are not called).
+  - If `False`, the effect runs even if `X` is empty or `None`.
+
+- `applies_to` (str: 'X' or 'y'):
+  - Determines the input data for your effect.
+  - If `'X'` (default), the `data` passed to `_fit` and `_transform` is the
+    exogenous variables DataFrame.
+  - If `'y'`, the `data` is the target variable DataFrame.
+
+- `filter_indexes_with_forecating_horizon_at_transform` (bool):
+  - If `True` (default), during `predict`, the DataFrame passed to `_transform`
+    is automatically filtered to only contain dates in the forecasting horizon (`fh`).
+  - This is a convenience to avoid manual filtering inside `_transform`.
+  - Set to `False` if your effect needs to see data outside the forecast horizon
+    during prediction (e.g., for calculating lags).
+
+- `requires_fit_before_transform` (bool):
+  - If `True`, Prophetverse ensures that `_fit` has been called before `_transform`.
+  - This is crucial if `_transform` relies on state computed in `_fit` (e.g.,
+    means, scaling factors).
+  - If `False` (default), `_transform` can be called without `_fit`, which is
+    typical for stateless effects.
+
+- `feature:panel_hyperpriors` (bool):
+  - If `True`, signals that your effect defines hyperpriors for hierarchical
+    models, allowing parameters to be shared and learned across different
+    time series in a panel dataset. This is an advanced feature for
+    implementing hierarchical Bayesian models.
+"""
 
 from typing import Any, Dict, Optional
+
+import pandas as pd
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-import pandas as pd
 
 from prophetverse.effects.base import BaseEffect
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
 
 
-class MySimpleEffectName(BaseEffect):
+class MySimpleEffect(BaseEffect):
     """
     A simple custom effect example that only overrides `_predict`.
 
@@ -19,46 +94,29 @@ class MySimpleEffectName(BaseEffect):
 
     Parameters
     ----------
-    param1 : float
+    scale_factor : float
         A scaling factor applied to the input data.
-    param2 : float
+    bias : float
         A constant bias added to the scaled input.
-
-    `_transform` in BaseEffect may return one of:
-      - `jnp.ndarray`
-      - `tuple` with first element a `jnp.ndarray` and extra metadata
-      - `dict` containing key "data" with a `jnp.ndarray` value
-      - `list` of any of the above, for broadcasted inputs
-
-    Tag behavior:
-      - `capability:panel`:
-          If True, supports panel (multiple time series) input in one call. False here.
-      - `capability:multivariate_input`:
-          If True, `_transform` can ingest multiple columns at once. False here triggers broadcasting.
-      - `requires_X`:
-          If True, skips effect if no X columns found. False would allow effect without X.
-      - `applies_to`:
-          Indicates whether this effect applies to 'X' (exogenous) or 'y' (target).
-      - `filter_indexes_with_forecating_horizon_at_transform`:
-          If True, filters X to only the forecasting horizon before `_transform`.
-      - `requires_fit_before_transform`:
-          If True, raises if `transform` is called before `fit`.
     """
 
     _tags = {
-        "capability:panel": False,  # no panel/multi-series support
-        "capability:multivariate_input": False,  # single-column input only
-        "requires_X": True,  # needs exogenous X
-        "applies_to": "X",  # effect applies to X
-        "filter_indexes_with_forecating_horizon_at_transform": True,  # filter to fh
-        "requires_fit_before_transform": False,  # transform does not require prior fit
+        "capability:panel": False,
+        "capability:multivariate_input": False,
+        "requires_X": True,
+        "applies_to": "X",
+        "filter_indexes_with_forecating_horizon_at_transform": True,
+        "requires_fit_before_transform": False,
     }
 
-    def __init__(self, param1: float = 1.0, param2: float = 0.0):
-        # assign hyperparameters before BaseEffect init
-        self.param1 = param1
-        self.param2 = param2
+    def __init__(self, scale_factor: float = 1.0, bias: float = 0.0):
+        # Init hyperparameters before BaseEffect init
+        # Do not change them!
+        self.scale_factor = scale_factor
+        self.bias = bias
         super().__init__()
+
+        # Now, do parameter handling
 
     def _predict(
         self,
@@ -73,102 +131,87 @@ class MySimpleEffectName(BaseEffect):
         Parameters
         ----------
         data : jnp.ndarray
-            Transformed exogenous data, shape (T, 1) or (N, T, 1).
+            Transformed exogenous data from the base `_transform` method.
         predicted_effects : dict
-            Other effect arrays (unused in this simple example).
+            A dictionary of already computed effects in the model (unused here).
 
         Returns
         -------
         jnp.ndarray
-            The effect contribution, same shape as `data`.
+            The computed effect, a JAX array.
         """
-        # TODO: Replace this with your own transformation logic if needed
-        return data * self.param1 + self.param2
+        return data * self.scale_factor + self.bias
 
 
-class MyEffectName(BaseEffect):
+class MyCustomEffect(BaseEffect):
     """
     A full-featured custom effect example.
+
+    This demonstrates how to implement `_fit`, `_transform`, and `_predict`,
+    and how to use tags to control the effect's behavior.
 
     Steps to implement a new effect:
       1. Override `_fit` (optional) to compute static quantities from `y` and `X`.
       2. Override `_transform` (optional) to prepare `X` as JAX arrays.
-      3. Within `_predict`, sample any parameters via `numpyro.sample`
+      3. Within `_predict`, sample any parameters via `numpyro.sample`.
       4. Implement `_predict` (required) using `data`, `predicted_effects`, and samples.
 
     Parameters
     ----------
-    param1 : float
+    multiplier : float
         A multiplier applied in `_predict`.
-    param2 : float
-        A bias term added in `_predict`.
     prior_scale : float
         Scale of the Normal prior for sampling a coefficient.
-
-    Notes
-    -----
-    `_transform` may return:
-      - `jnp.ndarray`
-      - `tuple` for arrays plus metadata
-      - `dict` with key "data"
-      - `list` of the above (for broadcasted columns)
-
-    Tag behavior:
-      - `capability:panel`: supports panel input if True
-      - `capability:multivariate_input`: allow multi-column transform if True
-      - `requires_X`: skip effect if X not present when True
-      - `applies_to`: "X" or "y" determines which DataFrame the transform applies to
-      - `filter_indexes_with_forecating_horizon_at_transform`: filter to fh before `_transform`
-      - `requires_fit_before_transform`: if True, `transform` errors when called pre-`fit`
     """
 
     _tags = {
-        "capability:panel": False,  # no built-in panel support
-        "capability:multivariate_input": False,  # will broadcast columns by default
-        "requires_X": True,  # needs X; if missing, skips predict
-        "applies_to": "X",  # transform applies to exogenous inputs
+        "capability:panel": False,
+        "capability:multivariate_input": False,
+        "requires_X": True,
+        "applies_to": "X",
         "filter_indexes_with_forecating_horizon_at_transform": True,
-        "requires_fit_before_transform": False,
+        "requires_fit_before_transform": True,  # We need fit to learn the mean
     }
 
-    def __init__(
-        self,
-        param1: float = 1.0,
-        param2: float = 0.0,
-        prior_scale: float = 1.0,
-    ):
-        # set hyperparameters and priors before base init
-        self.param1 = param1
-        self.param2 = param2
-        self._param_prior = dist.Normal(0.0, prior_scale)
+    def __init__(self, multiplier: float = 1.0, prior=None):
+        # Init hyperparameters before BaseEffect init
+        # Do not change them!
+        self.multiplier = multiplier
+        self.prior = prior
         super().__init__()
+        # It's good practice to define priors in __init__
+        self._prior = prior if prior is not None else dist.Normal(0.0, 1.0)
 
     def _fit(self, y: pd.DataFrame, X: Optional[pd.DataFrame], scale: float = 1.0):
         """
-        Optional: called during fit to compute static quantities.
+        (Optional) Fit phase: called once during forecaster.fit().
 
-        Example implementation centers X by column means.
+        This example learns the column means from the training data `X` for centering.
         """
         if X is not None:
-            # compute and store column means of X for centering
+            # Compute and store column means of X for centering in _transform
             self._X_mean = X.mean()
-            # TODO: add additional fit logic here (e.g., compute other summaries)
         else:
-            self._X_mean = None
+            self._X_mean = 0.0
+        super()._fit(y, X, scale)
 
     def _transform(self, X: pd.DataFrame, fh: pd.Index) -> Any:
         """
-        Optional: prepare X for the model.
+        (Optional) Transform phase: prepares data for `_predict`.
 
-        Example implementation subtracts stored means then converts to tensor.
+        This example implementation subtracts the stored mean and then converts
+        the data to a JAX array.
+
+        The `_transform` method can return one of the following structures:
+        - A single `jnp.ndarray`: The simplest and most common case.
+        - A `tuple`: Useful for passing multiple arrays or mixed data types.
+          The first element is typically the main data array.
+        - A `dict`: Flexible for passing named arrays and other metadata.
+          Must contain a 'data' key holding the main `jnp.ndarray`.
         """
-        if self._X_mean is not None:
-            # center X
-            X_proc = X - self._X_mean
-            # TODO: add any other transform steps (e.g., feature engineering)
-        else:
-            X_proc = X
-        # convert to JAX tensor/array
+        # Center the data using the mean learned in _fit
+        X_proc = X - self._X_mean
+        # Convert to JAX tensor/array
         return series_to_tensor_or_array(X_proc)
 
     def _predict(
@@ -179,27 +222,60 @@ class MyEffectName(BaseEffect):
         **kwargs,
     ) -> jnp.ndarray:
         """
-        Core effect logic: sample parameters and compute contribution.
+        (Mandatory) Prediction phase: core effect computation.
+
+        This is where the main effect logic happens. Use numpyro.sample()
+        to define Bayesian priors for parameters.
+
+        The `data` argument receives the output of `_transform`. Your implementation
+        should handle the structure you defined:
+        - If `_transform` returns a `jnp.ndarray`, `data` will be that array.
+        - If `_transform` returns a `tuple`, `data` will be that tuple.
+        - If `_transform` returns a `dict`, `data` will be that dictionary.
         """
-        # sample a coefficient from the prior
-        coef = numpyro.sample("coef", self._param_prior)
-        # TODO: sample additional parameters if your effect needs more
+        # Sample a coefficient from the prior defined in __init__
+        coef = numpyro.sample("my_custom_coef", self._prior)
 
-        # unwrap array from dict/tuple if necessary
-        if isinstance(data, dict):
-            arr = data["data"]
-        elif isinstance(data, tuple):
-            arr = data[0]
-        else:
-            arr = data
+        # The effect's computation.
+        # This example creates a linear effect with the centered data.
+        effect = data * coef * self.multiplier
 
-        # compute the effect: data * coef * param1 + param2
-        # TODO: replace with your own custom computation
-        return arr * coef * self.param1 + self.param2
+        return effect
 
     @classmethod
     def get_test_params(cls, parameter_set: str = "default"):
         """
-        Return test parameters for automated framework checks.
+        (Optional) Provide test parameters for Prophetverse's testing framework.
         """
-        return [{"param1": 2.0, "param2": 0.5, "prior_scale": 1.0}]
+        return [{"multiplier": 2.0, "prior_scale": 1.0}]
+
+
+# --- Advanced: Additive vs Multiplicative Effects ---
+#
+# For effects that can switch between additive and multiplicative modes,
+# inherit from BaseAdditiveOrMultiplicativeEffect instead of BaseEffect.
+#
+# Example:
+# from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect
+#
+# class AdstockEffect(BaseAdditiveOrMultiplicativeEffect):
+#     def __init__(self, effect_mode="multiplicative", **kwargs):
+#         super().__init__(effect_mode=effect_mode, **kwargs)
+#
+#     def _predict(self, data, predicted_effects, **kwargs):
+#         # Your core logic here
+#         adstock_rate = numpyro.sample("adstock", dist.Beta(1, 1))
+#         # The base class handles additive vs multiplicative application
+#         return apply_adstock(data, adstock_rate)
+
+# --- Tips for Creating Custom Effects ---
+#
+# 1. Start with MySimpleEffect template for basic transformations.
+# 2. Use MyCustomEffect template when you need parameter fitting.
+# 3. Check existing effects in prophetverse.effects for inspiration:
+#    - LinearEffect: Simple linear regression
+#    - HillEffect: Hill saturation transformation
+#    - GeometricAdstockEffect: Media adstock modeling
+# 4. Use descriptive parameter names in numpyro.sample().
+# 5. Test your effect with get_test_params() method.
+# 6. Consider panel data capabilities if working with multiple time series.

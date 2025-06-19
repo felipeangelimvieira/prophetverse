@@ -458,7 +458,7 @@ class BaseBayesianForecaster(BaseForecaster):
             # Map any values that are 0 to 1
             self._scale = self._scale.replace(0, 1)
 
-    def _scale_y(self, y: pd.DataFrame) -> pd.DataFrame:
+    def _scale_y(self, y: pd.DataFrame, force=False) -> pd.DataFrame:
         """
         Scales the input DataFrame y (divide it by the scaling factor).
 
@@ -466,6 +466,8 @@ class BaseBayesianForecaster(BaseForecaster):
         ----------
         y : pd.DataFrame
             The input DataFrame to be inverse scaled.
+        force: bool, optional
+            Should scale even if likelihood is discrete.
 
         Returns
         -------
@@ -485,7 +487,7 @@ class BaseBayesianForecaster(BaseForecaster):
         This method assumes that the scaling factor has already been computed and stored
         in the `_scale` attribute of the class.
         """
-        if self._likelihood_is_discrete:
+        if self._likelihood_is_discrete and not force:
             return y
 
         if isinstance(self._scale, (int, float)):
@@ -919,10 +921,17 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
                     default_effect = self.default_effect
 
                 default_effect = default_effect.clone()
+
+                _y = y
+                _scale = self._scale
+                if self._likelihood_is_discrete:
+                    _y = self._scale_y(y, force=True)
+                    _scale = 1
+
                 default_effect.fit(
                     X=X[features_without_effects],
-                    y=y,
-                    scale=self._scale,  # type: ignore[attr-defined]
+                    y=_y,
+                    scale=_scale,  # type: ignore[attr-defined]
                 )
                 fitted_effects_list_.append(
                     (

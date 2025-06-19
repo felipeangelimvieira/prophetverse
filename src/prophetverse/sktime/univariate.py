@@ -222,11 +222,11 @@ class Prophetverse(BaseProphetForecaster):
 
         if self._likelihood_is_discrete:
             # Scale the data for discrete likelihoods to avoid non-integer values.
-            self.trend_model_.fit(X=X, y=y / self._scale)
-            self.likelihood_model_.fit(X=X, y=y / self._scale)
+            self.trend_model_.fit(X=X, y=y / self._scale, scale=1)
+            self.likelihood_model_.fit(X=X, y=y, scale=self._scale)
         else:
-            self.trend_model_.fit(X=X, y=y)
-            self.likelihood_model_.fit(X=X, y=y)
+            self.trend_model_.fit(X=X, y=y, scale=self._scale)
+            self.likelihood_model_.fit(X=X, y=y, scale=self._scale)
 
         # Handle exogenous features.
         if X is None:

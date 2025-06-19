@@ -11,7 +11,7 @@ from prophetverse.effects.base import (
     EFFECT_APPLICATION_TYPE,
     BaseAdditiveOrMultiplicativeEffect,
 )
-from prophetverse.utils.algebric_operations import matrix_multiplication
+from prophetverse.utils.frame_to_array import series_to_tensor
 
 __all__ = ["LinearEffect"]
 
@@ -86,12 +86,19 @@ class LinearEffect(BaseAdditiveOrMultiplicativeEffect):
 
 
 class PanelBHLinearEffect(BaseAdditiveOrMultiplicativeEffect):
-    """Hierarchical linear effect.
+    """
+    Bayesian Hierarchical linear effect.
 
     Parameters
     ----------
-    prior : Distribution, optional
-        A numpyro distribution to use as prior. Defaults to dist.Normal(0, 1)
+    loc_hyperprior : Distribution, optional
+        A numpyro distribution to use as the location hyperprior. Defaults to dist.Normal(0
+        , 1).
+    scale_hyperprior : Distribution, optional
+        A numpyro distribution to use as the scale hyperprior. Defaults to dist.HalfNormal
+        (1).
+    prior_callable : Distribution, optional
+        A numpyro distribution callable to use as the prior. Defaults to dist.Normal.
     effect_mode : effects_application, optional
         Either "multiplicative" or "additive" by default "multiplicative".
     """
@@ -127,6 +134,10 @@ class PanelBHLinearEffect(BaseAdditiveOrMultiplicativeEffect):
         self._prior_callable = (
             prior_callable if prior_callable is not None else dist.Normal
         )
+
+    def _transform(self, X, fh):
+        """Prepare input data to be passed to numpyro model."""
+        return series_to_tensor(X)
 
     def _predict(
         self,

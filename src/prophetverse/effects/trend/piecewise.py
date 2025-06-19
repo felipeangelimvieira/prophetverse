@@ -164,7 +164,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
             An array containing the prepared input data.
         """
         idx = self._fh_to_index(fh)
-        return self.get_changepoint_matrix(idx)
+        return jnp.array(self.get_changepoint_matrix(idx))
 
     def _predict(
         self,

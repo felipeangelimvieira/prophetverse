@@ -1,6 +1,7 @@
 from numpyro.infer import Predictive
 from prophetverse.engine.base import BaseInferenceEngine
 from numpyro import handlers
+from jax import random
 
 
 class PriorPredictiveInferenceEngine(BaseInferenceEngine):
@@ -18,11 +19,13 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
 
     def _infer(self, **kwargs):
 
+        _, trace_key, predictive_key = random.split(self._rng_key, 3)
+
         model = self.model_
         if self.substitute is not None:
             model = handlers.substitute(model, self.substitute)
 
-        trace = handlers.trace(handlers.seed(model, self._rng_key)).get_trace(**kwargs)
+        trace = handlers.trace(handlers.seed(model, trace_key)).get_trace(**kwargs)
         sample_sites = [
             site_name
             for site_name in trace.keys()
@@ -36,7 +39,7 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
             exclude_deterministic=True,
             return_sites=sample_sites,
         )
-        self.posterior_samples_ = prior_predictive(self._rng_key, **kwargs)
+        self.posterior_samples_ = prior_predictive(predictive_key, **kwargs)
 
         if "obs" in self.posterior_samples_:
             # Remove the observed data from the samples
@@ -47,6 +50,7 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
         """
         Draw samples from the prior predictive distribution.
         """
+        _, predictive_key = random.split(self._rng_key)
         model = self.model_
 
         predictive = Predictive(
@@ -55,5 +59,7 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
             num_samples=self.num_samples,
         )
 
-        self.samples_predictive_ = predictive(self._rng_key, **kwargs)
+        self.samples_predictive_ = predictive(predictive_key, **kwargs)
+        return self.samples_predictive_
+        self.samples_predictive_ = predictive(predictive_key, **kwargs)
         return self.samples_predictive_

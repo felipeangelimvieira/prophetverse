@@ -69,8 +69,8 @@ class LogEffect(BaseAdditiveOrMultiplicativeEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        scale = numpyro.sample("log_scale", self.scale_prior)
-        rate = numpyro.sample("log_rate", self.rate_prior)
+        scale = numpyro.sample("log_scale", self._scale_prior)
+        rate = numpyro.sample("log_rate", self._rate_prior)
 
         effect = scale * jnp.log(jnp.clip(rate * data + 1, 1e-8, None))
 

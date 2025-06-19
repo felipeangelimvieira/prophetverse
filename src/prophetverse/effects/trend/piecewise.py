@@ -61,6 +61,10 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
 
     """
 
+    _tags = {
+        "capability:panel": True
+    }
+
     def __init__(
         self,
         changepoint_interval: int = 25,

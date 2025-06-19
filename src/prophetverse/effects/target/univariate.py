@@ -163,6 +163,8 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
                 obs=y,
             )
 
+        return jnp.zeros_like(mean)
+
 
 def _build_positive_smooth_clipper(
     smooth_threshold: float, threshold: float = 1e-10

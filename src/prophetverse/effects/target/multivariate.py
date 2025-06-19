@@ -112,3 +112,5 @@ class MultivariateNormal(BaseTargetEffect):
                     dist.MultivariateNormal(mean.squeeze(-1).T, scale_tril=cov_mat),
                     obs=y,
                 )
+
+        return jnp.zeros_like(mean)

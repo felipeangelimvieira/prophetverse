@@ -372,16 +372,12 @@ class HierarchicalProphet(BaseProphetForecaster):
         List[dict[str, int]]
             A list of dictionaries containing the test parameters.
         """
-        from prophetverse.engine.map import MAPInferenceEngine
+        from prophetverse.engine.prior import PriorPredictiveInferenceEngine
         from prophetverse.engine.mcmc import MCMCInferenceEngine
         from prophetverse.engine.optimizer import AdamOptimizer
 
         return [
-            {
-                "inference_engine": MAPInferenceEngine(
-                    num_steps=1, optimizer=AdamOptimizer()
-                )
-            },
+            {"inference_engine": PriorPredictiveInferenceEngine(1)},
             {
                 "inference_engine": MCMCInferenceEngine(
                     num_samples=1, num_warmup=1, num_chains=1

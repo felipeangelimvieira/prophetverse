@@ -1,4 +1,4 @@
-from prophetverse.experimental.budget_optimization.constraints import (
+from prophetverse.budget_optimization.constraints import (
     SharedBudgetConstraint,
     MinimumTargetResponse,
 )
@@ -47,9 +47,12 @@ def test_shared_budget_constraint_custom_channels():
 
 
 class DummyOptimizer:
-    def __init__(self, out):
+    def __init__(self, out, horizon_idx=None):
         # out: array of shape (n_draws, total_horizon_len)
         self._out = out
+        self.horizon_idx_ = (
+            horizon_idx if horizon_idx is not None else jnp.array([0, 1, 2])
+        )
 
     def predictive_(self, x):
         return self._out
@@ -61,8 +64,8 @@ def test_minimum_target_response_satisfied_and_unsatisfied():
     X = pd.DataFrame(np.zeros((3, 1)), index=idx, columns=["dummy"])
     horizon = [1, 2]
     # predictive_ returns ones => mean over draws = ones => sum at horizon=1+1=2
-    out = np.ones((5, 3))
-    opt = DummyOptimizer(out)
+    out = np.ones((5, 3, 1))
+    opt = DummyOptimizer(out, horizon_idx=jnp.array([1, 2]))
     c1 = MinimumTargetResponse(target_response=1.0)
     spec1 = c1(X, horizon, None)
     val1 = spec1["fun"](None, opt)

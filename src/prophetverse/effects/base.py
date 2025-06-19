@@ -8,7 +8,8 @@ from skbase.base import BaseObject
 import numpyro
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+import copy
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
@@ -75,6 +76,8 @@ class BaseEffect(BaseObject):
     _tags = {
         # Can handle panel data?
         "capability:panel": False,
+        # Can be used with hierarchical Prophet?
+        "capability:panel": False,
         # Can handle multiple input feature columns?
         "capability:multivariate_input": False,
         # If no columns are found, should
@@ -88,12 +91,14 @@ class BaseEffect(BaseObject):
         # should this effect be applied to `y` (target) or
         # `X` (exogenous variables)?
         "applies_to": "X",
+        # Does this effect implement hyperpriors across panel?
+        "feature:panel_hyperpriors": False,
     }
 
     def __init__(self):
         self._is_fitted: bool = False
         super().__init__()
-        self._broadcasted = False
+        self._broadcasted = None
 
     def fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Initialize the effect.
@@ -125,12 +130,6 @@ class BaseEffect(BaseObject):
             If the effect does not support multivariate data and the DataFrame has more
             than one level of index.
         """
-        if not self.get_tag("capability:panel", False):
-            if X is not None and X.index.nlevels > 1:
-                raise ValueError(
-                    f"The effect {self.__class__.__name__} does not "
-                    + "support multivariate data"
-                )
 
         self.columns_ = None
         if X is not None:
@@ -144,6 +143,14 @@ class BaseEffect(BaseObject):
             and not self.get_tag("capability:multivariate_input", False)
         ):
             self._set_broadcasting_attributes(data)
+            self._broadcast("fit", X=X, y=y, scale=scale)
+
+        elif (
+            data is not None
+            and data.index.nlevels > 1
+            and not self.get_tag("capability:panel", False)
+        ):
+            self._set_panel_broadcasting_attributes(data)
             self._broadcast("fit", X=X, y=y, scale=scale)
         else:
             self._fit(y=y, X=X, scale=scale)
@@ -217,17 +224,25 @@ class BaseEffect(BaseObject):
             # Filter when index level -1 is in fh
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
-        if (
-            X is not None
-            and len(X.columns) > 1
-            and not self.get_tag("capability:multivariate_input", False)
-        ):
-            if not self._is_fitted:
+
+        if not self._is_fitted and X is not None:
+            if len(X.columns) > 1 and not self.get_tag(
+                "capability:multivariate_input", False
+            ):
+                if not self._is_fitted:
+                    # Since the broadcasting attributes are set during fit,
+                    # we need to set them
+                    self._set_broadcasting_attributes(X)
+
+            elif X.index.nlevels > 1 and not self.get_tag("capability:panel", False):
+
                 # Since the broadcasting attributes are set during fit,
                 # we need to set them
-                self._set_broadcasting_attributes(X)
+                self._set_panel_broadcasting_attributes(X)
 
+        if self._broadcasted is not None:
             return self._broadcast("transform", X=X, fh=fh)
+
         return self._transform(X, fh)
 
     def _broadcast(self, methodname: str, X, **kwargs):
@@ -247,12 +262,75 @@ class BaseEffect(BaseObject):
         -------
         jnp.ndarray
         """
+        if self._broadcasted == "panel":
+            return self._broadcast_panel(X, methodname, **kwargs)
+        if self._broadcasted == "columns":
+            return self._broadcast_columns(X, methodname, **kwargs)
+        raise ValueError(
+            f"Broadcasting not set for {self.__class__.__name__}. "
+            "Please call fit() before calling transform()."
+        )
 
+    def _broadcast_columns(self, X: pd.DataFrame, methodname: str, **kwargs):
+        """
+        Broadcasts a method to handle multiple columns of the input DataFrame.
+
+        This method iterates over the columns of the DataFrame and calls the
+        specified method on each column, collecting the results in a list.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input DataFrame containing the exogenous variables.
+        methodname : str
+            The name of the method to be called on each column.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the method.
+        Returns
+        -------
+        list
+            A list of outputs from the method applied to each column.
+        """
         outputs = []
-        for column in self.columns_:
+        for column in self.effects_.keys():
             X_ = X[[column]]
             effect_ = self.effects_[column]
             xt = getattr(effect_, methodname)(X=X_, **kwargs)
+            outputs.append(xt)
+        return outputs
+
+    def _broadcast_panel(self, X: pd.DataFrame, methodname: str, **kwargs):
+        """
+        Broadcasts a method to handle panel data of the input DataFrame.
+
+        This method iterates over the idx of the DataFrame and calls the
+        specified method on each idx, collecting the results in a list.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input DataFrame containing the exogenous variables.
+        methodname : str
+            The name of the method to be called on each column.
+        **kwargs : dict
+            Additional keyword arguments to be passed to the method.
+        Returns
+        -------
+        list
+            A list of outputs from the method applied to each column.
+        """
+        outputs = []
+
+        for i, idx in enumerate(self.effects_.keys()):
+
+            X_ = None
+            if X is not None:
+                X_ = X.loc[idx]
+            new_kwargs = kwargs.copy()
+            if "y" in kwargs:
+                new_kwargs["y"] = kwargs["y"].loc[idx]
+            effect_ = self.effects_[idx]
+            xt = getattr(effect_, methodname)(X=X_, **new_kwargs)
             outputs.append(xt)
         return outputs
 
@@ -312,74 +390,49 @@ class BaseEffect(BaseObject):
         if predicted_effects is None:
             predicted_effects = {}
 
-        if params is None:
-            params = self.sample_params(data, predicted_effects)
-
         if isinstance(data, list):
-            x = 0
-            for i, _data in enumerate(data):
-                effect_ = self.effects_[self.columns_[i]]
-                with numpyro.handlers.scope(prefix=self.columns_[i]):
-                    out = effect_.predict(
-                        data=_data, predicted_effects=predicted_effects, params=params
-                    )
-                out = numpyro.deterministic(self.columns_[i], out)
-                x += out
+            if self._broadcasted == "columns":
+                x = 0
+                for i, _data in enumerate(data):
+                    effect_ = self.effects_[self.columns_[i]]
+                    with numpyro.handlers.scope(prefix=self.columns_[i]):
+                        out = effect_.predict(
+                            data=_data,
+                            predicted_effects=predicted_effects,
+                            params=params,
+                        )
+                    out = numpyro.deterministic(self.columns_[i], out)
+                    x += out
+            elif self._broadcasted == "panel":
+                x = []
+                for i, _data in enumerate(data):
+                    effect_ = self.effects_[self.idxs_[i]]
+                    idx = self.idxs_[i]
+                    if isinstance(idx, (tuple, list)):
+                        idx = ",".join(idx)
+                    else:
+                        idx = str(idx)
+                    prefix = f"panel-{i}"
+                    _predicted_effects = {k: v[i] for k, v in predicted_effects.items()}
+                    with numpyro.handlers.scope(prefix=prefix):
+                        out = effect_.predict(
+                            data=_data,
+                            predicted_effects=_predicted_effects,
+                            params=params,
+                        )
+                    x.append(out)
 
+                # If output is None, then the effect
+                # shouldn't output anything.
+                if x[0] is None:
+                    return None
+                # If out is of shape (N, T), x will be
+                # (D, N, T)
+                x = jnp.stack(x, axis=0)
+                x = numpyro.deterministic("panel_effects", x)
         else:
             x = self._predict(data, predicted_effects, params)
         return x
-
-    def sample_params(
-        self,
-        data: Dict,
-        predicted_effects: Optional[Dict[str, jnp.ndarray]] = None,
-    ):
-        """Sample parameters from the prior distribution.
-
-        Parameters
-        ----------
-        data : Dict
-            The data to be used for sampling the parameters, obtained from
-            `transform` method.
-
-        predicted_effects : Optional[Dict[str, jnp.ndarray]]
-            A dictionary containing the predicted effects, by default None.
-
-        Returns
-        -------
-        Dict
-            A dictionary containing the sampled parameters.
-        """
-
-        if predicted_effects is None:
-            predicted_effects = {}
-
-        return self._sample_params(data, predicted_effects)
-
-    def _sample_params(
-        self,
-        data: Any,
-        predicted_effects: Dict[str, jnp.ndarray],
-    ):
-        """Sample parameters from the prior distribution.
-
-        Should be implemented by subclasses to provide the actual sampling logic.
-
-        Parameters
-        ----------
-        data : Any
-            The data to be used for sampling the parameters, obtained from
-            `transform` method.
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects, by default None.
-
-        Returns
-        -------
-        Dict
-            A dictionary containing the sampled parameters.
-        """
-        return {}
 
     def _predict(
         self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
@@ -430,10 +483,15 @@ class BaseEffect(BaseObject):
             data = data.copy()
             data["data"] = arr
             return data
-        if isinstance(data, list):
+        if isinstance(data, list) and self._broadcasted == "columns":
             out = []
             for i, d in enumerate(data):
                 out.append(self._update_data(d, arr[:, i].reshape((-1, 1))))
+            return out
+        if isinstance(data, list) and self._broadcasted == "panel":
+            out = []
+            for i, d in enumerate(data):
+                out.append(self._update_data(d, arr[i]))
             return out
         raise ValueError(
             f"Unexpected data type {type(data)}. "
@@ -448,24 +506,109 @@ class BaseEffect(BaseObject):
         broadcasting attributes for the effect, or during `transform`
         of the method does not require fitting before transform.
         """
-
         self.effects_ = OrderedDict((column, self.clone()) for column in X.columns)
         self.columns_ = X.columns.tolist()
-        self._broadcasted = True
+        self._broadcasted = "columns"
 
-    # TODO: Remove in version 0.8.0
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if getattr(cls, "_sample_params") is not getattr(BaseEffect, "_sample_params"):
-            deprecation_warning(
-                "sample_params",
-                "0.7.0",
-                "Sorry for the inconvenience, but this method will be deprecated. "
-                "It was introducted to avoid resampling the same site twice, but"
-                "a new, and better, interface is being implemented. "
-                "Please call the parameters directly from _predict using"
-                "numpyro.sample as you would call numpyro.sample",
+    def _set_panel_broadcasting_attributes(self, X):
+
+        if X.index.nlevels == 1:
+            return
+        elif self.get_tag("capability:panel", False):
+            return
+        # Else proceed to broadcasting by panel
+
+        if self._broadcasted == "columns":
+            raise ValueError(
+                "Cannot set panel broadcasting attributes when "
+                + "broadcasting by columns is already set."
             )
+
+        idxs = X.index.droplevel(-1).unique().tolist()
+        self.effects_ = OrderedDict((idx, self.clone()) for idx in idxs)
+        self.idxs_ = idxs
+        self._broadcasted = "panel"
+
+    def _get_distribution_params(self, params):
+        """
+        Get numpyro distribution parameters.
+
+        Parameters
+        ----------
+        params : dict
+            A dictionary containing the parameters of the effect.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the distribution parameters of the effect.
+        """
+        distribution_params = {}
+        for param_name, param_value in params.items():
+            if isinstance(param_value, numpyro.distributions.Distribution):
+                # Get init args of param_value
+                init_args = param_value.__init__.__code__.co_varnames[1:]
+                for argname in init_args:
+                    distribution_params[param_name + "__" + argname] = getattr(
+                        param_value, argname
+                    )
+        return distribution_params
+
+    def get_params(self, deep=True):
+        """
+        Override get_params to include distribution parameters.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            If True, will return the parameters of the effect and its sub-
+            estimators,
+            by default True.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the parameters of the effect, including
+            distribution parameters.
+        """
+        params = super().get_params(deep=deep)
+        if not deep:
+            return params
+        new_params = self._get_distribution_params(params)
+        return {**params, **new_params}
+
+    def set_params(self, **params):
+        """
+        Extend set_params to handle distribution parameters.
+        """
+
+        all_params = self.get_params(deep=False)
+        distribution_params = self._get_distribution_params(all_params)
+
+        # We list all distribution parameters and their args
+        distribution_params_to_update = defaultdict(dict)
+        for param_name, param_value in params.items():
+            if param_name in distribution_params:
+                base_param_name, distribution_argname = param_name.split("__")
+                distribution_params_to_update[base_param_name] = {
+                    **distribution_params_to_update[base_param_name],
+                    distribution_argname: param_value,
+                }
+
+        # We update the distribution parameters with the new values
+        # and set them to the effect
+        for param_to_update, distribution_args in distribution_params_to_update.items():
+            # Create the distribution object
+            distribution_obj = copy.deepcopy(getattr(self, param_to_update))
+            for argname, value in distribution_args.items():
+                setattr(distribution_obj, argname, value)
+            # Update the distribution param
+            self.set_params(**{param_to_update: distribution_obj})
+
+        not_distribution_params = {
+            k: v for k, v in params.items() if k not in distribution_params
+        }
+        return super().set_params(**not_distribution_params)
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):

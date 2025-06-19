@@ -1,7 +1,7 @@
 """Constraints for Budget Optimizer"""
 
 import numpy as np
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseConstraint,
 )
 import jax
@@ -10,11 +10,11 @@ import pandas as pd
 from jax import grad
 
 __all__ = [
-    "SharedBudgetConstraint",
+    "TotalBudgetConstraint",
 ]
 
 
-class SharedBudgetConstraint(BaseConstraint):
+class TotalBudgetConstraint(BaseConstraint):
     """Shared budget constraint.
 
     This constraint ensures that the sum of the budgets for the specified
@@ -45,7 +45,8 @@ class SharedBudgetConstraint(BaseConstraint):
 
         total = self.total
         if total is None:
-            total = X.loc[horizon, columns].sum(axis=0).sum()
+            mask = X.index.get_level_values(-1).isin(horizon)
+            total = X.loc[mask, columns].sum(axis=0).sum()
 
         channel_idx = [columns.index(ch) for ch in channels]
 
@@ -59,6 +60,10 @@ class SharedBudgetConstraint(BaseConstraint):
             return val
 
         return {"type": self.constraint_type, "fun": func, "jac": grad(func)}
+
+
+# TODO: remove in future version
+SharedBudgetConstraint = TotalBudgetConstraint
 
 
 class MinimumTargetResponse(BaseConstraint):
@@ -94,7 +99,8 @@ class MinimumTargetResponse(BaseConstraint):
             specified value.
             """
             obs = budget_optimizer.predictive_(x_array)
-            out = obs.mean(axis=0)[horizon_idx].sum()
+            out = obs.mean(axis=0).squeeze(-1)
+            out = out[..., budget_optimizer.horizon_idx_].sum()
             out = out - self.target_response
 
             return out

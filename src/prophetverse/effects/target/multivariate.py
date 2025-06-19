@@ -17,6 +17,7 @@ class MultivariateNormal(BaseTargetEffect):
     _tags = {
         # Supports multivariate data? Can this
         # Effect be used with Multiariate prophet?
+        "hierarchical_prophet_compliant": True,
         "capability:panel": True,
         # If no columns are found, should
         # _predict be skipped?
@@ -111,3 +112,5 @@ class MultivariateNormal(BaseTargetEffect):
                     dist.MultivariateNormal(mean.squeeze(-1).T, scale_tril=cov_mat),
                     obs=y,
                 )
+
+        return jnp.zeros_like(mean)

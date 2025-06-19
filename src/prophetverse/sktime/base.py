@@ -313,7 +313,7 @@ class BaseBayesianForecaster(BaseForecaster):
 
         keys_to_delete = []
         for key in predictive_samples_.keys():
-            if key.endswith(":ignore"):
+            if ":ignore" in key:
                 keys_to_delete.append(key)
         for key in keys_to_delete:
             del predictive_samples_[key]
@@ -337,9 +337,11 @@ class BaseBayesianForecaster(BaseForecaster):
             A DataFrame containing the predicted samples for all sites.
         """
         if self._is_vectorized:
-            return self._vectorize_predict_method(
+            out = self._vectorize_predict_method(
                 "predict_component_samples", X=X, fh=fh
             )
+
+            return out
 
         predictive_samples_ = self._get_predictive_samples_dict(fh=fh, X=X)
 
@@ -456,7 +458,7 @@ class BaseBayesianForecaster(BaseForecaster):
             # Map any values that are 0 to 1
             self._scale = self._scale.replace(0, 1)
 
-    def _scale_y(self, y: pd.DataFrame) -> pd.DataFrame:
+    def _scale_y(self, y: pd.DataFrame, force=False) -> pd.DataFrame:
         """
         Scales the input DataFrame y (divide it by the scaling factor).
 
@@ -464,6 +466,8 @@ class BaseBayesianForecaster(BaseForecaster):
         ----------
         y : pd.DataFrame
             The input DataFrame to be inverse scaled.
+        force: bool, optional
+            Should scale even if likelihood is discrete.
 
         Returns
         -------
@@ -483,7 +487,7 @@ class BaseBayesianForecaster(BaseForecaster):
         This method assumes that the scaling factor has already been computed and stored
         in the `_scale` attribute of the class.
         """
-        if self._likelihood_is_discrete:
+        if self._likelihood_is_discrete and not force:
             return y
 
         if isinstance(self._scale, (int, float)):
@@ -742,9 +746,10 @@ class BaseBayesianForecaster(BaseForecaster):
             out = getattr(forecaster, methodname)(X=_X, fh=fh)
 
             if not isinstance(idx, (tuple, list)):
-                idx = [idx]
+                idx = [idx]  # pragma: no cover
             new_index = pd.MultiIndex.from_tuples(
-                [[*idx, *_coerce_to_tuple(dateidx)] for dateidx in out.index]
+                [[*idx, *_coerce_to_tuple(dateidx)] for dateidx in out.index],
+                names=[*self.forecasters_.index.names, *out.index.names],
             )
             out.set_index(new_index, inplace=True)
             outs.append(out)
@@ -916,10 +921,17 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
                     default_effect = self.default_effect
 
                 default_effect = default_effect.clone()
+
+                _y = y
+                _scale = self._scale
+                if self._likelihood_is_discrete:
+                    _y = self._scale_y(y, force=True)
+                    _scale = 1
+
                 default_effect.fit(
                     X=X[features_without_effects],
-                    y=y,
-                    scale=self._scale,  # type: ignore[attr-defined]
+                    y=_y,
+                    scale=_scale,  # type: ignore[attr-defined]
                 )
                 fitted_effects_list_.append(
                     (

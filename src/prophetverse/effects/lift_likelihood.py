@@ -32,7 +32,7 @@ class LiftExperimentLikelihood(BaseEffect):
         The scale of the prior distribution for the likelihood.
     """
 
-    _tags = {"requires_X": False, "capability:panel": False}
+    _tags = {"requires_X": True, "hierarchical_prophet_compliant": False}
 
     def __init__(
         self,
@@ -211,7 +211,8 @@ class LiftExperimentLikelihood(BaseEffect):
                         "x_start": [1, 2, 3],
                         "x_end": [4, 5, 6],
                         "lift": [0.1, 0.2, 0.3],
-                    }
+                    },
+                    index=pd.date_range(start="2000-01-02", periods=3, freq="D"),
                 ),
                 "prior_scale": 0.1,
             }

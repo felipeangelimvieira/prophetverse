@@ -8,6 +8,7 @@ import numpyro.distributions as dist
 import pandas as pd
 
 from prophetverse.effects.base import BaseEffect
+from prophetverse.distributions import GammaReparametrized
 
 from .base import TrendEffectMixin
 
@@ -78,9 +79,9 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
 
         coefficient = numpyro.sample(
             "trend_flat_coefficient",
-            dist.Gamma(
-                rate=self.changepoint_prior_loc / self.changepoint_prior_scale**2,
-                concentration=self.changepoint_prior_loc,
+            GammaReparametrized(
+                loc=self.changepoint_prior_loc,
+                scale=self.changepoint_prior_scale,
             ),
         )
 

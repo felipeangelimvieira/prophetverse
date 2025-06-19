@@ -1,5 +1,5 @@
 import scipy.optimize
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseBudgetOptimizer,
     BaseConstraint,
     BaseOptimizationObjective,
@@ -12,7 +12,7 @@ from jax import grad, hessian
 import jax.numpy as jnp
 import jax
 import pandas as pd
-from prophetverse.experimental.budget_optimization.parametrization_transformations import (
+from prophetverse.budget_optimization.parametrization_transformations import (
     IdentityTransform,
 )
 from typing import List, Optional
@@ -103,21 +103,29 @@ class BudgetOptimizer(BaseBudgetOptimizer):
             columns=columns,
         )
 
-        x0 = X.loc[horizon, columns].values.flatten()
+        x0 = X.loc[X.index.get_level_values(-1).isin(horizon), columns].values.flatten()
         # Transform decision variable
         self._parametrization_transform.fit(X, horizon, columns)
         x0 = self._parametrization_transform.transform(x0)
+
+        self.x0_ = x0
 
         # Bounds are set based on the re-parametrized decision variable.
         self.bounds_ = []
         if isinstance(self._bounds, list):
             self.bounds_ = self._bounds
-        else:
+        elif len(x0) % len(columns) == 0:
             size_per_column = len(x0) // len(columns)
             for col in columns:
                 self.bounds_.extend(
                     [self._bounds.get(col, (0, np.inf))] * size_per_column
                 )
+        else:
+            if self._bounds is not None:
+                warnings.warn(
+                    "Bounds are not set correctly. Using default bounds (0, np.inf) for each decision variable."
+                )
+            self.bounds_ = [(0, np.inf)] * len(x0)
 
         self.objective_fun_ = self.wrap_func_with_inv_transform(self.objective_fun_)
         self.jac_ = grad(self.objective_fun_)
@@ -164,63 +172,19 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
         X_opt = X.copy()
         x_opt = self._parametrization_transform.inverse_transform(res.x)
-        X_opt.loc[horizon, columns] = x_opt.reshape(-1, len(columns))
+        mask = X_opt.index.get_level_values(-1).isin(horizon)
+        X_opt.loc[mask, columns] = x_opt.reshape(-1, len(columns))
         return X_opt
 
     def set_predictive_attr(self, model, X, horizon, columns):
 
         fh: pd.Index = X.index.get_level_values(-1).unique()
-        X = X.copy()
-
-        predict_data = model.get_predict_data(X=X, fh=fh)
-        inference_engine = model.inference_engine_
-
         # Get the indexes of `horizon` in fh
         horizon_idx = jnp.array([fh.get_loc(h) for h in horizon])
 
-        # Prepare exogenous effects -
-        # we need to transform them on every call to check the
-        # objective function and gradient
-        exogenous_effects_column_idx = []
-        for effect_name, effect, effect_columns in model.exogenous_effects_:
-            # If no columns are found, skip
-            if effect_columns is None or len(effect_columns) == 0:
-                continue
-
-            intersection = effect_columns.intersection(columns)
-            if len(intersection) == 0:
-                continue
-
-            exogenous_effects_column_idx.append(
-                (
-                    effect_name,
-                    effect,
-                    # index of effect_columns in columns
-                    [columns.index(col) for col in intersection],
-                )
-            )
-
-        x_array = jnp.array(X.values)
-
-        def predictive(new_x):
-            """
-            Update predict data and call self._predict
-            """
-            new_x = new_x.reshape(-1, len(columns))
-            for effect_name, effect, effect_column_idx in exogenous_effects_column_idx:
-                _data = x_array[:, effect_column_idx]
-                _data = _data.at[horizon_idx].set(new_x[:, effect_column_idx])
-                # Update the effect data
-                predict_data["data"][effect_name] = effect._update_data(
-                    predict_data["data"][effect_name], _data
-                )
-
-            predictive_samples = inference_engine.predict(**predict_data)
-            obs = predictive_samples["obs"]
-            obs = obs * model._scale
-
-            return obs
-
+        predictive = model.optimize_predictive_callable(
+            X=X, horizon=horizon, columns=columns
+        )
         self.predictive_no_jit_ = predictive
         self.predictive_ = jax.jit(predictive)
         self.horizon_idx_ = horizon_idx
@@ -236,38 +200,65 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
-        from prophetverse.experimental.budget_optimization.objectives import (
+        from prophetverse.budget_optimization.objectives import (
             MaximizeROI,
             MaximizeKPI,
             MinimizeBudget,
         )
-        from prophetverse.experimental.budget_optimization.constraints import (
-            SharedBudgetConstraint,
+        from prophetverse.budget_optimization.constraints import (
+            TotalBudgetConstraint,
             MinimumTargetResponse,
         )
-        from prophetverse.experimental.budget_optimization.parametrization_transformations import (
+        from prophetverse.budget_optimization.parametrization_transformations import (
             InvestmentPerChannelTransform,
+            TotalInvestmentTransform,
+            InvestmentPerChannelAndSeries,
+            InvestmentPerSeries,
         )
 
-        return [
-            {
-                "objective": MaximizeROI(),
-                "constraints": [
-                    SharedBudgetConstraint(),
-                    MinimumTargetResponse(0.5),
-                ],
-            },
-            {
-                "objective": MaximizeKPI(),
-                "constraints": [
-                    SharedBudgetConstraint(),
-                ],
-                "parametrization_transform": InvestmentPerChannelTransform(),
-            },
-            {
-                "objective": MinimizeBudget(),
-                "constraints": [
-                    MinimumTargetResponse(0.5),
-                ],
-            },
-        ]
+        params = []
+
+        for parametrization in [
+            None,
+            InvestmentPerChannelTransform(),
+            TotalInvestmentTransform(),
+            InvestmentPerChannelAndSeries(),
+            InvestmentPerSeries(),
+        ]:
+
+            if not isinstance(
+                parametrization, (TotalInvestmentTransform, InvestmentPerSeries)
+            ):
+                params.extend(
+                    [
+                        {
+                            "objective": MaximizeKPI(),
+                            "constraints": [
+                                TotalBudgetConstraint(),
+                            ],
+                            "parametrization_transform": parametrization,
+                            "options": {"maxiter": 10},
+                        },
+                        {
+                            "objective": MaximizeROI(),
+                            "constraints": [
+                                TotalBudgetConstraint(),
+                                MinimumTargetResponse(0.5),
+                            ],
+                            "options": {"maxiter": 10},
+                        },
+                    ]
+                )
+
+            params.extend(
+                [
+                    {
+                        "objective": MinimizeBudget(),
+                        "constraints": [
+                            MinimumTargetResponse(0.5),
+                        ],
+                        "options": {"maxiter": 10},
+                    },
+                ]
+            )
+        return params

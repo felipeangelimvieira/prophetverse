@@ -31,7 +31,7 @@ class ExactLikelihood(BaseEffect):
         The scale of the prior distribution for the likelihood.
     """
 
-    _tags = {"requires_X": False, "capability:panel": False}
+    _tags = {"requires_X": False, "hierarchical_prophet_compliant": False}
 
     def __init__(
         self,
@@ -100,7 +100,7 @@ class ExactLikelihood(BaseEffect):
         lift_array = series_to_tensor_or_array(X_lift)
         data_dict["observed_reference_value"] = lift_array / self.timeseries_scale
         data_dict["obs_mask"] = ~jnp.isnan(data_dict["observed_reference_value"])
-
+        data_dict["data"] = None
         return data_dict
 
     def _predict(
@@ -140,7 +140,7 @@ class ExactLikelihood(BaseEffect):
 
         return [
             {
-                "effect_name": "linear",
+                "effect_name": "trend",
                 "reference_df": pd.DataFrame({"y": [1, 2, 3]}),
                 "prior_scale": 0.1,
             }

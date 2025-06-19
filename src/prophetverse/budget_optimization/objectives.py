@@ -1,4 +1,4 @@
-from prophetverse.experimental.budget_optimization.base import (
+from prophetverse.budget_optimization.base import (
     BaseOptimizationObjective,
 )
 import jax.numpy as jnp
@@ -38,8 +38,8 @@ class MaximizeROI(BaseOptimizationObjective):
             Objective function value
         """
         obs = budget_optimizer.predictive_(x)
-        obs = obs.mean(axis=0)
-        obs_horizon = obs[budget_optimizer.horizon_idx_]
+        obs = obs.mean(axis=0).squeeze(-1)
+        obs_horizon = obs[..., budget_optimizer.horizon_idx_]
         total_return = obs_horizon.sum()
         spend = x.sum()
 
@@ -69,8 +69,8 @@ class MaximizeKPI(BaseOptimizationObjective):
             Objective function value
         """
         obs = budget_optimizer.predictive_(x)
-        obs = obs.mean(axis=0)
-        obs_horizon = obs[budget_optimizer.horizon_idx_]
+        obs = obs.mean(axis=0).squeeze(-1)
+        obs_horizon = obs[..., budget_optimizer.horizon_idx_]
         obs_horizon = obs_horizon.sum(axis=0)
 
         value = -obs_horizon.sum()

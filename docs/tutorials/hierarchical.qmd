@@ -1,0 +1,173 @@
+---
+title: "Hierarchical Bayesian Model"
+description: "*A tutorial demonstrating how to leverage hierarchical bayesian models to forecast panel timeseries*"
+---
+
+
+In this example, we will show how to forecast panel timeseries with the `Prophetverse` model.
+
+The univariate Prophetverse model can seamlessly handle hierarchical timeseries due to the package's compatibility with sktime.
+
+```{python}
+# | echo: false
+
+import warnings
+
+warnings.filterwarnings("ignore")
+```
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from prophetverse.datasets.loaders import load_tourism
+```
+
+## Import dataset
+
+Here we use the tourism dataset with purpose-level aggregation.
+
+```{python}
+y = load_tourism(groupby="Purpose")
+display(y)
+```
+
+We define the helper function below to plot the predictions and the observations.
+
+```{python}
+LEVELS = y.index.get_level_values(0).unique()
+
+
+def plot_preds(y=None, preds={}, axs=None):
+
+    if axs is None:
+        fig, axs = plt.subplots(
+            figsize=(12, 8), nrows=int(np.ceil(len(LEVELS) / 2)), ncols=2
+        )
+    ax_generator = iter(axs.flatten())
+    for level in LEVELS:
+        ax = next(ax_generator)
+        if y is not None:
+            y.loc[level].iloc[:, 0].rename("Observation").plot(
+                ax=ax, label="truth", color="black"
+            )
+        for name, _preds in preds.items():
+            _preds.loc[level].iloc[:, 0].rename(name).plot(ax=ax, legend=True)
+        ax.set_title(level)
+
+    # Tight layout
+    plt.tight_layout()
+    return ax
+```
+
+## Automatic upcasting
+
+Because of sktime's amazing interface, we can use the univariate Prophet seamlessly with hierarchical data. 
+
+
+```{python}
+import jax.numpy as jnp
+
+from prophetverse.effects import LinearFourierSeasonality
+from prophetverse.effects.trend import PiecewiseLinearTrend, PiecewiseLogisticTrend
+from prophetverse.engine import MAPInferenceEngine, MCMCInferenceEngine
+from prophetverse.sktime.univariate import Prophetverse
+from prophetverse.utils import no_input_columns
+from prophetverse.engine.optimizer import LBFGSSolver
+
+model = Prophetverse(
+    trend=PiecewiseLogisticTrend(
+        changepoint_prior_scale=0.1,
+        changepoint_interval=8,
+        changepoint_range=-8,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=["YE"],
+                fourier_terms_list=[1],
+                freq="Q",
+                prior_scale=0.1,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        )
+    ],
+    inference_engine=MCMCInferenceEngine(
+        num_warmup=500,
+        num_samples=1000,
+    ),
+)
+model.fit(y=y)
+```
+
+
+We can see how, internally, sktime creates clones of the model for each timeseries instance:
+
+```{python}
+model.forecasters_
+```
+
+
+To call the same methods we used in the univariate case, we do not need to change a single line of code. The only difference is that the output will be a pd.DataFrame with more rows and index levels.
+
+```{python}
+
+forecast_horizon = pd.period_range("1997Q1",
+                                   "2020Q4",
+                                   freq="Q")
+preds = model.predict(fh=forecast_horizon)
+display(preds.head())
+
+# Plot
+plot_preds(y, {"Prophet": preds})
+plt.show()
+
+```
+
+The same applies to the decomposition method:
+
+```{python}
+# | warning: false
+
+decomposition = model.predict_components(fh=forecast_horizon)
+decomposition.head()
+```
+
+## Hierarchical Bayesian model
+
+Sometimes, we want to capture patterns shared between the different series, such as seasonality or trend. In this case, we can use a Bayesian Hierarchical Model. 
+
+A Bayesian Hierarchical Model sets hyperpriors: global priors over the priors for each timeseries. These hyperpriors allow us to share information across the different series, which can lead to better forecasts, especially when some series have very few observations.
+
+To do that, we just need to use `PanelBHLinearEffect` as the `seasonality__linear_effect` parameter in the model. This effect will automatically create a hierarchical model for the linear effects, allowing us to share information across the different series. Also, let us set the `broadcast_mode` to "off" to use a single model to all the series.
+
+```{python}
+
+from prophetverse.effects.linear import PanelBHLinearEffect
+
+from numpyro import distributions as dist
+
+model_hier = model.clone()
+model_hier.set_params(
+    seasonality__linear_effect=PanelBHLinearEffect(
+        scale_hyperprior=dist.HalfNormal(0.1)
+    ),
+    broadcast_mode="effect",
+)
+model_hier.fit(y=y)
+```
+
+```{python}
+
+preds_hier = model_hier.predict(fh=forecast_horizon)
+
+plot_preds(
+    y,
+    preds={
+        "Prophet": preds,
+        "HierarchicalProphet": preds_hier,
+    },
+)
+```

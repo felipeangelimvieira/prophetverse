@@ -123,7 +123,10 @@ class GeometricAdstockEffect(BaseEffect):
         jnp.ndarray
             An array with shape (T, 1) for univariate timeseries.
         """
-        data, ix = data
+        if isinstance(data, tuple):
+            data, ix = data
+        elif isinstance(data, (jnp.ndarray)):
+            ix = jnp.arange(data.shape[0], dtype=jnp.int32)
 
         decay = numpyro.sample("decay", self._decay_prior)
 

@@ -123,4 +123,10 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
                     ("linear", LinearEffect()),
                 ]
             },
+            {
+                "steps": [
+                    ("linear", LinearEffect()),
+                    ("adstock", GeometricAdstockEffect()),
+                ]
+            },
         ]

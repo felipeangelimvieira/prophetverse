@@ -175,7 +175,7 @@ def test_raise_error_when_passing_parameters(parameters):
         Prophetverse(**parameters)
 
 
-@pytest.mark.parametrize("likelihood", ["normal", "gamma", "negbinomial"])
+@pytest.mark.parametrize("likelihood", ["normal", "gamma", "negbinomial", "beta"])
 def test_prophetverse_likelihood_behaviour(likelihood):
     model = Prophetverse(likelihood=likelihood)
     assert isinstance(model._likelihood, _LIKELIHOOD_MODEL_MAP[likelihood])

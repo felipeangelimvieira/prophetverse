@@ -379,7 +379,7 @@ window.Quarto = {
 <p>If you have read the <a href="https://prophetverse.com/the-theory/">theory section</a>, by effect we mean each function <span class="math inline">\(f_i\)</span>. You can implement those custom functions by subclassing the <code>BaseEffect</code> class, and then use them in the <code>Prophetverse</code> model. Some effects are already implemented in the library, and you can find them in the <code>prophetverse.effects</code> module.</p>
 <p>When creating a model instance, effects can be specified through <code>exogenous_effects</code> parameter of the <code>Prophetverse</code> model. This parameter is a list of tuples of three values: the name, the effect object, and a regex to filter columns related to that effect. The regex is what defines <span class="math inline">\(x_i\)</span> in the previous section. The <code>prophetverse.utils.regex</code> module provides some useful functions to create regex patterns for common use cases, include <code>starts_with</code>, <code>ends_with</code>, <code>contains</code>, and <code>no_input_columns</code>.</p>
 <p>Consider the example below, where we create a model with a linear seasonality effect and a custom effect that uses the feature <code>channel1_investment</code> as input and transforms it with a <a href="https://en.wikipedia.org/wiki/Hill_equation_(biochemistry)">hill curve</a>, which is a common curve for capturing diminishing returns.</p>
-<div id="384afa15" class="cell" data-execution_count="1">
+<div id="3f2abc3e" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects <span class="im">import</span> HillEffect, LinearFourierSeasonality</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.sktime <span class="im">import</span> Prophetverse</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.utils.regex <span class="im">import</span> exact, no_input_columns, starts_with</span>
@@ -423,7 +423,7 @@ window.Quarto = {
 <section id="squared-effect-class" class="level3">
 <h3 class="anchored" data-anchor-id="squared-effect-class">Squared Effect Class</h3>
 <p>The <code>SquaredEffect</code> class receives two hyperparameters: the prior distribution for the scale parameter, and the prior distribution for the offset parameter. If no prior is provided, it uses a <code>Gamma(1, 1)</code> for the scale and a <code>Normal(0, 1)</code> for the offset. Note that here we already see an interesting feature of Prophetverse: by adopting a Gamma Prior, we force the effect to be positive. Any other prior with positive support would work as well. If no such constraint is needed, we can use a <code>Normal(0, 1)</code> prior or any other distribution with support in the real line.</p>
-<div id="28550930" class="cell" data-execution_count="2">
+<div id="80c20f94" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Dict, Optional</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
@@ -465,7 +465,7 @@ window.Quarto = {
 <p>The example below is, of course, a toy example, but I hope it illustrates the process of creating a custom effect. We load a synthetic dataset with a squared relationship between the exogenous variable and the target variable, and then we fit a model with the <code>SquaredEffect</code>. The true relationship is 2 * (x - 5) ** 2, and we will see if the model is able to recover it.</p>
 <section id="loading-the-series" class="level3">
 <h3 class="anchored" data-anchor-id="loading-the-series">Loading the Series</h3>
-<div id="44c8214e" class="cell" data-execution_count="3">
+<div id="597345d1" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.split <span class="im">import</span> temporal_train_test_split</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.utils.plotting <span class="im">import</span> plot_series</span>
@@ -589,7 +589,7 @@ window.Quarto = {
 </div>
 <section id="creating-the-model" class="level4">
 <h4 class="anchored" data-anchor-id="creating-the-model">Creating the Model</h4>
-<div id="f8a9342a" class="cell" data-execution_count="4">
+<div id="c7b76db8" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.trend <span class="im">import</span> PiecewiseLinearTrend</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.engine <span class="im">import</span> MAPInferenceEngine</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.sktime <span class="im">import</span> Prophetverse</span>
@@ -613,7 +613,7 @@ window.Quarto = {
 <span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="4">
-<style>#sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b {
+<style>#sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -638,15 +638,15 @@ window.Quarto = {
     }
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b pre {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 pre {
     padding: 0;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b input.sk-hidden--visually {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -658,7 +658,7 @@ window.Quarto = {
     width: 1px;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-dashed-wrapped {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -666,7 +666,7 @@ window.Quarto = {
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-container {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -676,7 +676,7 @@ window.Quarto = {
     position: relative;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-text-repr-fallback {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -692,14 +692,14 @@ window.Quarto = {
 
   /* Parallel-specific style estimator block */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-parallel-item::after {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-parallel {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -707,28 +707,28 @@ window.Quarto = {
     position: relative;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-parallel-item {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-parallel-item:first-child::after {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-parallel-item:last-child::after {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-parallel-item:only-child::after {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-serial {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -746,14 +746,14 @@ window.Quarto = {
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-toggleable {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b label.sk-toggleable__label {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -763,7 +763,7 @@ window.Quarto = {
     text-align: center;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b label.sk-toggleable__label-arrow:before {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -771,13 +771,13 @@ window.Quarto = {
     color: var(--sklearn-color-icon);
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b label.sk-toggleable__label-arrow:hover:before {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-toggleable__content {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -785,27 +785,27 @@ window.Quarto = {
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-toggleable__content pre {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -813,38 +813,38 @@ window.Quarto = {
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-label label.sk-toggleable__label,
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-label label {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-label label.sk-toggleable__label,
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-label:hover label.sk-toggleable__label {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-label label {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-label-container {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-estimator {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -854,7 +854,7 @@ window.Quarto = {
   }
 
   /* on hover */
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b div.sk-estimator:hover {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -911,7 +911,7 @@ window.Quarto = {
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b a.estimator_doc_link {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -926,32 +926,32 @@ window.Quarto = {
   }
 
   /* On hover */
-  #sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b a.estimator_doc_link:hover {
+  #sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-0b015fbb-48d4-40a4-9daa-89fb05d7fc9b" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('exog_effect',
-                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7fb3a3960e50 with batch shape () and event shape ()&gt;,
-                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7fb41cb43ad0 with batch shape () and event shape ()&gt;),
+</style><div id="sk-c6a025e1-4f78-4b76-8189-6ae69bc2ba40" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('exog_effect',
+                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f1bc7b8e790 with batch shape () and event shape ()&gt;,
+                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f1bc7a53c10 with batch shape () and event shape ()&gt;),
                                  '^exogenous$')],
              inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=100,
                                         changepoint_prior_scale=0.1,
-                                        changepoint_range=-100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('65493d57-68c5-4504-8f65-6dcbec85b46f')" type="checkbox"><label for="UUID('65493d57-68c5-4504-8f65-6dcbec85b46f')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('exog_effect',
-                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7fb3a3960e50 with batch shape () and event shape ()&gt;,
-                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7fb41cb43ad0 with batch shape () and event shape ()&gt;),
+                                        changepoint_range=-100))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f0038511-fb85-4e4b-8977-fc84f47a046f')" type="checkbox"><label for="UUID('f0038511-fb85-4e4b-8977-fc84f47a046f')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('exog_effect',
+                                 SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f1bc7b8e790 with batch shape () and event shape ()&gt;,
+                                               scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f1bc7a53c10 with batch shape () and event shape ()&gt;),
                                  '^exogenous$')],
              inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=100,
                                         changepoint_prior_scale=0.1,
-                                        changepoint_range=-100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('7a757173-c2e9-45b1-89ba-b7d83c551014')" type="checkbox"><label for="UUID('7a757173-c2e9-45b1-89ba-b7d83c551014')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.1,
-                     changepoint_range=-100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2a2860c4-6ac7-4a5d-8322-357f544e2c3b')" type="checkbox"><label for="UUID('2a2860c4-6ac7-4a5d-8322-357f544e2c3b')" class="sk-toggleable__label sk-toggleable__label-arrow">SquaredEffect</label><div class="sk-toggleable__content"><pre>SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7fb3a3960e50 with batch shape () and event shape ()&gt;,
-              scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7fb41cb43ad0 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('740350c0-17d4-47a5-900f-15a6beb1c3b0')" type="checkbox"><label for="UUID('740350c0-17d4-47a5-900f-15a6beb1c3b0')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
+                                        changepoint_range=-100))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c95a318e-ef9b-401e-9172-d6c0cebb938d')" type="checkbox"><label for="UUID('c95a318e-ef9b-401e-9172-d6c0cebb938d')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=100, changepoint_prior_scale=0.1,
+                     changepoint_range=-100)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a697b04c-bcac-4d30-8537-6bd59c17c66a')" type="checkbox"><label for="UUID('a697b04c-bcac-4d30-8537-6bd59c17c66a')" class="sk-toggleable__label sk-toggleable__label-arrow">SquaredEffect</label><div class="sk-toggleable__content"><pre>SquaredEffect(offset_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f1bc7b8e790 with batch shape () and event shape ()&gt;,
+              scale_prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f1bc7a53c10 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('99843375-346e-4e5e-b4d6-d29ea8fb0d73')" type="checkbox"><label for="UUID('99843375-346e-4e5e-b4d6-d29ea8fb0d73')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
 <p>To fit and plot, we use always the same interface, from <code>sktime</code> library.</p>
-<div id="50188dd3" class="cell" data-execution_count="5">
+<div id="c89ac7ad" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y_train, X<span class="op">=</span>X_train)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(fh<span class="op">=</span>y_test.index, X<span class="op">=</span>X)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>y_pred.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -969,23 +969,23 @@ window.Quarto = {
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2011-07-15</td>
-<td>31.400700</td>
+<td>31.401440</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2011-07-16</td>
-<td>16.796591</td>
+<td>16.797390</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2011-07-17</td>
-<td>36.026497</td>
+<td>36.026741</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2011-07-18</td>
-<td>16.221268</td>
+<td>16.221848</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2011-07-19</td>
-<td>16.970295</td>
+<td>16.970869</td>
 </tr>
 </tbody>
 </table>
@@ -993,7 +993,7 @@ window.Quarto = {
 </div>
 </div>
 </div>
-<div id="480ebc81" class="cell" data-execution_count="6">
+<div id="12e0c844" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>plot_series(y, y_pred, labels<span class="op">=</span>[<span class="st">"True"</span>, <span class="st">"Predicted"</span>], title<span class="op">=</span><span class="st">"True vs Predicted"</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
@@ -1009,7 +1009,7 @@ window.Quarto = {
 <h4 class="anchored" data-anchor-id="recovering-the-predicted-effect-and-components">Recovering the Predicted Effect and Components</h4>
 <p>This library adds extra methods to the sktime interface, such as <code>predict_components</code>, which behaves similarly to <code>predict</code>, but returns the components of the forecast as components of the output.</p>
 <p>The name of the effect in the output dataframe is equal to the one we have passed as first item in the tuple when creating the model. In this case, the name is “exog_effect”.</p>
-<div id="3c0c7da6" class="cell" data-execution_count="7">
+<div id="e565bf04" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>components <span class="op">=</span> model.predict_components(fh<span class="op">=</span>y.index, X<span class="op">=</span>X)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>components.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
@@ -1029,38 +1029,38 @@ window.Quarto = {
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2010-01-01</td>
-<td>17.593321</td>
-<td>17.405899</td>
-<td>17.539221</td>
-<td>-0.187419</td>
+<td>17.592936</td>
+<td>17.405258</td>
+<td>17.538565</td>
+<td>-0.187683</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2010-01-02</td>
-<td>0.006433</td>
-<td>-0.164711</td>
-<td>-0.247692</td>
-<td>-0.171144</td>
+<td>0.006437</td>
+<td>-0.164972</td>
+<td>-0.247950</td>
+<td>-0.171409</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2010-01-03</td>
-<td>27.817522</td>
-<td>27.662643</td>
-<td>27.589247</td>
-<td>-0.154869</td>
+<td>27.816975</td>
+<td>27.661848</td>
+<td>27.588451</td>
+<td>-0.155136</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">2010-01-04</td>
-<td>10.351620</td>
-<td>10.213025</td>
-<td>10.137894</td>
-<td>-0.138593</td>
+<td>10.351355</td>
+<td>10.212488</td>
+<td>10.137367</td>
+<td>-0.138862</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2010-01-05</td>
-<td>20.049046</td>
-<td>19.926723</td>
-<td>19.955496</td>
-<td>-0.122318</td>
+<td>20.049088</td>
+<td>19.926479</td>
+<td>19.955252</td>
+<td>-0.122589</td>
 </tr>
 </tbody>
 </table>
@@ -1069,7 +1069,7 @@ window.Quarto = {
 </div>
 </div>
 <p>Now, let’s compare it with the true effect. We will plot the true effect and the predicted effect in the same plot.</p>
-<div id="0c0c1df1" class="cell" data-execution_count="8">
+<div id="8eeb2ba7" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots()</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ax.scatter(</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    X[<span class="st">"exogenous"</span>], <span class="dv">2</span> <span class="op">*</span> (X[<span class="st">"exogenous"</span>] <span class="op">-</span> <span class="dv">5</span>) <span class="op">**</span> <span class="dv">2</span>, color<span class="op">=</span><span class="st">"black"</span>, label<span class="op">=</span><span class="st">"True effect"</span></span>

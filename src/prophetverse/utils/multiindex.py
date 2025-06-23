@@ -1,7 +1,13 @@
 """Utilities for working with multi-indexed DataFrames."""
 
 import pandas as pd
-from sktime.transformations.hierarchical.reconcile import _get_s_matrix
+from sktime import __version__
+
+if __version__ < "0.37.1":
+    from sktime.transformations.hierarchical.reconcile import _get_s_matrix
+else:
+    from sktime.transformations.hierarchical.reconcile._reconcile import _get_s_matrix
+
 
 __all__ = [
     "get_bottom_series_idx",

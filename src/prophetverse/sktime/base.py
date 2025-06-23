@@ -970,7 +970,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             if effect.get_tag("applies_to") == "X":
                 _X = X[columns]
             elif effect.get_tag("applies_to") == "y":
-                _X = y[columns]
+                _X = y.copy()
 
             data: Dict[str, jnp.ndarray] = effect.transform(_X, fh=fh)
             out[effect_name] = data

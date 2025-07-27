@@ -224,7 +224,9 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         predictive_samples = self.predict_components(fh=fh, X=X)
         mean = predictive_samples["mean"]
-        y_pred = mean.to_frame(self._y.columns[0])
+
+        target_names = self._y_metadata["feature_names"]
+        y_pred = mean.to_frame(target_names[0])
 
         return self._postprocess_output(y_pred)
 

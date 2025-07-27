@@ -225,6 +225,7 @@ class BaseBayesianForecaster(BaseForecaster):
         predictive_samples = self.predict_components(fh=fh, X=X)
         mean = predictive_samples["mean"]
 
+        # TODO: can `feature_names` be empty?
         target_names = self._y_metadata["feature_names"]
         y_pred = mean.to_frame(target_names[0])
 

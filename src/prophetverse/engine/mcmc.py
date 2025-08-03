@@ -4,17 +4,53 @@ The classes in this module take a model, the data and perform inference using Nu
 """
 
 from operator import attrgetter
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Sequence, Tuple, Union
 
 import jax.numpy as jnp
-from jax.random import PRNGKey
+import numpy as np
+from jax.random import PRNGKey, split
 from numpyro.diagnostics import summary
+from numpyro.handlers import condition
 from numpyro.infer import MCMC, NUTS, Predictive
 from numpyro.infer.initialization import init_to_mean
 from numpyro.infer.mcmc import MCMCKernel
 
 from prophetverse.engine.base import BaseInferenceEngine
 from prophetverse.engine.utils import assert_mcmc_converged
+
+
+def _get_posterior_samples(
+    rng_key, kernel, num_samples, num_warmup, num_chains, progress_bar, **kw
+) -> Tuple[Dict[str, jnp.ndarray], Dict[str, Dict[str, jnp.ndarray]]]:
+    mcmc_ = MCMC(
+        kernel,
+        num_samples=num_samples,
+        num_warmup=num_warmup,
+        num_chains=num_chains,
+        progress_bar=progress_bar,
+    )
+    mcmc_.run(rng_key, **kw)
+
+    group_by_chain = True
+    samples = mcmc_.get_samples(group_by_chain=group_by_chain)
+
+    # NB: we fetch sample sites to avoid calculating convergence
+    # check on deterministic sites, basically same approach
+    # as in `mcmc.print_summary`.
+    sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
+
+    # NB: we keep it simple and only calculate a summary check whenever it
+    # satisfies the requirements of split_gelman_rubin. As it's not likely
+    # users will use less than four samples.
+    if num_samples >= 4:
+        filtered_samples = {k: v for k, v in samples.items() if k in sites}
+        summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
+    else:
+        summary_ = {}
+
+    flattened_samples = {k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()}
+
+    return flattened_samples, summary_
 
 
 class MCMCInferenceEngine(BaseInferenceEngine):
@@ -115,51 +151,15 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         self
             The MCMCInferenceEngine object.
         """
-
-        def get_posterior_samples(
-            rng_key, kernel, num_samples, num_warmup, num_chains, progress_bar, **kw
-        ) -> Tuple[Dict[str, jnp.ndarray], Dict[str, Dict[str, jnp.ndarray]]]:
-            mcmc_ = MCMC(
-                kernel,
-                num_samples=num_samples,
-                num_warmup=num_warmup,
-                num_chains=num_chains,
-                progress_bar=progress_bar,
-            )
-            mcmc_.run(rng_key, **kw)
-
-            group_by_chain = True
-            samples = mcmc_.get_samples(group_by_chain=group_by_chain)
-
-            # NB: we fetch sample sites to avoid calculating convergence
-            # check on deterministic sites, basically same approach
-            # as in `mcmc.print_summary`.
-            sites = attrgetter(mcmc_._sample_field)(mcmc_._last_state)
-
-            # NB: we keep it simple and only calculate a summary check whenever it
-            # satisfies the requirements of split_gelman_rubin. As it's not likely
-            # users will use less than four samples.
-            if num_samples >= 4:
-                filtered_samples = {k: v for k, v in samples.items() if k in sites}
-                summary_ = summary(filtered_samples, group_by_chain=group_by_chain)
-            else:
-                summary_ = {}
-
-            flattened_samples = {
-                k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()
-            }
-
-            return flattened_samples, summary_
-
-        kernel_ = self.build_kernel(self.model_)
-        self.posterior_samples_, self.summary_ = get_posterior_samples(
+        kernel = self.build_kernel(self.model_)
+        self.posterior_samples_, self.summary_ = _get_posterior_samples(
             self._rng_key,
-            kernel_,
+            kernel,
             num_samples=self.num_samples,
             num_warmup=self.num_warmup,
             num_chains=self.num_chains,
             progress_bar=self.progress_bar,
-            **kwargs
+            **kwargs,
         )
 
         if self.r_hat and self.summary_:
@@ -189,3 +189,46 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         self.samples_predictive_ = predictive(self._rng_key, **kwargs)
         return self.samples_predictive_
+
+    def _update(self, site_names=None, mode="mean", **kwargs):
+        assert (
+            self.posterior_samples_ is not None
+        ), "Can only update from a fitted instance!"
+
+        if site_names is None:
+            return self.infer(self.model_, **kwargs)
+
+        posterior_samples = {
+            k: v for k, v in self.posterior_samples_.items() if k not in site_names
+        }
+
+        if mode == "mean":
+            to_condition_on = {
+                k: np.mean(v, axis=0) for k, v in posterior_samples.items()
+            }
+        else:
+            raise NotImplementedError(f"currently does not support '{mode}'!")
+
+        conditioned_model = condition(self.model_, data=to_condition_on)
+        kernel = self.build_kernel(conditioned_model)
+
+        update_key, _ = split(self._rng_key)
+
+        # TODO: support full mode by sampling over full posterior
+        update_samples, updated_summary = _get_posterior_samples(
+            update_key,
+            kernel,
+            num_samples=self.num_samples,
+            num_warmup=self.num_warmup,
+            num_chains=self.num_chains,
+            progress_bar=self.progress_bar,
+            **kwargs,
+        )
+
+        if self.r_hat and updated_summary:
+            assert_mcmc_converged(update_samples, self.r_hat)
+
+        posterior_samples.update(update_samples)
+        self.posterior_samples_ = posterior_samples
+
+        return self

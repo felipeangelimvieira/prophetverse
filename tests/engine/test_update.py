@@ -20,7 +20,7 @@ def model(y: np.ndarray):
     return
 
 
-@pytest.mark.parametrize("mode", ["mean"])
+@pytest.mark.parametrize("mode", ["mean", "full"])
 def test_update_mcmc(data, mode):
     engine = MCMCInferenceEngine(
         10,
@@ -39,6 +39,9 @@ def test_update_mcmc(data, mode):
     engine.update(["mean"], mode=mode, y=new_data)
 
     new_samples = engine.posterior_samples_
+
+    for k, v in new_samples.items():
+        assert k.shape == original_samples[k].shape
 
     assert new_samples["mean"].mean() > original_samples["mean"].mean()
     assert np.allclose(new_samples["scale"].mean(), original_samples["scale"].mean())

@@ -2,12 +2,13 @@
 
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
-
+from functools import partial
 from operator import attrgetter
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
+from jax import vmap
 from jax.random import PRNGKey, split
 from numpyro.diagnostics import summary
 from numpyro.handlers import condition
@@ -51,6 +52,27 @@ def _get_posterior_samples(
     flattened_samples = {k: v.reshape((-1,) + v.shape[2:]) for k, v in samples.items()}
 
     return flattened_samples, summary_
+
+
+def _update_posterior(rng_key, model, kernel_builder, to_condition_on, num_samples, num_warmup, num_chains, progress_bar, **kwargs):
+    conditioned_model = condition(model, data=to_condition_on)
+    kernel = kernel_builder(conditioned_model)
+
+    update_key, _ = split(rng_key)
+
+    # TODO: support full mode by sampling over full posterior, i.e. generate one
+    #  posterior sample per posterior sample
+    update_samples, _ = _get_posterior_samples(
+        update_key,
+        kernel,
+        num_samples=num_samples,
+        num_warmup=num_warmup,
+        num_chains=num_chains,
+        progress_bar=progress_bar,
+        **kwargs,
+    )
+
+    return update_samples
 
 
 class MCMCInferenceEngine(BaseInferenceEngine):
@@ -204,30 +226,34 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         if mode == "mean":
             to_condition_on = {
-                k: np.mean(v, axis=0) for k, v in posterior_samples.items()
+                k: np.mean(v, axis=0, keepdims=True) for k, v in posterior_samples.items()
             }
+            num_samples = self.num_samples
+            num_chains = self.num_chains
         else:
-            raise NotImplementedError(f"currently does not support '{mode}'!")
+            to_condition_on = posterior_samples
+            num_samples = 1 * self.num_chains
+            num_chains = 1
 
-        conditioned_model = condition(self.model_, data=to_condition_on)
-        kernel = self.build_kernel(conditioned_model)
-
-        update_key, _ = split(self._rng_key)
-
-        # TODO: support full mode by sampling over full posterior, i.e. generate one
-        #  posterior sample per posterior sample
-        update_samples, updated_summary = _get_posterior_samples(
-            update_key,
-            kernel,
-            num_samples=self.num_samples,
+        fun = partial(
+            _update_posterior,
+            rng_key=self._rng_key,
+            model=self.model_,
+            kernel_builder=self.build_kernel,
+            num_samples=num_samples,
             num_warmup=self.num_warmup,
-            num_chains=self.num_chains,
+            num_chains=num_chains,
             progress_bar=self.progress_bar,
             **kwargs,
         )
 
-        if self.r_hat and updated_summary:
-            assert_mcmc_converged(update_samples, self.r_hat)
+        if do_vmap := (mode == "full"):
+            fun = vmap(fun)
+
+        update_samples = fun(to_condition_on=to_condition_on)
+
+        if do_vmap:
+            update_samples = {k: np.reshape(v, (-1,) + v.shape[2:]) for k, v in update_samples.items()}
 
         posterior_samples.update(update_samples)
         self.posterior_samples_ = posterior_samples

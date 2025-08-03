@@ -41,7 +41,7 @@ def test_update_mcmc(data, mode):
     new_samples = engine.posterior_samples_
 
     for k, v in new_samples.items():
-        assert k.shape == original_samples[k].shape
+        assert v.shape == original_samples[k].shape
 
     assert new_samples["mean"].mean() > original_samples["mean"].mean()
     assert np.allclose(new_samples["scale"].mean(), original_samples["scale"].mean())

@@ -214,7 +214,8 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         update_key, _ = split(self._rng_key)
 
-        # TODO: support full mode by sampling over full posterior
+        # TODO: support full mode by sampling over full posterior, i.e. generate one
+        #  posterior sample per posterior sample
         update_samples, updated_summary = _get_posterior_samples(
             update_key,
             kernel,

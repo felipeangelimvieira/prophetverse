@@ -16,18 +16,14 @@ class BaseInferenceEngine(BaseObject):
 
     Parameters
     ----------
-    model : Callable
-        The model to be used for inference.
     rng_key : Optional[jax.random.PRNGKey]
         The random number generator key. If not provided, a default key with value 0
         will be used.
 
     Attributes
     ----------
-    model : Callable
+    model_ : Callable
         The model used for inference.
-    rng_key : jax.random.PRNGKey
-        The random number generator key.
     """
 
     _tags = {
@@ -35,11 +31,12 @@ class BaseInferenceEngine(BaseObject):
     }
 
     def __init__(self, rng_key=None):
-        self.rng_key = rng_key
-
         if rng_key is None:
             rng_key = jax.random.PRNGKey(0)
+
         self._rng_key = rng_key
+
+        super().__init__()
 
     # pragma: no cover
     def infer(self, model, **kwargs):
@@ -48,6 +45,8 @@ class BaseInferenceEngine(BaseObject):
 
         Parameters
         ----------
+        model: Callable
+            Model to perform inference for.
         **kwargs
             Additional keyword arguments to be passed to the model.
 
@@ -106,20 +105,21 @@ class BaseInferenceEngine(BaseObject):
         """
         raise NotImplementedError("predict method must be implemented in subclass")
 
+    # pragma: no cover
     def update(
         self,
         site_names: Sequence[str] = None,
         mode: Literal["full", "mean"] = "mean",
         **kwargs
-    ):
+    ):  # pragma: no cover
         """
         Update some or all samples.
 
         Parameters
         ----------
-        site_names:
+        site_names : Sequence[str]
             Site names to update.
-        mode:
+        mode : Literal["full", "mean"], default "mean"
             Whether to update for each sample, or use mean of posterior samples not in ``site_names``.
         **kwargs
             Additional keyword arguments to be passed to the model.
@@ -130,7 +130,11 @@ class BaseInferenceEngine(BaseObject):
         """
         return self._update(site_names or [], mode, **kwargs)
 
+    # pragma: no cover
     def _update(
         self, site_names: Sequence[str], mode: Literal["full", "mean"], **kwargs
-    ):
-        raise NotImplementedError("update method must be implemented in subclass")
+    ): # pragma: no cover
+        """
+        See :meth:`update`.
+        """
+        return self.infer(self.model_, **kwargs)

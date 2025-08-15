@@ -7,6 +7,7 @@ prophetverse library.
 
 from .multivariate import HierarchicalProphet
 from .univariate import Prophet, ProphetGamma, ProphetNegBinomial, Prophetverse
+from . import intermittent_demand
 
 __all__ = [
     "Prophet",
@@ -14,4 +15,5 @@ __all__ = [
     "ProphetNegBinomial",
     "Prophetverse",
     "HierarchicalProphet",
+    "intermittent_demand",
 ]

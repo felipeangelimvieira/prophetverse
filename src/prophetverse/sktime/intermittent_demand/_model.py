@@ -19,19 +19,15 @@ from numpyro.distributions.transforms import (
     RecursiveLinearTransform,
     SigmoidTransform,
 )
-from prophetverse.sktime.base import BaseBayesianForecaster
-from skpro.distributions import (
-    Hurdle as skpro_Hurdle,
-)
-from skpro.distributions import (
-    NegativeBinomial as skpro_NegativeBinomial,
-)
+from skpro.distributions import Hurdle as skpro_Hurdle
+from skpro.distributions import NegativeBinomial as skpro_NegativeBinomial
 from skpro.distributions import Poisson as skpro_Poisson
-
 from sktime.forecasting.base import ForecastingHorizon
 
-from ._truncated_discrete import TruncatedDiscrete
+from prophetverse.sktime.base import BaseBayesianForecaster
+
 from ._hurdle_distribution import HurdleDistribution
+from ._truncated_discrete import TruncatedDiscrete
 
 
 def _sample_components(
@@ -231,7 +227,7 @@ class HurdleDemandForecaster(_BaseProbabilisticDemandForecaster):
     with (measured in terms of R-hat), so it is recommended to use dense masses for
     regression parameters should the default inference engine not work well.
 
-        Examples
+    Examples
     --------
     >>> from prophetverse.sktime.intermittent_demand import HurdleDemandForecaster
     >>> from prophetverse.engine import MCMCInferenceEngine
@@ -353,7 +349,7 @@ class HurdleDemandForecaster(_BaseProbabilisticDemandForecaster):
 
         raise NotImplementedError(f"Unknown family: {self.family}!")
 
-    def model(  # noqa: D102
+    def model(
         self,
         length: int,
         y: np.ndarray,
@@ -361,7 +357,7 @@ class HurdleDemandForecaster(_BaseProbabilisticDemandForecaster):
         mask: np.ndarray,
         oos: int = 0,
         index: np.ndarray = None,
-    ):
+    ):  # noqa: D102
         with numpyro.handlers.scope(prefix="probability"):
             prob = self._sample_probability(length, X, oos=oos)
 
@@ -398,7 +394,7 @@ class HurdleDemandForecaster(_BaseProbabilisticDemandForecaster):
 
         return
 
-    def predict_components(self, fh, X=None):
+    def predict_components(self, fh, X=None):  # noqa: D102
         if self._is_vectorized:
             return self._vectorize_predict_method("predict_components", X=X, fh=fh)
 

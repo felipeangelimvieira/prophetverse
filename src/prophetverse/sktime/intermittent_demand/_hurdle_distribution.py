@@ -58,7 +58,7 @@ class HurdleDistribution(Distribution):
         is_zero = value == 0
         return jnp.where(is_zero, log_prob_zero, log_prob_positive)
 
-    def sample(self, key, sample_shape=()):
+    def sample(self, key, sample_shape=()):  # noqa: D102
         key_hurdle, key_positive = jax.random.split(key)
         is_positive = Bernoulli(probs=self.prob_gt_zero).sample(
             key_hurdle, sample_shape

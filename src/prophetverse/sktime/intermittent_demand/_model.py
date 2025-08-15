@@ -192,14 +192,14 @@ class HurdleDemandForecaster(_BaseProbabilisticDemandForecaster):
             \end{cases}
     where
         .. math::
-            \begin{split}
+            \begin{cases}
                 I_t &\sim \mathcal{B}(1.0 - p_t), \\
                 \log{r_t} &= \beta_r \cdot X_t + \Phi(t, r_{t - 1}), \\
                 \sigma^{-1}(p_t) &= \beta_p \cdot X_t + \Phi \left ( t,
                 \sigma^{-1}(p_t) \right ), \\
                 \Phi_i(t, x) &= \phi_i x + \eta_{t, i}, \eta \sim \mathcal{N}(0,
                 \sigma^2_i),
-            \end{split}
+            \end{cases}
     :math:`f` denotes a density parameterized by at least a location parameter,
     :math:`X` is the exogenous variables, and :math:`\sigma^{-1}` denotes the logit
     function. The time varying component can be toggled on or off depending on the

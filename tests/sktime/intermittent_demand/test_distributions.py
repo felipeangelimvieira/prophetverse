@@ -1,6 +1,6 @@
 import pytest
 
-from prophetverse.sktime.intermittent_demand._truncated_discrete import TruncatedDiscrete
+from prophetverse.distributions import TruncatedDiscrete
 
 
 @pytest.mark.parametrize(

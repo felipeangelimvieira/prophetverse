@@ -1,9 +1,11 @@
+"""Hurdle distribution implementation."""
+
 import jax
 import jax.numpy as jnp
 from numpyro.distributions import Bernoulli, Distribution, constraints
 from numpyro.distributions.util import validate_sample
 
-from ._truncated_discrete import TruncatedDiscrete
+from prophetverse.distributions.truncated_discrete import TruncatedDiscrete
 
 
 class HurdleDistribution(Distribution):

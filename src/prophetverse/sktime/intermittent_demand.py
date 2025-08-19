@@ -24,10 +24,8 @@ from skpro.distributions import NegativeBinomial as skpro_NegativeBinomial
 from skpro.distributions import Poisson as skpro_Poisson
 from sktime.forecasting.base import ForecastingHorizon
 
+from prophetverse.distributions import HurdleDistribution, TruncatedDiscrete
 from prophetverse.sktime.base import BaseBayesianForecaster
-
-from ._hurdle_distribution import HurdleDistribution
-from ._truncated_discrete import TruncatedDiscrete
 
 
 def _sample_components(
@@ -82,7 +80,9 @@ def _sample_components(
                 eps_oos,
                 [
                     AffineTransform(0.0, sigma),
-                    RecursiveLinearTransform(transition_matrix=transition_matrix, initial_value=initial_value),
+                    RecursiveLinearTransform(
+                        transition_matrix=transition_matrix, initial_value=initial_value
+                    ),
                 ],
             ),
         )

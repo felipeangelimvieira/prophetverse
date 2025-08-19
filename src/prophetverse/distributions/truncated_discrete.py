@@ -1,3 +1,5 @@
+"""Truncated discrete distribution."""
+
 import jax
 import jax.numpy as jnp
 import numpyro.distributions as dist

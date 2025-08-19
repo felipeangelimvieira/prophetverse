@@ -73,7 +73,7 @@ def _sample_components(
     )
 
     if oos > 0:
-        mean = jnp.eye(oos, 1) * time_varying_component[-1] * reversion_speed
+        initial_value = time_varying_component[-1]
         eps_oos = Normal().expand((oos, 1)).to_event(1)
 
         x_oos = numpyro.sample(
@@ -81,8 +81,8 @@ def _sample_components(
             TransformedDistribution(
                 eps_oos,
                 [
-                    AffineTransform(mean, sigma),
-                    RecursiveLinearTransform(transition_matrix=transition_matrix),
+                    AffineTransform(0.0, sigma),
+                    RecursiveLinearTransform(transition_matrix=transition_matrix, initial_value=initial_value),
                 ],
             ),
         )

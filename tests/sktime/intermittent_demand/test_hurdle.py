@@ -7,7 +7,6 @@ from sktime.datasets import load_PBS_dataset
 from prophetverse.sktime.intermittent_demand import HurdleDemandForecaster
 
 
-@pytest.mark.smoke
 @pytest.mark.parametrize("family", ["poisson", "negative-binomial"])
 @pytest.mark.parametrize("time_varying", [False, "rw"])
 @pytest.mark.parametrize(

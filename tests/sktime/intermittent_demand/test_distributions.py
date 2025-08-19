@@ -3,7 +3,6 @@ import pytest
 from prophetverse.sktime.intermittent_demand._truncated_discrete import TruncatedDiscrete
 
 
-@pytest.mark.smoke
 @pytest.mark.parametrize(
     "distribution",
     [

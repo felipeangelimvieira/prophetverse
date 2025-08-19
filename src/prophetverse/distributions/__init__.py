@@ -1,7 +1,7 @@
-"""Custom numpyro distributions for the ProphetVerse package.
+"""Custom numpyro distributions.
 
 This module contains custom distributions that can be used as likelihoods or priors
-for the models in the ProphetVerse package.
+for models.
 """
 
 from .gamma_reparam import GammaReparametrized

@@ -4,9 +4,10 @@ The classes in this module take a model, the data and perform inference using Nu
 """
 
 from collections.abc import Sequence
-from typing import Literal
+from typing import Literal, Optional
 
 import jax
+from jax.random import PRNGKey
 from skbase.base import BaseObject
 
 
@@ -22,6 +23,9 @@ class BaseInferenceEngine(BaseObject):
 
     Attributes
     ----------
+    rng_key : jax.random.PRNGKey
+        Random number generator key.
+
     model_ : Callable
         The model used for inference.
     """
@@ -30,13 +34,18 @@ class BaseInferenceEngine(BaseObject):
         "object_type": "inference_engine",
     }
 
-    def __init__(self, rng_key=None):
+    def __init__(self, rng_key: Optional[PRNGKey] = None):
         if rng_key is None:
             rng_key = jax.random.PRNGKey(0)
 
         self._rng_key = rng_key
 
         super().__init__()
+
+    @property
+    def rng_key(self) -> PRNGKey:
+        """The random number generator key."""
+        return self._rng_key
 
     # pragma: no cover
     def infer(self, model, **kwargs):
@@ -108,7 +117,7 @@ class BaseInferenceEngine(BaseObject):
     # pragma: no cover
     def update(
         self,
-        site_names: Sequence[str] = None,
+        site_names: Optional[Sequence[str]] = None,
         mode: Literal["full", "mean"] = "mean",
         **kwargs
     ):  # pragma: no cover

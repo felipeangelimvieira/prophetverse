@@ -55,6 +55,7 @@ def _get_posterior_samples(
     return flattened_samples, summary_
 
 
+# NB: we use separate function s.t. we may vmap over it
 def _update_posterior(
     rng_key,
     model,
@@ -262,14 +263,15 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         if do_vmap := (mode == "full"):
             fun = vmap(fun)
 
-        update_samples = fun(to_condition_on=to_condition_on)
+        updated_posterior = fun(to_condition_on=to_condition_on)
 
         if do_vmap:
-            update_samples = {
-                k: np.reshape(v, (-1,) + v.shape[2:]) for k, v in update_samples.items()
+            updated_posterior = {
+                k: np.reshape(v, (-1,) + v.shape[2:])
+                for k, v in updated_posterior.items()
             }
 
-        posterior_samples.update(update_samples)
+        posterior_samples.update(updated_posterior)
         self.posterior_samples_ = posterior_samples
 
         return self

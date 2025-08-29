@@ -3,7 +3,12 @@ import numpyro
 import pytest
 from numpyro.distributions import HalfNormal, Normal
 
-from prophetverse import MCMCInferenceEngine
+from prophetverse import MCMCInferenceEngine, MAPInferenceEngine
+
+
+def engines():
+    yield MAPInferenceEngine(num_steps=20, progress_bar=False)
+    yield MCMCInferenceEngine(10, 20, progress_bar=False)
 
 
 @pytest.fixture
@@ -20,14 +25,9 @@ def model(y: np.ndarray):
     return
 
 
+@pytest.mark.parametrize("engine", engines())
 @pytest.mark.parametrize("mode", ["mean", "full"])
-def test_update_mcmc(data, mode):
-    engine = MCMCInferenceEngine(
-        10,
-        20,
-        progress_bar=False,
-    )
-
+def test_update_inference_engine(engine, data, mode):
     # fit
     engine.infer(model, y=data)
     original_samples = engine.posterior_samples_

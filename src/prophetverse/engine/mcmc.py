@@ -2,6 +2,7 @@
 
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
+
 from functools import partial
 from operator import attrgetter
 from typing import Callable, Dict, List, Tuple, Union
@@ -54,7 +55,17 @@ def _get_posterior_samples(
     return flattened_samples, summary_
 
 
-def _update_posterior(rng_key, model, kernel_builder, to_condition_on, num_samples, num_warmup, num_chains, progress_bar, **kwargs):
+def _update_posterior(
+    rng_key,
+    model,
+    kernel_builder,
+    to_condition_on,
+    num_samples,
+    num_warmup,
+    num_chains,
+    progress_bar,
+    **kwargs,
+):
     conditioned_model = condition(model, data=to_condition_on)
     kernel = kernel_builder(conditioned_model)
 
@@ -226,7 +237,8 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         if mode == "mean":
             to_condition_on = {
-                k: np.mean(v, axis=0, keepdims=True) for k, v in posterior_samples.items()
+                k: np.mean(v, axis=0, keepdims=True)
+                for k, v in posterior_samples.items()
             }
             num_samples = self.num_samples
             num_chains = self.num_chains
@@ -253,7 +265,9 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         update_samples = fun(to_condition_on=to_condition_on)
 
         if do_vmap:
-            update_samples = {k: np.reshape(v, (-1,) + v.shape[2:]) for k, v in update_samples.items()}
+            update_samples = {
+                k: np.reshape(v, (-1,) + v.shape[2:]) for k, v in update_samples.items()
+            }
 
         posterior_samples.update(update_samples)
         self.posterior_samples_ = posterior_samples

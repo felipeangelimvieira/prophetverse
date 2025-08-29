@@ -221,9 +221,6 @@ class MAPInferenceEngine(BaseInferenceEngine):
                 "Only 'mean' mode is supported for MAPInferenceEngine. Ignoring the provided mode."
             )
 
-        if not site_names:
-            return self.infer(self.model_, **kwargs)
-
         to_condition_on = {
             k: v for k, v in self.posterior_samples_.items() if k not in site_names
         }

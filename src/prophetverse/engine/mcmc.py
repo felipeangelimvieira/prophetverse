@@ -229,9 +229,6 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             self.posterior_samples_ is not None
         ), "Can only update from a fitted instance!"
 
-        if not site_names:
-            return self.infer(self.model_, **kwargs)
-
         posterior_samples = {
             k: v for k, v in self.posterior_samples_.items() if k not in site_names
         }

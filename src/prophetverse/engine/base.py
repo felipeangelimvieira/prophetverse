@@ -128,12 +128,16 @@ class BaseInferenceEngine(BaseObject):
         -------
         Nothing.
         """
-        return self._update(site_names or [], mode, **kwargs)
+
+        if site_names is None or not site_names:
+            return self.infer(self.model_, **kwargs)
+
+        return self._update(site_names, mode, **kwargs)
 
     # pragma: no cover
     def _update(
         self, site_names: Sequence[str], mode: Literal["full", "mean"], **kwargs
-    ): # pragma: no cover
+    ):  # pragma: no cover
         """
         See :meth:`update`.
         """

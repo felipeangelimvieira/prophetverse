@@ -4,7 +4,7 @@ The classes in this module take a model, the data and perform inference using Nu
 """
 
 from collections.abc import Sequence
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 import jax
 from jax.random import PRNGKey
@@ -34,7 +34,7 @@ class BaseInferenceEngine(BaseObject):
         "object_type": "inference_engine",
     }
 
-    def __init__(self, rng_key: Optional[PRNGKey] = None):
+    def __init__(self, rng_key=None):
         if rng_key is None:
             rng_key = jax.random.PRNGKey(0)
 
@@ -47,12 +47,10 @@ class BaseInferenceEngine(BaseObject):
         """The random number generator key."""
         return self._rng_key
 
+    # TODO: fix type hinting and check
     @rng_key.setter
-    def rng_key(self, x: PRNGKey):
+    def rng_key(self, x: Any):
         """Sets the random number generator key."""
-        if not isinstance(x, PRNGKey):
-            raise TypeError("rng_key must be a jax.random.PRNGKey")
-
         self._rng_key = x
         return
 

@@ -3,10 +3,14 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
-from typing import Optional
+import warnings
+from functools import partial
+from typing import Literal, Optional, Sequence
 
 import jax.numpy as jnp
 import numpyro
+from jax.random import split
+from numpyro.handlers import condition
 from numpyro.infer import SVI, Trace_ELBO
 from numpyro.infer.autoguide import AutoDelta
 from numpyro.infer.initialization import init_to_mean
@@ -22,6 +26,33 @@ from prophetverse.utils.deprecation import deprecation_warning
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
 DEFAULT_PROGRESS_BAR = False
+
+
+def _fit_svi(
+    rng_key,
+    model,
+    guide,
+    optimizer,
+    num_steps,
+    progress_bar,
+    stable_update,
+    forward_mode_differentiation,
+    **kwargs,
+) -> SVIRunResult:
+    svi_ = SVI(
+        model,
+        guide,
+        optimizer,
+        loss=Trace_ELBO(),
+    )
+    return svi_.run(
+        rng_key=rng_key,
+        progress_bar=progress_bar,
+        stable_update=stable_update,
+        num_steps=num_steps,
+        forward_mode_differentiation=forward_mode_differentiation,
+        **kwargs,
+    )
 
 
 class MAPInferenceEngine(BaseInferenceEngine):
@@ -115,33 +146,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         """
         self.guide_ = AutoDelta(self.model_, init_loc_fn=self._init_loc_fn)
 
-        def get_result(
-            rng_key,
-            model,
-            guide,
-            optimizer,
-            num_steps,
-            progress_bar,
-            stable_update,
-            forward_mode_differentiation,
-            **kwargs,
-        ) -> SVIRunResult:
-            svi_ = SVI(
-                model,
-                guide,
-                optimizer,
-                loss=Trace_ELBO(),
-            )
-            return svi_.run(
-                rng_key=rng_key,
-                progress_bar=progress_bar,
-                stable_update=stable_update,
-                num_steps=num_steps,
-                forward_mode_differentiation=forward_mode_differentiation,
-                **kwargs,
-            )
-
-        self.run_results_: SVIRunResult = get_result(
+        self.run_results_: SVIRunResult = _fit_svi(
             self._rng_key,
             self.model_,
             self.guide_,
@@ -205,6 +210,51 @@ class MAPInferenceEngine(BaseInferenceEngine):
         )
         self.samples_ = predictive(rng_key=self._rng_key, **kwargs)
         return self.samples_
+
+    def _update(self, site_names=None, mode="mean", **kwargs):
+        assert (
+            self.posterior_samples_ is not None
+        ), "Can only update from a fitted instance!"
+
+        if mode != "mean":
+            warnings.warn(
+                "Only 'mean' mode is supported for MAPInferenceEngine. Ignoring the provided mode."
+            )
+
+        if site_names is None:
+            return self.infer(self.model_, **kwargs)
+
+        to_condition_on = {
+            k: v for k, v in self.posterior_samples_.items() if k not in site_names
+        }
+
+        conditioned_model = condition(self.model_, data=to_condition_on)
+        temp_guide = AutoDelta(conditioned_model, init_loc_fn=self._init_loc_fn)
+        rng_key, _ = split(self._rng_key)
+
+        # NB: not sure if we should overwrite, keep or simply discard the results?
+        temp_results: SVIRunResult = _fit_svi(
+            rng_key,
+            conditioned_model,
+            temp_guide,
+            self._optimizer.create_optimizer(),
+            self._num_steps,
+            stable_update=self.stable_update,
+            progress_bar=self.progress_bar,
+            forward_mode_differentiation=self.forward_mode_differentiation,
+            **kwargs,
+        )
+
+        self.raise_error_if_nan_loss(temp_results)
+
+        updated_posterior = temp_guide.sample_posterior(
+            self._rng_key, params=temp_results.params, **kwargs
+        )
+
+        updated_posterior.update(to_condition_on)
+        self.posterior_samples_ = updated_posterior
+
+        return self
 
     @classmethod
     def get_test_params(*args, **kwargs):

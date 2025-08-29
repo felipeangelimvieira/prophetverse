@@ -130,6 +130,9 @@ class MAPInferenceEngine(BaseInferenceEngine):
             )
             self._num_steps = 1
 
+    def _generate_guide(self, model):
+        return AutoDelta(model, init_loc_fn=self._init_loc_fn)
+
     def _infer(self, **kwargs):
         """
         Perform MAP inference.
@@ -144,7 +147,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self
             The updated MAPInferenceEngine object.
         """
-        self.guide_ = AutoDelta(self.model_, init_loc_fn=self._init_loc_fn)
+        self.guide_ = self._optimizer.infer(self.model_)
 
         self.run_results_: SVIRunResult = _fit_svi(
             self._rng_key,
@@ -226,7 +229,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         }
 
         conditioned_model = condition(self.model_, data=to_condition_on)
-        temp_guide = AutoDelta(conditioned_model, init_loc_fn=self._init_loc_fn)
+        temp_guide = self._generate_guide(conditioned_model)
         rng_key, _ = split(self._rng_key)
 
         # NB: not sure if we should overwrite, keep or simply discard the results?

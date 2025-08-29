@@ -240,10 +240,12 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             }
             num_samples = self.num_samples
             num_chains = self.num_chains
-        else:
+        elif mode == "full":
             to_condition_on = posterior_samples
             num_samples = 1 * self.num_chains
             num_chains = 1
+        else:
+            raise ValueError(f"Unknown mode '{mode}'!")
 
         fun = partial(
             _update_posterior,

@@ -224,12 +224,12 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         self.samples_predictive_ = predictive(self._rng_key, **kwargs)
         return self.samples_predictive_
 
-    def _update(self, site_names=None, mode="mean", **kwargs):
+    def _update(self, site_names, mode="mean", **kwargs):
         assert (
             self.posterior_samples_ is not None
         ), "Can only update from a fitted instance!"
 
-        if site_names is None:
+        if not site_names:
             return self.infer(self.model_, **kwargs)
 
         posterior_samples = {

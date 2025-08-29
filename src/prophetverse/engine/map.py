@@ -211,7 +211,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.samples_ = predictive(rng_key=self._rng_key, **kwargs)
         return self.samples_
 
-    def _update(self, site_names=None, mode="mean", **kwargs):
+    def _update(self, site_names, mode="mean", **kwargs):
         assert (
             self.posterior_samples_ is not None
         ), "Can only update from a fitted instance!"
@@ -221,7 +221,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
                 "Only 'mean' mode is supported for MAPInferenceEngine. Ignoring the provided mode."
             )
 
-        if site_names is None:
+        if not site_names:
             return self.infer(self.model_, **kwargs)
 
         to_condition_on = {

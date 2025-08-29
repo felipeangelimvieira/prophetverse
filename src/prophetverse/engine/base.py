@@ -43,7 +43,7 @@ class BaseInferenceEngine(BaseObject):
         super().__init__()
 
     @property
-    def rng_key(self) -> PRNGKey:
+    def rng_key(self):
         """The random number generator key."""
         return self._rng_key
 

@@ -47,6 +47,15 @@ class BaseInferenceEngine(BaseObject):
         """The random number generator key."""
         return self._rng_key
 
+    @rng_key.setter
+    def rng_key(self, x: PRNGKey):
+        """Sets the random number generator key."""
+        if not isinstance(x, PRNGKey):
+            raise TypeError("rng_key must be a jax.random.PRNGKey")
+
+        self._rng_key = x
+        return
+
     # pragma: no cover
     def infer(self, model, **kwargs):
         """

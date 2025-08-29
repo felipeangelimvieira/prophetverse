@@ -147,7 +147,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self
             The updated MAPInferenceEngine object.
         """
-        self.guide_ = self._optimizer.infer(self.model_)
+        self.guide_ = self._generate_guide(self.model_)
 
         self.run_results_: SVIRunResult = _fit_svi(
             self._rng_key,

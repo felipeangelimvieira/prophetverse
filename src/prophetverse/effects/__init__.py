@@ -9,7 +9,6 @@ from .hill import HillEffect
 from .lift_likelihood import LiftExperimentLikelihood
 from .linear import LinearEffect
 from .log import LogEffect
-from .ar import AREffect
 from .target.multivariate import MultivariateNormal
 from .target.univariate import (
     NormalTargetLikelihood,
@@ -28,7 +27,6 @@ __all__ = [
     "LinearFourierSeasonality",
     "GeometricAdstockEffect",
     "ChainedEffects",
-    "AREffect",
     "MultivariateNormal",
     "NormalTargetLikelihood",
     "GammaTargetLikelihood",

@@ -46,6 +46,7 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         noise_scale=0.05,
         likelihood_family: Literal["poisson", "negbinomial"] = "poisson",
         zero_proba_effects_prefix="zero_proba__",
+        proba_transform=expit,
         eps=1e-7,
     ):
 
@@ -53,6 +54,7 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         self.zero_proba_effects_prefix = zero_proba_effects_prefix
         self.likelihood_family = likelihood_family
         self.eps = eps
+        self.proba_transform = proba_transform
         self.link_function = _build_positive_smooth_clipper(eps)
 
         super().__init__()
@@ -99,14 +101,14 @@ class HurdleTargetLikelihood(BaseTargetEffect):
 
         # If len is zero, sample a fixed small probability
         if len(zero_prob_effects) == 0:
-            zero_proba_const = numpyro.sample(
+            gate_proba_const = numpyro.sample(
                 "zero_proba_const",
                 dist.Beta(2, 20),
             )
-            zero_prob = jnp.ones(demand.shape) * zero_proba_const
+            gate_prob = jnp.ones(demand.shape) * gate_proba_const
         else:
-            zero_prob = self._compute_mean(zero_prob_effects)
-            zero_prob = expit(zero_prob)
+            gate_prob = self._compute_mean(zero_prob_effects)
+            gate_prob = self.proba_transform(gate_prob)
 
         if self.likelihood_family == "negbinomial":
             noise_scale = numpyro.sample(
@@ -123,14 +125,14 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         with numpyro.plate("data", len(demand), dim=-2):
 
             samples = numpyro.sample(
-                "demand:ignore",
-                HurdleDistribution(zero_prob, truncated),
+                "obs",
+                HurdleDistribution(gate_prob, truncated),
                 obs=data,
             )
 
-        numpyro.deterministic("gate", zero_prob)
+        numpyro.deterministic("gate", gate_prob)
         numpyro.deterministic("demand", demand)
-        numpyro.deterministic("obs", samples)
+        numpyro.deterministic("mean", samples)
 
         return jnp.zeros_like(demand)
 

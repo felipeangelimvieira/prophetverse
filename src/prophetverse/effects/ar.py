@@ -47,14 +47,11 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 import jax.numpy as jnp
+import jax
 import numpyro
 import numpyro.distributions as dist
 from numpyro.distributions import TransformedDistribution
-from numpyro.distributions.transforms import (
-    AffineTransform,
-    RecursiveLinearTransform,
-    SigmoidTransform,
-)
+from numpyro.distributions.transforms import SigmoidTransform
 
 from prophetverse.effects.base import BaseEffect
 from prophetverse.utils.pandas import _build_full_index
@@ -84,18 +81,12 @@ class AREffect(BaseEffect):
         mean_reverting: bool = True,
         sigma_prior: Optional[dist.Distribution] = None,
         phi_prior: Optional[dist.Distribution] = None,
-        innovation_prior: Optional[dist.Distribution] = None,
     ):
         self.mean_reverting = mean_reverting
-        self.innovation_prior = innovation_prior
         self.sigma_prior = sigma_prior
         # Prior before sigmoid (only used if mean_reverting)
         self.phi_prior = phi_prior
         super().__init__()
-
-        self._innovation_prior = innovation_prior
-        if self._innovation_prior is None:
-            self._innovation_prior = dist.Normal(0.0, 0.05)
 
         self._sigma_prior = sigma_prior
         if self._sigma_prior is None:
@@ -147,29 +138,43 @@ class AREffect(BaseEffect):
 
         sigma = numpyro.sample("sigma", self._sigma_prior)
 
-        phi_dist = self.phi_prior
+        # Sample AR coefficient. If mean_reverting, constrain to (0,1) via sigmoid.
         if self.mean_reverting:
             phi_dist = TransformedDistribution(self._phi_prior, SigmoidTransform())
+            phi = numpyro.sample("phi", phi_dist)
+        else:
+            # Random walk (unit root) process
+            phi = numpyro.deterministic("phi", jnp.array(1.0))
 
-        phi = numpyro.sample("phi", phi_dist)
-        transition_matrix = jnp.reshape(phi, (1, 1))
+        # Sample Gaussian innovations for t=1..T-1 (initial state is fixed to initial_value_)
+        # Using standard normal then scaled by sigma inside the recursion for clarity.
+        if T <= 0:
+            raise ValueError("Time dimension must be positive")
+        # For a single-step path (T==1) we just return the initial value.
+        if T == 1:
+            latent_full = jnp.array([[self.initial_value_]])
+        else:
+            eps = numpyro.sample("ar_eps", dist.Normal(0.0, 1.0).expand([T - 1]))
 
-        eps = self._innovation_prior.expand((T, 1)).to_event(1)
-        latent_full = numpyro.sample(
-            "ar_state_full",
-            TransformedDistribution(
-                eps,
+            def ar_step(x_prev, eps_t):
+                x_t = phi * x_prev + sigma * eps_t
+                return x_t, x_t
+
+            # Run scan to build latent trajectory (excluding initial which we prepend)
+            _, xs = jax.lax.scan(ar_step, init=self.initial_value_, xs=eps)
+            latent_full = jnp.concatenate(
                 [
-                    AffineTransform(self.initial_value_, sigma),
-                    RecursiveLinearTransform(
-                        transition_matrix=transition_matrix,
-                    ),
-                ],
-            ),
-        )
+                    jnp.array([self.initial_value_]),  # x_0
+                    xs,
+                ]
+            )
+            latent_full = latent_full.reshape(-1, 1)
 
+        # Register the full latent path (ignored in component aggregation) and subset.
+        latent_full = numpyro.deterministic("ar_state_full:ignore", latent_full)
         latent = latent_full[ix]
-        return latent  # shape (len(fh),1)
+        numpyro.deterministic("ar_state", latent)
+        return latent  # shape (len(fh), 1)
 
     @classmethod
     def get_test_params(cls, parameter_set: str = "default"):

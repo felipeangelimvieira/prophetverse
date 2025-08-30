@@ -1,10 +1,7 @@
 ---
-title: "Forecasting count data"
-description: "A tutorial on how to use Prophetverse to model count data using a Negative Binomial likelihood."
+title: "Hurdle model"
+description: "Using Hurdle Likelihood for forecasting"
 ---
-
-
-This tutorial shows how to use the `prophetverse` library to model count data, with a prophet-like model that uses Negative Binomial likelihood. Many timeseries are composed of counts, which are non-negative integers. For example, the number of cars that pass through a toll booth in a given hour, the number of people who visit a website in a given day, or the number of sales of a product. The original Prophet model struggles to handle this type of data, as it assumes that the data is continuous and normally distributed. 
 
 ```{python}
 # Disable warnings
@@ -86,6 +83,7 @@ from prophetverse.effects.target.univariate import NormalTargetLikelihood
 from prophetverse.sktime import Prophetverse
 from prophetverse.utils.regex import no_input_columns
 from prophetverse.effects.constant import Constant
+import jax.numpy as jnp
 
 # Here we set the prior for the seasonality effect
 # And the coefficients for it
@@ -105,8 +103,8 @@ exogenous_effects = [
     (
         "zero_proba__seasonality",
         LinearFourierSeasonality(
-            sp_list=[24, 24 * 7, 24 * 365.5],
-            fourier_terms_list=[3, 2, 10],
+            sp_list=[24],
+            fourier_terms_list=[5],
             freq="H",
             prior_scale=2,
             effect_mode="additive",
@@ -120,7 +118,7 @@ model = Prophetverse(
     exogenous_effects=exogenous_effects,
     inference_engine=MAPInferenceEngine(),
     # likelihood=NormalTargetLikelihood(),
-    likelihood=HurdleTargetLikelihood(likelihood_family="poisson"),
+    likelihood=HurdleTargetLikelihood(likelihood_family="poisson", proba_transform=lambda x: jnp.clip(x, 0, 1)),
 )
 model.fit(y=y_train)
 ```
@@ -152,7 +150,7 @@ y_pred_components = model.predict_components(fh=forecast_horizon)
 ```{python}
 fig, axs = plt.subplots(figsize=(10, 3), nrows=2, sharex=True)
 ax = axs[0]
-y_pred_components["demand"].plot.line(ax=ax)
+y_pred_components["mean"].plot.line(ax=ax)
 
 ax.scatter(y_train.index, y_train, marker="o", color="k", s=2, alpha=0.5, label="Train")
 ax.scatter(
@@ -160,5 +158,5 @@ ax.scatter(
 )
 
 y_pred_components["gate"].plot.line(ax=axs[1])
-y_pred_components["zero_proba__constant_term"].plot.line(ax=axs[1])
+# y_pred_components["zero_proba__constant_term"].plot.line(ax=axs[1])
 ```

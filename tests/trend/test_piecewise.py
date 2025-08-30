@@ -131,56 +131,6 @@ def test_piecewise_linear_get_changepoint_matrix(
     assert result.shape == (100, 9), "Changepoint matrix shape is incorrect."
 
 
-def test_single_series_get_multivariate_changepoint_matrix(piecewise_linear_trend):
-    t = np.arange(7)
-    changepoint_ts = np.array([[2, 5]])
-    expected = (
-        np.array([[0, 0, 0, 1, 2, 3, 4], [0, 0, 0, 0, 0, 0, 1]])
-        .reshape((1, 2, 7))
-        .transpose((0, 2, 1))
-    )
-
-    piecewise_linear_trend._changepoint_ts = changepoint_ts
-    result = piecewise_linear_trend._get_multivariate_changepoint_matrix(t)
-    np.testing.assert_array_equal(
-        result,
-        expected,
-        "Matrix does not match expected for single series multiple changepoints",
-    )
-
-
-def test_multiple_series_get_multivariate_changepoint_matrix(piecewise_linear_trend):
-    t = np.arange(10)
-    changepoint_ts = [[5], [3]]
-    expected = np.concatenate(
-        [
-            np.concatenate(
-                [
-                    np.array([0, 0, 0, 0, 0, 0, 1, 2, 3, 4]).reshape((1, 10, 1)),
-                    np.zeros((1, 10, 1)),
-                ],
-                axis=-1,
-            ),
-            np.concatenate(
-                [
-                    np.zeros((1, 10, 1)),
-                    np.array([0, 0, 0, 0, 1, 2, 3, 4, 5, 6]).reshape((1, 10, 1)),
-                ],
-                axis=-1,
-            ),
-        ],
-        axis=0,
-    )
-
-    piecewise_linear_trend._changepoint_ts = changepoint_ts
-    result = piecewise_linear_trend._get_multivariate_changepoint_matrix(t)
-    np.testing.assert_array_equal(
-        result,
-        expected,
-        "Matrix does not match expected for single series single changepoint",
-    )
-
-
 def test_get_changepoint_matrix():
     t = np.arange(10)
     changepoint_ts = np.array([[5]])

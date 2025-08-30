@@ -46,8 +46,6 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         The prior scale for the changepoints.
     offset_prior_scale : float, optional
         The prior scale for the offset. Default is 0.1.
-    squeeze_if_single_series : bool, optional
-        If True, squeeze the output if there is only one series. Default is True.
     remove_seasonality_before_suggesting_initial_vals : bool, optional
         If True, remove seasonality before suggesting initial values, using sktime's
         detrender. Default is True.
@@ -61,13 +59,14 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
 
     """
 
+    _tags = {"capability:panel": False}
+
     def __init__(
         self,
         changepoint_interval: int = 25,
         changepoint_range: int = 0.8,
         changepoint_prior_scale: dist.Distribution = 0.001,
         offset_prior_scale=0.1,
-        squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
         global_rate_prior_loc: Optional[float] = None,
         offset_prior_loc: Optional[float] = None,
@@ -76,7 +75,6 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         self.changepoint_range = changepoint_range
         self.changepoint_prior_scale = changepoint_prior_scale
         self.offset_prior_scale = offset_prior_scale
-        self.squeeze_if_single_series = squeeze_if_single_series
         self.remove_seasonality_before_suggesting_initial_vals = (
             remove_seasonality_before_suggesting_initial_vals
         )
@@ -109,43 +107,6 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         self._setup_changepoints(t_scaled)
         self._setup_changepoint_prior_vectors(y)
         self._index_names = y.index.names
-        self._series_idx = None
-        if y.index.nlevels > 1:
-            self._series_idx = y.index.droplevel(-1).unique()
-
-    def _fh_to_index(self, fh: pd.Index) -> Union[pd.Index, pd.MultiIndex]:
-        """Convert an index representing the fcst horizon to multiindex if needed.
-
-        If there's a single timeseries, just returns the fh.
-
-        Parameters
-        ----------
-        fh : pd.Index
-            The timeindex representing the forecasting horizon.
-
-        Returns
-        -------
-        Union[pd.Index, pd.MultiIndex]
-            The fh for all time series passed during fit
-        """
-        if self._series_idx is None:
-            return fh
-
-        idx_list = self._series_idx.to_list()
-        idx_list = [x if isinstance(x, tuple) else (x,) for x in idx_list]
-        # Create a new multi-index combining the existing levels with the new time index
-        new_idx_tuples = list(
-            map(
-                lambda x: (
-                    *x[0],
-                    x[1],
-                ),
-                # Create a cross product of current indexes
-                # and dates in fh
-                itertools.product(idx_list, fh.to_list()),
-            )
-        )
-        return pd.MultiIndex.from_tuples(new_idx_tuples, names=self._index_names)
 
     def _transform(self, X: pd.DataFrame, fh: pd.Index) -> dict:
         """
@@ -163,8 +124,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         jnp.ndarray
             An array containing the prepared input data.
         """
-        idx = self._fh_to_index(fh)
-        return jnp.array(self.get_changepoint_matrix(idx))
+        return self.get_changepoint_matrix(fh)
 
     def _predict(
         self,
@@ -202,18 +162,9 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
             dist.Laplace(self._changepoint_prior_loc, self._changepoint_prior_scale),
         )
 
-        if changepoint_matrix.ndim == 3:
-            changepoint_coefficients = changepoint_coefficients.reshape((1, -1, 1))
-            offset = offset.reshape((-1, 1, 1))
-
         trend = (changepoint_matrix) @ changepoint_coefficients + offset
 
-        if trend.ndim == 1 or (
-            trend.ndim == 3 and self.n_series == 1 and self.squeeze_if_single_series
-        ):
-            trend = trend.reshape((-1, 1))
-
-        return trend
+        return trend.reshape((-1, 1))
 
     def get_changepoint_matrix(self, idx: pd.PeriodIndex) -> jnp.ndarray:
         """
@@ -229,12 +180,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
             jnp.ndarray: The changepoint matrix.
         """
         t_scaled = self._index_to_scaled_timearray(idx)
-        changepoint_matrix = self._get_multivariate_changepoint_matrix(t_scaled)
-
-        # If only one series, remove the first dimension
-        if changepoint_matrix.shape[0] == 1:
-            if self.squeeze_if_single_series:
-                changepoint_matrix = changepoint_matrix[0]
+        changepoint_matrix = _get_changepoint_matrix(t_scaled, self._changepoint_ts)
 
         return changepoint_matrix
 
@@ -258,47 +204,7 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         int
             Total number of changepoints.
         """
-        return sum(self.n_changepoint_per_series)
-
-    def _get_multivariate_changepoint_matrix(self, t_scaled) -> jnp.ndarray:
-        """
-        Get the changepoint matrix.
-
-        The changepoint matrix has shape (n_series, n_timepoints, total number of
-        changepoints for all series). A mask is applied so that for index i at dim 0,
-        only the changepoints for series i are non-zero at dim -1.
-
-        Parameters
-        ----------
-        t_scaled: jnp.ndarray
-            Transformed time index.
-
-        Returns
-        -------
-        jnp.ndarray
-            The changepoint matrix.
-        """
-        changepoint_ts = np.concatenate(self._changepoint_ts)
-        changepoint_design_tensor_list = []
-        changepoint_mask_tensor_list = []
-        for i, n_changepoints in enumerate(self.n_changepoint_per_series):
-            A = _get_changepoint_matrix(t_scaled, changepoint_ts)
-
-            start_idx = sum(self.n_changepoint_per_series[:i])
-            end_idx = start_idx + n_changepoints
-            mask = np.zeros_like(A)
-            mask[:, start_idx:end_idx] = 1
-
-            changepoint_design_tensor_list.append(A)
-            changepoint_mask_tensor_list.append(mask)
-
-        changepoint_design_tensor: np.ndarray = np.stack(
-            changepoint_design_tensor_list, axis=0
-        )
-        changepoint_mask_tensor: np.ndarray = np.stack(
-            changepoint_mask_tensor_list, axis=0
-        )
-        return changepoint_design_tensor * changepoint_mask_tensor
+        return len(self._changepoint_ts)
 
     def _setup_changepoints(self, t_scaled) -> None:
         """
@@ -316,32 +222,20 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         -------
             None
         """
-        changepoint_intervals = _to_list_if_scalar(
-            self.changepoint_interval, self.n_series
+
+        self._changepoint_ts = _get_changepoint_timeindexes(
+            t_scaled,
+            changepoint_interval=self.changepoint_interval,
+            changepoint_range=self.changepoint_range,
         )
-        changepoint_ranges = _to_list_if_scalar(self.changepoint_range, self.n_series)
 
-        changepoint_ts = []
-        for changepoint_interval, changepoint_range in zip(
-            changepoint_intervals, changepoint_ranges
-        ):
-            changepoint_ts.append(
-                _get_changepoint_timeindexes(
-                    t_scaled,
-                    changepoint_interval=changepoint_interval,
-                    changepoint_range=changepoint_range,
-                )
+        if len(self._changepoint_ts) == 0:
+            raise ValueError(
+                "No changepoints were generated. Try increasing the changing"
+                + f" the changepoint_range. There are {len(t_scaled)} timepoints "
+                + f" in the series, changepoint_range is {self.changepoint_range} and "
+                + f"changepoint_interval is {self.changepoint_interval}."
             )
-
-            if len(changepoint_ts[-1]) == 0:
-                raise ValueError(
-                    "No changepoints were generated. Try increasing the changing"
-                    + f" the changepoint_range. There are {len(t_scaled)} timepoints "
-                    + f" in the series, changepoint_range is {changepoint_range} and "
-                    + f"changepoint_interval is {changepoint_interval}."
-                )
-
-        self._changepoint_ts = changepoint_ts
 
     def _setup_changepoint_prior_vectors(self, y: pd.DataFrame) -> None:
         """
@@ -360,17 +254,17 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
             detrender = Detrender()
             y = y - detrender.fit_transform(y)
 
-        self._global_rates, self._offset_prior_loc = (
+        self._global_rate, self._offset_prior_loc = (
             self._suggest_global_trend_and_offset(y)
         )
         self._changepoint_prior_loc, self._changepoint_prior_scale = (
-            self._get_changepoint_prior_vectors(global_rates=self._global_rates)
+            self._get_changepoint_prior_vectors(global_rate=self._global_rate)
         )
         self._offset_prior_scale = self.offset_prior_scale
 
     def _get_changepoint_prior_vectors(
         self,
-        global_rates: jnp.array,
+        global_rate: jnp.array,
     ) -> Tuple[jnp.array, jnp.array]:
         """
         Return the prior vectors for the changepoint coefficients.
@@ -386,30 +280,18 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
             A tuple containing the changepoint prior location vector and the
             changepoint prior scale vector.
         """
-        n_series = len(self.n_changepoint_per_series)
 
         def zeros_with_first_value(size, first_value):
             x = jnp.zeros(size)
             x = x.at[0].set(first_value)
             return x
 
-        changepoint_prior_scale_vector = np.concatenate(
-            [
-                np.ones(n_changepoint) * cur_changepoint_prior_scale
-                for n_changepoint, cur_changepoint_prior_scale in zip(
-                    self.n_changepoint_per_series,
-                    _to_list_if_scalar(self.changepoint_prior_scale, n_series),
-                )
-            ]
+        changepoint_prior_scale_vector = (
+            np.ones(self.n_changepoints) * self.changepoint_prior_scale
         )
 
-        changepoint_prior_loc_vector = np.concatenate(
-            [
-                zeros_with_first_value(n_changepoint, estimated_global_rate)
-                for n_changepoint, estimated_global_rate in zip(
-                    self.n_changepoint_per_series, global_rates
-                )
-            ]
+        changepoint_prior_loc_vector = zeros_with_first_value(
+            self.n_changepoints, global_rate
         )
 
         return jnp.array(changepoint_prior_loc_vector), jnp.array(
@@ -442,10 +324,15 @@ class PiecewiseLinearTrend(TrendEffectMixin, BaseEffect):
         )
         offset_loc = y_array[:, 0].squeeze() - global_rate * t[0].squeeze()
 
-        if self.global_rate_prior_loc is not None:
-            global_rate = jnp.ones_like(global_rate) * self.global_rate_prior_loc
+        global_rate = global_rate.item()
+        offset_loc = offset_loc.item()
+
         if self.offset_prior_loc is not None:
-            offset_loc = jnp.ones_like(offset_loc) * self.offset_prior_loc
+            offset_loc = self.offset_prior_loc
+
+        if self.global_rate_prior_loc is not None:
+            global_rate = self.global_rate_prior_loc
+
         return global_rate, offset_loc
 
 
@@ -475,8 +362,6 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         The prior scale for the changepoints.
     offset_prior_scale : float, optional
         The prior scale for the offset. Default is 0.1.
-    squeeze_if_single_series : bool, optional
-        If True, squeeze the output if there is only one series. Default is True.
     remove_seasonality_before_suggesting_initial_vals : bool, optional
         If True, remove seasonality before suggesting initial values, using sktime's
         detrender. Default is True.
@@ -492,7 +377,6 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
         changepoint_prior_scale: float = 0.001,
         offset_prior_scale=10,
         capacity_prior: dist.Distribution = None,
-        squeeze_if_single_series: bool = True,
         remove_seasonality_before_suggesting_initial_vals: bool = True,
         global_rate_prior_loc: Optional[float] = None,
         offset_prior_loc: Optional[float] = None,
@@ -505,7 +389,6 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             changepoint_range,
             changepoint_prior_scale,
             offset_prior_scale=offset_prior_scale,
-            squeeze_if_single_series=squeeze_if_single_series,
             remove_seasonality_before_suggesting_initial_vals=remove_seasonality_before_suggesting_initial_vals,
             global_rate_prior_loc=global_rate_prior_loc,
             offset_prior_loc=offset_prior_loc,
@@ -556,7 +439,7 @@ class PiecewiseLogisticTrend(PiecewiseLinearTrend):
             capacities=capacity_prior_loc,
         )
 
-        return global_rates, offset
+        return global_rates.item(), offset.item()
 
     def _predict(  # type: ignore[override]
         self, data: Any, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs

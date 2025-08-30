@@ -224,7 +224,10 @@ class BaseBayesianForecaster(BaseForecaster):
         """
         predictive_samples = self.predict_components(fh=fh, X=X)
         mean = predictive_samples["mean"]
-        y_pred = mean.to_frame(self._y.columns[0])
+
+        # TODO: can `feature_names` be empty?
+        target_names = self._y_metadata["feature_names"]
+        y_pred = mean.to_frame(target_names[0])
 
         return self._postprocess_output(y_pred)
 
@@ -943,7 +946,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
         self.exogenous_effects_ = fitted_effects_list_
 
-    def _transform_effects(self, X: pd.DataFrame, fh: pd.Index) -> OrderedDict:
+    def _transform_effects(self, X: pd.DataFrame, fh: pd.Index, y=None) -> OrderedDict:
         """
         Get exogenous data array.
 
@@ -953,6 +956,8 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             Input data.
         fh : pd.Index
             Forecasting horizon as an index.
+        y : pd.DataFrame, optional
+            Target variable. Defaults to None.
 
         Returns
         -------
@@ -965,8 +970,12 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             if columns is None or len(columns) == 0:
                 if effect.get_tag("requires_X"):
                     continue
+            if effect.get_tag("applies_to") == "X":
+                _X = X[columns]
+            elif effect.get_tag("applies_to") == "y":
+                _X = y.copy()
 
-            data: Dict[str, jnp.ndarray] = effect.transform(X[columns], fh=fh)
+            data: Dict[str, jnp.ndarray] = effect.transform(_X, fh=fh)
             out[effect_name] = data
 
         return out

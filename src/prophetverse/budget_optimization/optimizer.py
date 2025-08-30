@@ -16,6 +16,7 @@ from prophetverse.budget_optimization.parametrization_transformations import (
     IdentityTransform,
 )
 from typing import List, Optional
+import numpyro
 
 __all__ = ["BudgetOptimizer"]
 
@@ -68,6 +69,8 @@ class BudgetOptimizer(BaseBudgetOptimizer):
 
     def _optimize(self, model, X, horizon, columns):
 
+        # To avoid errors with Scipy optimize
+        numpyro.enable_x64()
         self.set_predictive_attr(
             model=model,
             X=X,
@@ -104,6 +107,7 @@ class BudgetOptimizer(BaseBudgetOptimizer):
         )
 
         x0 = X.loc[X.index.get_level_values(-1).isin(horizon), columns].values.flatten()
+        x0 = x0.astype(jnp.float64)
         # Transform decision variable
         self._parametrization_transform.fit(X, horizon, columns)
         x0 = self._parametrization_transform.transform(x0)

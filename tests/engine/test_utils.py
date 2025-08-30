@@ -43,13 +43,18 @@ def not_converged_summary(rng_key, shape):
 
     samples = mcmc.get_samples(group_by_chain=True)
 
-    return summary(samples, group_by_chain=True)
+    _summary = summary(samples, group_by_chain=True)
+    for name in _summary:
+        _summary[name]["r_hat"] = _summary[name]["r_hat"] * np.inf
+    return _summary
 
 
 def test_assert_converged(converged_summary):
+
     assert_mcmc_converged(converged_summary, max_r_hat=1.1)
 
 
 def test_assert_error(not_converged_summary):
+
     with pytest.raises(ConvergenceError):
         assert_mcmc_converged(not_converged_summary, max_r_hat=1.1)

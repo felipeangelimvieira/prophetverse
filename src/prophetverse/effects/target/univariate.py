@@ -7,7 +7,7 @@ import numpyro
 import numpyro.distributions as dist
 from prophetverse.effects.base import BaseEffect
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
-from prophetverse.distributions import GammaReparametrized
+from prophetverse.distributions import GammaReparametrized, BetaReparametrized
 from prophetverse.effects.target.base import BaseTargetEffect
 
 
@@ -237,10 +237,38 @@ class BetaTargetLikelihood(TargetLikelihood):
         noise_scale=0.05,
         epsilon=1e-5,
     ):
+        """Beta likelihood effect.
+
+        Parameters
+        ----------
+        epsilon : float
+            Numerical slack to keep means/factors away from the boundaries.
+        """
+
         self.epsilon = epsilon
-        link_function = _build_bounded_smooth_clipper(epsilon)
+
+        link_function = lambda x: jnp.clip(x, epsilon, 1 - epsilon)
         super().__init__(
-            noise_scale,
+            noise_scale=noise_scale,  # not used for beta now
             link_function=link_function,
-            likelihood_func=dist.Beta,
+            likelihood_func=BetaReparametrized,
         )
+
+    def _predict(self, data, predicted_effects, *args, **kwargs):
+        y = data
+
+        mean = self._compute_mean(predicted_effects) * self.scale_
+        mean = numpyro.deterministic("mean", mean)
+        noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(self.noise_scale))
+
+        if y is not None:
+            y = y * self.scale_
+
+        with numpyro.plate("data", len(mean), dim=-2):
+            numpyro.sample(
+                "obs",
+                BetaReparametrized(mean.reshape((-1, 1)), noise_scale),
+                obs=y,
+            )
+
+        return jnp.zeros_like(mean)

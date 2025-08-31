@@ -1,0 +1,114 @@
+---
+title: "Forecasting Daily Share of Monthly Total with Beta Likelihood"
+description: "Recipe: derive a bounded (0,1) target from Peyton Manning pageviews and forecast it with likelihood='beta'."
+---
+
+This how‑to shows how to use the Beta likelihood for a proportion / percentage target using the **same sktime-style API** demonstrated in other tutorials.
+
+Why Beta? Because the target is naturally bounded in (0,1) and often heteroskedastic: variance shrinks near 0 or 1. The `likelihood="beta"` option internally applies a link that guarantees valid predictions.
+
+## 1. Load data and build a (0,1) target
+
+
+```{python}
+import numpy as np
+import pandas as pd
+y = pd.DataFrame(
+    data={"value" : np.sin(np.arange(100)*2*np.pi/30)*0.45 + 0.5},
+    index=pd.period_range(
+        "2025-01-01",
+        periods=100,
+        freq="D",
+    )
+) 
+y += np.random.normal(0, 0.1, size=y.shape)
+y = y.clip(1e-6, 1 - 1e-6)
+y.plot.line()
+```
+
+## 2. Specify model components
+
+We use a piecewise linear trend plus weekly and yearly seasonality. The API mirrors the univariate tutorial: pass `trend=...`, supply `exogenous_effects` as a list of tuples, and choose `likelihood="beta"`.
+
+```{python}
+from prophetverse.effects.trend import PiecewiseLinearTrend
+from prophetverse.effects.fourier import LinearFourierSeasonality
+from prophetverse.effects.target.univariate import BetaTargetLikelihood
+from prophetverse.utils import no_input_columns
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.sktime import Prophetverse
+
+
+seasonality = (
+    "seasonality",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[30],  # weekly + yearly
+        fourier_terms_list=[30],
+        prior_scale=1,
+        effect_mode="additive",
+    ),
+    no_input_columns,
+)
+
+model = Prophetverse(
+    trend="flat",
+    exogenous_effects=[seasonality],
+    likelihood=BetaTargetLikelihood(noise_scale=0.2),  # <— key change
+    inference_engine=MAPInferenceEngine(),
+    scale=1
+)
+model.fit(y=y)
+```
+
+
+## 3. Forecast the next 180 days
+
+```{python}
+import pandas as pd
+
+fh = pd.period_range(y.index[-1] + 1, periods=180, freq="D")
+pred_share = model.predict(fh=fh)
+pred_share.head()
+```
+
+## 4. Plot
+
+```{python}
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(9, 4))
+ax.plot(
+    y.index.to_timestamp(), y, label="observed daily share", lw=1, alpha=0.6
+)
+ax.plot(pred_share.index.to_timestamp(), pred_share, label="forecast", color="C1")
+ax.set_ylabel("Daily share of monthly total")
+ax.legend()
+plt.show()
+```
+
+## 6. Probabilistic forecast (quantiles)
+
+```{python}
+q = model.predict_quantiles(fh=fh, alpha=[0.1, 0.9])
+fig, ax = plt.subplots(figsize=(9, 4))
+ax.fill_between(
+    q.index.to_timestamp(),
+    q.iloc[:, 0],
+    q.iloc[:, -1],
+    color="C1",
+    alpha=0.3,
+    label="80% PI",
+)
+ax.plot(y.index.to_timestamp(), y, lw=1, alpha=0.6, color="k")
+ax.set_ylabel("Daily share")
+ax.legend()
+plt.show()
+```
+
+## Notes & Tips
+
+* Ensure the target is strictly inside (0,1), excluding the boundaries.
+* `noise_scale` controls dispersion of the Beta (smaller => tighter intervals). You can tune it or let the model infer if supported.
+* The same pattern works for conversion rates, CTR, retention proportions, etc.
+* Switch to full Bayesian inference by setting `inference_engine=MCMCInferenceEngine(...)` if you need richer uncertainty.

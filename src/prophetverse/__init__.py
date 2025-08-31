@@ -23,6 +23,7 @@ from .engine import (
     MAPInferenceEngine,
     MCMCInferenceEngine,
     PriorPredictiveInferenceEngine,
+    VIInferenceEngine,
 )
 
 from .engine.optimizer import (
@@ -70,6 +71,7 @@ __all__ = [
     "MAPInferenceEngine",
     "MCMCInferenceEngine",
     "PriorPredictiveInferenceEngine",
+    "VIInferenceEngine",
     # Optimizers
     "LBFGSSolver",
     "CosineScheduleAdamOptimizer",

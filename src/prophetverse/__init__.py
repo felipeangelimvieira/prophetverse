@@ -9,6 +9,7 @@ from .effects import (
     MultivariateNormal,
     GammaTargetLikelihood,
     NegativeBinomialTargetLikelihood,
+    BetaTargetLikelihood,
     # Exogenous effects
     HillEffect,
     LinearEffect,
@@ -64,6 +65,7 @@ __all__ = [
     "ExactLikelihood",
     "GeometricAdstockEffect",
     "ChainedEffects",
+    "BetaTargetLikelihood",
     # Engine
     "MAPInferenceEngine",
     "MCMCInferenceEngine",

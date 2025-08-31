@@ -15,6 +15,7 @@ from .target.univariate import (
     NormalTargetLikelihood,
     GammaTargetLikelihood,
     NegativeBinomialTargetLikelihood,
+    BetaTargetLikelihood,
 )
 from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
 
@@ -33,6 +34,7 @@ __all__ = [
     "NormalTargetLikelihood",
     "GammaTargetLikelihood",
     "NegativeBinomialTargetLikelihood",
+    "BetaTargetLikelihood",
     "PiecewiseLinearTrend",
     "PiecewiseLogisticTrend",
     "FlatTrend",

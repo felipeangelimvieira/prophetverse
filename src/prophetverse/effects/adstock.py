@@ -324,9 +324,10 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         # Determine max_lag if not provided
         max_lag = self.max_lag
         if max_lag is None:
-            # Use 99th percentile of Weibull CDF as cutoff
-            weibull_dist = dist.Weibull(scale=scale, concentration=concentration)
-            max_lag = int(jnp.ceil(weibull_dist.icdf(0.99))) + 1
+            # Use a heuristic based on Weibull parameters
+            # For Weibull distribution, most of the mass is within scale * concentration^(1/concentration) * 3
+            # This is a rough approximation for the 99th percentile
+            max_lag = int(jnp.ceil(scale * (concentration ** (1.0 / concentration)) * 3)) + 1
             max_lag = jnp.clip(max_lag, 1, len(data_array))
         else:
             max_lag = min(max_lag, len(data_array))

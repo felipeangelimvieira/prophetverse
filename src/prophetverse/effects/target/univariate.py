@@ -201,36 +201,6 @@ def _build_positive_smooth_clipper(
     return _to_positive
 
 
-def _build_bounded_smooth_clipper(
-    smooth_threshold: float, threshold: float = 1e-10
-) -> callable:
-    """Force the values of x to be between 0 and 1.
-
-    Applies the sigmoid function to transform any real number to the interval (0,1).
-    Clips the values to avoid numerical issues at the boundaries.
-
-    Parameters
-    ----------
-    smooth_threshold : float
-        The threshold value for scaling the input before applying sigmoid.
-    threshold : float, optional
-        The threshold value for clipping, by default 1e-10.
-
-    Returns
-    -------
-    callable
-        A function that transforms real numbers to (0,1).
-    """
-
-    def _to_bounded(x):
-        x = x / smooth_threshold
-        # Apply sigmoid function: 1 / (1 + exp(-x))
-        p = 1 / (1 + jnp.exp(-x))
-        return jnp.clip(p, threshold, 1 - threshold)
-
-    return _to_bounded
-
-
 class BetaTargetLikelihood(TargetLikelihood):
     def __init__(
         self,

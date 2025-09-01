@@ -150,7 +150,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.guide_ = self._generate_guide(self.model_)
 
         self.run_results_: SVIRunResult = _fit_svi(
-            self._rng_key,
+            self.rng_key,
             self.model_,
             self.guide_,
             self._optimizer.create_optimizer(),
@@ -164,7 +164,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.raise_error_if_nan_loss(self.run_results_)
 
         self.posterior_samples_ = self.guide_.sample_posterior(
-            self._rng_key, params=self.run_results_.params, **kwargs
+            self.rng_key, params=self.run_results_.params, **kwargs
         )
         return self
 
@@ -211,7 +211,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
             # posterior_samples=self.posterior_samples_,
             num_samples=self.num_samples,
         )
-        self.samples_ = predictive(rng_key=self._rng_key, **kwargs)
+        self.samples_ = predictive(rng_key=self.rng_key, **kwargs)
         return self.samples_
 
     def _update(self, site_names, mode="mean", **kwargs):
@@ -230,7 +230,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
 
         conditioned_model = condition(self.model_, data=to_condition_on)
         temp_guide = self._generate_guide(conditioned_model)
-        rng_key, _ = split(self._rng_key)
+        rng_key, _ = split(self.rng_key)
 
         # NB: not sure if we should overwrite, keep or simply discard the results?
         temp_results: SVIRunResult = _fit_svi(
@@ -248,7 +248,7 @@ class MAPInferenceEngine(BaseInferenceEngine):
         self.raise_error_if_nan_loss(temp_results)
 
         updated_posterior = temp_guide.sample_posterior(
-            self._rng_key, params=temp_results.params, **kwargs
+            self.rng_key, params=temp_results.params, **kwargs
         )
 
         updated_posterior.update(to_condition_on)

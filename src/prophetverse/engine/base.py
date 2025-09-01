@@ -38,21 +38,9 @@ class BaseInferenceEngine(BaseObject):
         if rng_key is None:
             rng_key = jax.random.PRNGKey(0)
 
-        self._rng_key = rng_key
+        self.rng_key = rng_key
 
         super().__init__()
-
-    @property
-    def rng_key(self):
-        """The random number generator key."""
-        return self._rng_key
-
-    # TODO: fix type hinting and check
-    @rng_key.setter
-    def rng_key(self, x: Any):
-        """Sets the random number generator key."""
-        self._rng_key = x
-        return
 
     # pragma: no cover
     def infer(self, model, **kwargs):

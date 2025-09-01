@@ -187,7 +187,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         """
         kernel = self.build_kernel(self.model_)
         self.posterior_samples_, self.summary_ = _get_posterior_samples(
-            self._rng_key,
+            self.rng_key,
             kernel,
             num_samples=self.num_samples,
             num_warmup=self.num_warmup,
@@ -221,7 +221,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             self.model_, self.posterior_samples_, num_samples=num_samples
         )
 
-        self.samples_predictive_ = predictive(self._rng_key, **kwargs)
+        self.samples_predictive_ = predictive(self.rng_key, **kwargs)
         return self.samples_predictive_
 
     def _update(self, site_names, mode="mean", **kwargs):
@@ -249,7 +249,7 @@ class MCMCInferenceEngine(BaseInferenceEngine):
 
         fun = partial(
             _update_posterior,
-            rng_key=self._rng_key,
+            rng_key=self.rng_key,
             model=self.model_,
             kernel_builder=self.build_kernel,
             num_samples=num_samples,

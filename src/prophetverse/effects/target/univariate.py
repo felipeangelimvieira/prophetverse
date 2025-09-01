@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Callable
 
 import jax.numpy as jnp
 import pandas as pd
@@ -171,7 +171,7 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
 
 def _build_positive_smooth_clipper(
     smooth_threshold: float, threshold: float = 1e-10
-) -> jnp.ndarray:
+) -> Callable[[jnp.ndarray], jnp.ndarray]:
     """Force the values of x to be positive.
 
     Applies a smooth threshold to the values of x to force positive-only outputs.

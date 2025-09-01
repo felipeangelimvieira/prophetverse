@@ -19,6 +19,7 @@ from prophetverse.effects.target.univariate import (
     NormalTargetLikelihood,
     NegativeBinomialTargetLikelihood,
     GammaTargetLikelihood,
+    BetaTargetLikelihood,
 )
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor, reindex_time_series
@@ -26,12 +27,18 @@ from collections import defaultdict
 from prophetverse.utils import get_multiindex_loc
 from prophetverse.utils.frame_to_array import series_to_tensor
 
-__all__ = ["Prophetverse", "Prophet", "ProphetGamma", "ProphetNegBinomial"]
+__all__ = [
+    "Prophetverse",
+    "Prophet",
+    "ProphetGamma",
+    "ProphetNegBinomial",
+]
 
 _LIKELIHOOD_MODEL_MAP = {
     "normal": NormalTargetLikelihood,
     "gamma": GammaTargetLikelihood,
     "negbinomial": NegativeBinomialTargetLikelihood,
+    "beta": BetaTargetLikelihood,
 }
 
 _DISCRETE_LIKELIHOODS = ["negbinomial"]

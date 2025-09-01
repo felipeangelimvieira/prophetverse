@@ -1,0 +1,75 @@
+---
+title: "Composition of effects"
+description: "*This guide explains how to create effects that use the output of other effects.*"
+---
+
+
+```{python}
+import warnings
+
+warnings.simplefilter(action="ignore")
+```
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from numpyro import distributions as dist
+import numpyro
+
+numpyro.enable_x64()  # To avoid computational issues
+```
+
+## Import dataset
+
+We import a dataset from Prophet's original repository. We then put it into sktime-friendly format, where the index is a `pd.PeriodIndex` and the colums are the time series.
+
+```{python}
+from prophetverse.datasets.loaders import load_peyton_manning
+
+y = load_peyton_manning()
+display(y.head())
+```
+
+The full dataset looks like this:
+
+```{python}
+y.plot.line(figsize=(8, 6))
+plt.show()
+```
+
+## Fit model
+
+Here, we will show how you can fit a simple model with Prophetverse. We first fit a model without seasonal components, and then fit a full model. We also show how easy it is to switch between Maximum A Posteriori (MAP) inference and Markov Chain Monte Carlo (MCMC).
+
+### No seasonality
+
+```{python}
+from prophetverse.effects.ar import AREffect
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.sktime import Prophetverse
+from prophetverse.utils import no_input_columns
+
+import numpyro
+
+numpyro.enable_x64()
+
+model = Prophetverse(
+    trend=AREffect(
+        mean_reverting=True,
+        phi_prior=dist.Normal(0.0, 1),
+        sigma_prior=dist.HalfNormal(0.5),
+    ),
+    inference_engine=MAPInferenceEngine(progress_bar=True),
+)
+model.fit(y=y)
+```
+
+```{python}
+forecast_horizon = pd.period_range("2007-01-01", "2018-01-01", freq="D")
+fig, ax = plt.subplots(figsize=(8, 5))
+preds = model.predict(fh=forecast_horizon)
+preds.plot.line(ax=ax)
+ax.scatter(y.index, y, marker="o", color="k", s=2, alpha=0.5)
+ax.set_ylim(0, 20)
+```

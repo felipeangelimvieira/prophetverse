@@ -134,6 +134,9 @@ class GammaTargetLikelihood(TargetLikelihood):
 
 
 class NegativeBinomialTargetLikelihood(TargetLikelihood):
+
+    discrete_support = True
+
     def __init__(
         self,
         noise_scale=0.05,

@@ -157,7 +157,7 @@ class VIInferenceEngine(BaseInferenceEngine):
             )
 
         self.run_results_: SVIRunResult = get_result(
-            self._rng_key,
+            self.rng_key,
             self.model_,
             self.guide_,
             self._optimizer.create_optimizer(),
@@ -171,7 +171,7 @@ class VIInferenceEngine(BaseInferenceEngine):
         self.raise_error_if_nan_loss(self.run_results_)
 
         self.posterior_samples_ = self.guide_.sample_posterior(
-            self._rng_key, params=self.run_results_.params, **kwargs
+            self.rng_key, params=self.run_results_.params, **kwargs
         )
         return self
 
@@ -217,7 +217,7 @@ class VIInferenceEngine(BaseInferenceEngine):
             guide=self.guide_,
             num_samples=self.num_samples,
         )
-        self.samples_ = predictive(rng_key=self._rng_key, **kwargs)
+        self.samples_ = predictive(rng_key=self.rng_key, **kwargs)
         return self.samples_
 
     @classmethod

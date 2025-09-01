@@ -181,72 +181,7 @@ class GeometricAdstockEffect(BaseAdstockEffect):
         return adstock
 
 
-class WeibullAdstockEffect(BaseAdstockEffect):
-    """Represents a Geometric Adstock effect in a time series model.
 
-    Parameters
-    ----------
-    decay_prior : Distribution, optional
-        Prior distribution for the decay parameter (controls the rate of decay).
-    raise_error_if_fh_changes : bool, optional
-        Whether to raise an error if the forecasting horizon changes during predict
-    """
-
-    def __init__(
-        self,
-        decay_prior: dist.Distribution = None,
-        raise_error_if_fh_changes: bool = False,
-    ):
-        self.decay_prior = decay_prior  # Default Beta distribution for decay rate.
-        super().__init__(raise_error_if_fh_changes=raise_error_if_fh_changes)
-
-        self._decay_prior = self.decay_prior
-        if self._decay_prior is None:
-            self._decay_prior = dist.Beta(2, 2)
-
-    def _predict(
-        self,
-        data: jnp.ndarray,
-        predicted_effects: Dict[str, jnp.ndarray],
-        *args,
-        **kwargs
-    ) -> jnp.ndarray:
-        """
-        Apply and return the geometric adstock effect values.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            Data obtained from the transformed method (shape: T, 1).
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
-        params : Dict[str, jnp.ndarray]
-            A dictionary containing the sampled parameters of the effect.
-
-        Returns
-        -------
-        jnp.ndarray
-            An array with shape (T, 1) for univariate timeseries.
-        """
-        if isinstance(data, tuple):
-            data, ix = data
-        elif isinstance(data, (jnp.ndarray)):
-            ix = jnp.arange(data.shape[0], dtype=jnp.int32)
-
-        decay = numpyro.sample("decay", self._decay_prior)
-
-        # Apply geometric adstock using jax.lax.scan for efficiency
-        def adstock_step(carry, current):
-            prev_adstock = carry
-            new_adstock = current + decay * prev_adstock
-            return new_adstock, new_adstock
-
-        _, adstock = jax.lax.scan(
-            adstock_step, init=jnp.array([0], dtype=data.dtype), xs=data.flatten()
-        )
-        adstock = adstock.reshape(-1, 1)
-        adstock = adstock[ix]
-        return adstock
 
 
 class WeibullAdstockEffect(BaseAdstockEffect):

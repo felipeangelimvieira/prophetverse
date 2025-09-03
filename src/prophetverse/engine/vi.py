@@ -3,29 +3,27 @@
 The VIInferenceEngine class performs Variational Inference using SVI with
 configurable autoguides specified as string parameters.
 """
+
 import warnings
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 import jax.numpy as jnp
 import numpyro
+from jax.random import split
 from numpyro.handlers import condition
 from numpyro.infer import SVI, Trace_ELBO
 from numpyro.infer.autoguide import (
+    AutoDelta,
     AutoDiagonalNormal,
     AutoLowRankMultivariateNormal,
     AutoMultivariateNormal,
     AutoNormal,
-    AutoDelta,
 )
 from numpyro.infer.initialization import init_to_mean
 from numpyro.infer.svi import SVIRunResult
-from jax.random import split
 
 from prophetverse.engine.base import BaseInferenceEngine
-from prophetverse.engine.optimizer.optimizer import (
-    AdamOptimizer,
-    BaseOptimizer,
-)
+from prophetverse.engine.optimizer.optimizer import AdamOptimizer, BaseOptimizer
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
 DEFAULT_PROGRESS_BAR = False
@@ -33,12 +31,18 @@ DEFAULT_PROGRESS_BAR = False
 # Mapping of guide string names to numpyro autoguide classes
 GUIDE_MAP = {
     "AutoNormal": AutoNormal,
-    "AutoMultivariateNormal": AutoMultivariateNormal, 
+    "AutoMultivariateNormal": AutoMultivariateNormal,
     "AutoDiagonalNormal": AutoDiagonalNormal,
     "AutoLowRankMultivariateNormal": AutoLowRankMultivariateNormal,
     "AutoDelta": AutoDelta,
 }
-Guides = Literal["AutoNormal", "AutoMultivariateNormal", "AutoDiagonalNormal", "AutoLowRankMultivariateNormal", "AutoDelta"]
+Guides = Literal[
+    "AutoNormal",
+    "AutoMultivariateNormal",
+    "AutoDiagonalNormal",
+    "AutoLowRankMultivariateNormal",
+    "AutoDelta",
+]
 
 
 def _fit_svi(
@@ -68,6 +72,14 @@ def _fit_svi(
     )
 
 
+class VIInferenceEngineError(Exception):
+    """Exception raised for NaN losses in VIInferenceEngine."""
+
+    def __init__(self, message="NaN losses in VIInferenceEngine"):
+        self.message = message
+        super().__init__(self.message)
+
+
 class VIInferenceEngine(BaseInferenceEngine):
     """
     Variational Inference Engine.
@@ -78,8 +90,8 @@ class VIInferenceEngine(BaseInferenceEngine):
     Parameters
     ----------
     guide : str, optional
-        The name of the autoguide to use for variational inference. 
-        Available options: "AutoNormal", "AutoMultivariateNormal", 
+        The name of the autoguide to use for variational inference.
+        Available options: "AutoNormal", "AutoMultivariateNormal",
         "AutoDiagonalNormal", "AutoLowRankMultivariateNormal".
         Default is "AutoNormal".
     optimizer : Optional[BaseOptimizer]
@@ -106,6 +118,7 @@ class VIInferenceEngine(BaseInferenceEngine):
     _tags = {
         "inference_method": "vi",
     }
+    _exc_class = VIInferenceEngineError
 
     def __init__(
         self,
@@ -132,7 +145,9 @@ class VIInferenceEngine(BaseInferenceEngine):
         # Validate guide parameter
         if guide not in GUIDE_MAP:
             available_guides = list(GUIDE_MAP.keys())
-            raise ValueError(f"Unknown guide '{guide}'. Available guides: {available_guides}")
+            raise ValueError(
+                f"Unknown guide '{guide}'. Available guides: {available_guides}"
+            )
 
         if optimizer is None:
             optimizer = AdamOptimizer()
@@ -197,11 +212,11 @@ class VIInferenceEngine(BaseInferenceEngine):
         """
         losses = run_results.losses
         if jnp.isnan(losses)[-1]:
-            msg = f"NaN losses in '{self.__class__.__name__}'."
+            msg = f"NaN losses in {self.__class__.__name__}."
             msg += " Try decreasing the learning rate or changing the model specs."
             msg += " If the problem persists, please open an issue at"
             msg += " https://github.com/felipeangelimvieira/prophetverse"
-            raise VIInferenceEngineError(msg)
+            raise self._exc_class(msg)
 
     def _predict(self, **kwargs):
         """
@@ -231,9 +246,13 @@ class VIInferenceEngine(BaseInferenceEngine):
             self.posterior_samples_ is not None
         ), "Can only update from a fitted instance!"
 
+        # TODO: fix this conditional
         if mode != "mean":
             warnings.warn(
-                "Only 'mean' mode is supported for MAPInferenceEngine. Ignoring the provided mode."
+                "Only 'mean' mode is supported for MAPInferenceEngine."
+                " Ignoring the provided mode.",
+                UserWarning,
+                stacklevel=2,
             )
 
         to_condition_on = {
@@ -288,11 +307,3 @@ class VIInferenceEngine(BaseInferenceEngine):
                 "num_steps": 100,
             },
         ]
-
-
-class VIInferenceEngineError(Exception):
-    """Exception raised for NaN losses in VIInferenceEngine."""
-
-    def __init__(self, message="NaN losses in VIInferenceEngine"):
-        self.message = message
-        super().__init__(self.message)

@@ -5,7 +5,7 @@ The classes in this module take a model, the data and perform inference using Nu
 
 from typing import Optional
 
-from prophetverse.engine.vi import VIInferenceEngine
+from prophetverse.engine.vi import VIInferenceEngine, VIInferenceEngineError
 from prophetverse.engine.optimizer.optimizer import (
     AdamOptimizer,
     BaseOptimizer,
@@ -14,6 +14,13 @@ from prophetverse.engine.optimizer.optimizer import (
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
 DEFAULT_PROGRESS_BAR = False
+
+
+class MAPInferenceEngineError(VIInferenceEngineError):
+    """Exception raised for NaN losses in MAPInferenceEngine."""
+
+    def __init__(self, message="NaN losses in MAPInferenceEngine"):
+        super().__init__(message)
 
 
 class MAPInferenceEngine(VIInferenceEngine):
@@ -49,6 +56,7 @@ class MAPInferenceEngine(VIInferenceEngine):
     _tags = {
         "inference_method": "map",
     }
+    _exc_class = MAPInferenceEngineError
 
     def __init__(
         self,
@@ -98,11 +106,3 @@ class MAPInferenceEngine(VIInferenceEngine):
                 "num_steps": 100,
             },
         ]
-
-
-class MAPInferenceEngineError(Exception):
-    """Exception raised for NaN losses in MAPInferenceEngine."""
-
-    def __init__(self, message="NaN losses in MAPInferenceEngine"):
-        self.message = message
-        super().__init__(self.message)

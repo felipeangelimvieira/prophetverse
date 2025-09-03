@@ -50,8 +50,11 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         noise_scale: float = 1.0,
         zero_proba_effects_prefix: str = "zero_proba__",
         proba_transform: Callable[[jnp.ndarray], jnp.ndarray] = expit,
-        demand_transform: Callable[[jnp.ndarray], jnp.ndarray] = jax.nn.softplus,
+        demand_transform: Callable[[jnp.ndarray], jnp.ndarray] = None,
     ):
+        if demand_transform is None:
+            demand_transform = jax.nn.softplus
+
         self.noise_scale = noise_scale
         self.zero_proba_effects_prefix = zero_proba_effects_prefix
         self.likelihood_family = likelihood_family

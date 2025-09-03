@@ -54,7 +54,6 @@ def model(
                     effect = exog_effect(transformed_data, predicted_effects)
 
                 effect = numpyro.deterministic(exog_effect_name, effect)
-
                 predicted_effects[exog_effect_name] = effect
 
         target_model.predict(target_data, predicted_effects)

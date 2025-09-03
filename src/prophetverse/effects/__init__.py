@@ -1,6 +1,6 @@
 """Effects that define relationships between variables and the target."""
 
-from .adstock import GeometricAdstockEffect
+from .adstock import GeometricAdstockEffect, WeibullAdstockEffect
 from .base import BaseEffect
 from .chain import ChainedEffects
 from .exact_likelihood import ExactLikelihood
@@ -29,6 +29,7 @@ __all__ = [
     "LiftExperimentLikelihood",
     "LinearFourierSeasonality",
     "GeometricAdstockEffect",
+    "WeibullAdstockEffect",
     "ChainedEffects",
     "MultivariateNormal",
     "NormalTargetLikelihood",

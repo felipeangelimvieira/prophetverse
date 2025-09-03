@@ -1,20 +1,30 @@
-from prophetverse.effects.base import BaseEffect
-import pandas as pd
+"""Constant effect module."""
+
+import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-import jax.numpy as jnp
+from numpyro.distributions import Distribution
+
+from prophetverse.effects.base import BaseEffect
 
 
 class Constant(BaseEffect):
-    """
-    Constant effect
+    """Constant effect.
+
+    Implements a constant effect.
+
+    Parameters
+    ----------
+    prior : Distribution, optional
+        The prior distribution for the constant coefficient, by default None
+        which corresponds to a standard normal distribution.
     """
 
     _tags = {
         "requires_X": False,
     }
 
-    def __init__(self, prior: float = None) -> None:
+    def __init__(self, prior: Distribution = None) -> None:
         self.prior = prior
         super().__init__()
 

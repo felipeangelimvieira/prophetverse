@@ -2,189 +2,219 @@
 title: Basics of Prophetverse API
 ---
 
-Welcome! This page is a fast, practical onboarding to Marketing Mix Modeling (MMM) with Prophetverse. In ~10 minutes you'll:
+Prophetverse is a powerful tool for building customized and glass-box forecasting and mix models.
+In Prophetverse, we define each component of the model as a separate effect, making this library extremely flexible to attend your specific needs.
+
+In this page, we will:
+
 
 1. Understand the structure of `y` (the target) and `X` (media & control variables) using the sktime interface.  
-2. Fit your first Bayesian MMM and generate forecasts.  
-3. Learn Prophetverse's additive/multiplicative effect system.  
-4. Chain effects (e.g. Adstock + Saturation) to model carryover and diminishing returns.  
-5. Inspect component contributions.
-
-> Tip: All examples are intentionally small so they run quickly with the default NUTS sampling configuration. For more robust inference increase the number of samples.
+2. Understand the hyperparameters of Prophetverse
+3. Fit your first Bayesian MMM and generate forecasts.  
 
 ## 1. Data Structures (`y` and `X`)
 
 Prophetverse uses the sktime forecasting API. The essentials:
 
-* `y`: a pandas DataFrame indexed by a time index (`pd.DatetimeIndex` or `pd.PeriodIndex`). Single column for univariate MMM (e.g. `revenue`).
+* `y`: a pandas DataFrame indexed by a time index (`pd.DatetimeIndex` or `pd.PeriodIndex`). Single column for univariate MMM (e.g. `revenue`):
+
+```{python}
+# | echo: false
+import numpy as np
+import pandas as pd
+
+y = pd.DataFrame(
+    index=pd.period_range("2020-01-01", "2020-12-31", freq="D"),
+    data={"revenue": np.random.rand(366)},
+)
+y.head()
+```
+
+
+For panel datasets (e.g. in the case of multiple products or regions), use a MultiIndex, where the first index level is the entity (e.g. product or region) and the second level is the time.
+
+
+```{python}
+# | echo: false
+
+import pandas as pd
+
+y = pd.DataFrame(
+    index=pd.period_range("2020-01-01", "2020-12-31", freq="D"),
+    data={"revenue": np.random.rand(366)},
+)
+y = pd.concat(
+    [y] * 3, keys=["product_a", "product_b", "product_c"], names=["product", None]
+)
+y
+```
+
+
 * `X`: a pandas DataFrame *aligned on the same index* containing exogenous variables (media spend, price, promotions, macro, etc.). Columns are arbitrary names.
 
-Optional panel/hierarchical cases use a pandas MultiIndex (entity, time). You can start simple and scale later.
+::: {.callout-note appearance="simple"}
+
+The index type should always be the same for `y` and `X`, and every dataframe you use. After choosing Datetime or Period index for `y`, use the same type for `X`.
+
+::: 
 
 ### Minimal Example
 
-```python
-from prophetverse.datasets import load_peyton_manning
+Here we load a synthetic dataset:
 
-df = load_peyton_manning()  # returns a DataFrame with a datetime index and one column 'y'
-df.head()
+```{python}
+from prophetverse.datasets._mmm.dataset1 import get_dataset
+
+(y, X, *_) = get_dataset()
+
+
+y.head()
 ```
 
-To simulate a basic MMM we create synthetic media channels:
+The `X` looks like this:
 
-```python
-import pandas as pd
-import numpy as np
 
-# Target (what we want to explain/forecast)
-y = df.rename(columns={df.columns[0]: 'revenue'}).iloc[-120:]  # last 120 days
-
-rs = np.random.default_rng(42)
-X = pd.DataFrame({
-	'tv_spend': rs.gamma(2., 150., size=len(y)) * 10,
-	'search_spend': rs.gamma(5., 40., size=len(y)),
-	'social_spend': rs.gamma(3., 60., size=len(y)),
-}, index=y.index)
-
-y.head(), X.head()
+```{python}
+X.head()
 ```
 
-## 2. Fit & Predict
+We will split the dataset into training and testing sets.
 
-The core estimator is `Prophetverse`.
+```{python}
+from sktime.split import temporal_train_test_split
 
-```python
-from prophetverse.sktime import Prophetverse
+y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=0.2)
 
-model = Prophetverse()  # default: linear trend, Normal likelihood
-model.fit(y=y, X=X)      # sktime style
-
-# Forecast 14 future periods
-from sktime.forecasting.base import ForecastingHorizon
-fh = ForecastingHorizon(range(1, 15), is_relative=True)
-pred_mean = model.predict(fh=fh, X=None)  # X=None if no future regressors
-pred_mean.head()
 ```
 
-If you need prediction intervals (posterior predictive quantiles):
+We can use a simple Prophetverse model with Linear effects and a seasonality component:
 
-```python
-pred_int = model.predict_interval(fh=fh, coverage=[0.8, 0.95])
-pred_int.head()
-```
+```{python}
+from prophetverse import Prophetverse, LinearEffect, LinearFourierSeasonality
 
-## 3. Effects: Additive vs Multiplicative
+from prophetverse.utils.regex import starts_with
 
-Instead of hard-coding media transformations, Prophetverse exposes a composable Effect API. Each effect is a probabilistic transformation with priors learned during inference.
 
-Two core application modes:
+seasonality_effect = LinearFourierSeasonality(sp_list=[365.25, 7], fourier_terms_list=[10, 3], prior_scale=0.1, freq="D", effect_mode="additive")
 
-* Additive: effect contributes directly to the latent mean (e.g., baseline trend + seasonal additive bumps).  
-* Multiplicative: effect scales an existing base (e.g., revenue baseline multiplied by marketing lift).  
-
-You control this via `effect_mode` when constructing an effect (e.g. `LinearEffect(effect_mode="multiplicative")`).
-
-### Simple Linear Effects
-
-```python
-from prophetverse.effects import LinearEffect
-
-linear_media = LinearEffect(effect_mode="multiplicative")  # slope prior ~ Normal(0,0.1)
+ad_spend_effect = LinearEffect()
 
 model = Prophetverse(
-	exogenous_effects=[linear_media],  # applies to all columns of X by default
+	exogenous_effects=[
+		("ad_spend", ad_spend_effect, starts_with("ad")),
+		("seasonality", seasonality_effect, None)
+	],
+	
 )
-model.fit(y=y, X=X)
+
+model.fit(y=y_train, X=X_train)
+
 ```
 
-## 4. Carryover + Saturation (Chaining Effects)
+By default, the model will run a MCMC inference to obtain the parameters. We can, however, easily switch to a MAP inference by setting `inference_engine=MAPInferenceEngine()` in the model constructor. The MAP inference is generally faster but provides point estimates of the parameters.
 
-Real media response often has:
+To run in-sample and out-of-sample forecasts of total revenue, we can simply call predict. We need to pass a "forecasting horizon" (fh) object, that should preferably be an index of the type of our `y` and `X`'s index. Since we want to forecast for both train and test timepoints, we use `y.index` as fh, and pass the full `X` as exogenous variables.
 
-* Carryover / memory (adstock) – spend today also influences tomorrow.  
-* Diminishing returns (saturation) – incremental effect flattens at higher spend.
+```{python}
+fh = y.index
 
-Prophetverse models this by chaining effects. For example: Geometric Adstock followed by a Hill saturation curve.
+y_pred = model.predict(fh=fh, X=X)
 
-```python
-from prophetverse.effects import GeometricAdstockEffect, HillEffect, ChainedEffects
+y_pred
+```
 
-adstock = GeometricAdstockEffect()                 # learns decay parameter
-saturation = HillEffect(effect_mode="multiplicative")  # learns half_max & slope
 
-media_chain = ChainedEffects([
-	("adstock", adstock),
-	("saturation", saturation),
-])
+```{python}
+import matplotlib.pyplot as plt
+
+
+def plot_forecasts(y_pred):
+	fig, ax = plt.subplots(figsize=(10,5))
+
+	ax.plot(y.index.to_timestamp(), y)
+	ax.plot(y_pred.index, y_pred)
+	ax.axvline(y_train.index.max().to_timestamp(), color="black", linestyle="--", label="Train/Test split")
+	fig.show()
+
+plot_forecasts(y_pred)
+```
+
+
+#### Modifying the trend component
+
+We could've used a difference trend, and not the default, for this example:
+
+```{python}
+
+from prophetverse import PiecewiseLinearTrend
+
 
 model = Prophetverse(
-	exogenous_effects=[media_chain],
+    trend=PiecewiseLinearTrend(
+		changepoint_interval=365, # One changepoint every 365 timeunits
+		changepoint_range=-120, # The last changepoint should be 120 days before the end of the training data,
+		changepoint_prior_scale=1e-3
+	),
+	exogenous_effects=[
+		("ad_spend", ad_spend_effect, starts_with("ad")),
+		("seasonality", seasonality_effect, None)
+	],
 )
-model.fit(y=y, X=X)
+
+model
 ```
 
-Currently the `ChainedEffects` implementation applies the first step (adstock) then predicts through the chain internally. This captures transformed media inputs before entering the likelihood.
+```{python}
 
-## 5. Inspect Component Contributions
-
-After fitting you can decompose the forecast into components to understand driver contributions.
-
-```python
-components = model.predict_components(fh=fh)
-components.keys()  # e.g. ['trend', 'exogenous', 'likelihood_noise'] depending on config
+model.fit(y_train, X_train)
+y_pred = model.predict(fh=fh, X=X)
 ```
 
-You can compare cumulative posterior means to gauge ROI, or compute elasticities by perturbing `X` and refitting/sampling (advanced topic).
 
-## 6. Extending Your Model
+#### Getting the components
 
-Common next steps:
+To obtain the contribution of each component, you can use the `predict_components` method:
 
-* Add seasonalities via an sktime FourierFeatures transformer passed as `feature_transformer`.
-* Use different likelihoods for count or skewed data: `likelihood="negbinomial"` or pass `NegativeBinomialTargetLikelihood()`.
-* Specify different effects per channel by supplying multiple effect instances and mapping them (future advanced tutorial).
-
-## 7. Troubleshooting Quick Checklist
-
-* Index mismatch? Ensure `y.index.equals(X.index)` before fit.  
-* Missing future exogenous data? Pass `X_future` to `predict` with matching fh length.  
-* Sampling slow? Reduce number of samples via the inference engine configuration or start with variational inference (see docs).  
-* Divergences? Consider rescaling variables (e.g., divide spend by 1000) or adjusting priors.
-
-## 8. Full Minimal Script
-
-```python
-from prophetverse.datasets import load_peyton_manning
-from prophetverse.sktime import Prophetverse
-from prophetverse.effects import GeometricAdstockEffect, HillEffect, ChainedEffects
-import pandas as pd, numpy as np
-
-df = load_peyton_manning().rename(columns={"y": "revenue"})
-y = df.iloc[-120:]
-rs = np.random.default_rng(42)
-X = pd.DataFrame({
-	'tv_spend': rs.gamma(2., 150., size=len(y))*10,
-	'search_spend': rs.gamma(5., 40., size=len(y)),
-	'social_spend': rs.gamma(3., 60., size=len(y)),
-}, index=y.index)
-
-adstock = GeometricAdstockEffect()
-saturation = HillEffect(effect_mode="multiplicative")
-media_chain = ChainedEffects([
-	("adstock", adstock),
-	("saturation", saturation),
-])
-
-model = Prophetverse(exogenous_effects=[media_chain])
-model.fit(y=y, X=X)
-
-from sktime.forecasting.base import ForecastingHorizon
-fh = ForecastingHorizon(range(1, 15), is_relative=True)
-forecast = model.predict(fh=fh)
-print(forecast.head())
+```{python}
+components = model.predict_components(fh=fh, X=X)
+components.head()
 ```
 
----
-Next: Dive deeper into budget allocation and calibration in the following pages.
+If you want to obtain all the sample to compute, for example, probabilistic intervals and measure the risk, you can use the `predict_component_samples` method:
+
+```{python}
+samples = model.predict_component_samples(fh=fh, X=X)
+samples
+```
 
 
+### Use saturation effects
+
+There are many available effects available by default on Prophetverse. 
+
+```{python}
+from prophetverse.effects import MichaelisMentenEffect, HillEffect, LogEffect
+import numpyro
+from numpyro import distributions as dist
+
+saturation = MichaelisMentenEffect(
+    effect_mode="additive",
+    max_effect_prior=dist.HalfNormal(1),
+    half_saturation_prior=dist.HalfNormal(80000)
+)
+
+saturation
+```
+
+```{python}
+
+saturation.fit(y, X[["ad_spend_search"]])
+predict_data = saturation.transform(X[["ad_spend_search"]], fh=fh)
+
+with numpyro.handlers.seed(rng_seed=42):
+    predict = saturation.predict(predict_data)
+
+fig, ax = plt.subplots()
+ax.scatter(X[["ad_spend_search"]], predict)
+fig.show()
+```

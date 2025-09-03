@@ -115,6 +115,9 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         return jnp.zeros_like(demand)
 
     def _compute_mean(self, predicted_effects: Dict[str, jnp.ndarray]) -> jnp.ndarray:
+        if not predicted_effects:
+            return 0.0
+
         mean = sum(predicted_effects.values())
         mean = self.demand_transform(mean)
 

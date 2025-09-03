@@ -1,0 +1,190 @@
+---
+title: Basics of Prophetverse API
+---
+
+Welcome! This page is a fast, practical onboarding to Marketing Mix Modeling (MMM) with Prophetverse. In ~10 minutes you'll:
+
+1. Understand the structure of `y` (the target) and `X` (media & control variables) using the sktime interface.  
+2. Fit your first Bayesian MMM and generate forecasts.  
+3. Learn Prophetverse's additive/multiplicative effect system.  
+4. Chain effects (e.g. Adstock + Saturation) to model carryover and diminishing returns.  
+5. Inspect component contributions.
+
+> Tip: All examples are intentionally small so they run quickly with the default NUTS sampling configuration. For more robust inference increase the number of samples.
+
+## 1. Data Structures (`y` and `X`)
+
+Prophetverse uses the sktime forecasting API. The essentials:
+
+* `y`: a pandas DataFrame indexed by a time index (`pd.DatetimeIndex` or `pd.PeriodIndex`). Single column for univariate MMM (e.g. `revenue`).
+* `X`: a pandas DataFrame *aligned on the same index* containing exogenous variables (media spend, price, promotions, macro, etc.). Columns are arbitrary names.
+
+Optional panel/hierarchical cases use a pandas MultiIndex (entity, time). You can start simple and scale later.
+
+### Minimal Example
+
+```python
+from prophetverse.datasets import load_peyton_manning
+
+df = load_peyton_manning()  # returns a DataFrame with a datetime index and one column 'y'
+df.head()
+```
+
+To simulate a basic MMM we create synthetic media channels:
+
+```python
+import pandas as pd
+import numpy as np
+
+# Target (what we want to explain/forecast)
+y = df.rename(columns={df.columns[0]: 'revenue'}).iloc[-120:]  # last 120 days
+
+rs = np.random.default_rng(42)
+X = pd.DataFrame({
+	'tv_spend': rs.gamma(2., 150., size=len(y)) * 10,
+	'search_spend': rs.gamma(5., 40., size=len(y)),
+	'social_spend': rs.gamma(3., 60., size=len(y)),
+}, index=y.index)
+
+y.head(), X.head()
+```
+
+## 2. Fit & Predict
+
+The core estimator is `Prophetverse`.
+
+```python
+from prophetverse.sktime import Prophetverse
+
+model = Prophetverse()  # default: linear trend, Normal likelihood
+model.fit(y=y, X=X)      # sktime style
+
+# Forecast 14 future periods
+from sktime.forecasting.base import ForecastingHorizon
+fh = ForecastingHorizon(range(1, 15), is_relative=True)
+pred_mean = model.predict(fh=fh, X=None)  # X=None if no future regressors
+pred_mean.head()
+```
+
+If you need prediction intervals (posterior predictive quantiles):
+
+```python
+pred_int = model.predict_interval(fh=fh, coverage=[0.8, 0.95])
+pred_int.head()
+```
+
+## 3. Effects: Additive vs Multiplicative
+
+Instead of hard-coding media transformations, Prophetverse exposes a composable Effect API. Each effect is a probabilistic transformation with priors learned during inference.
+
+Two core application modes:
+
+* Additive: effect contributes directly to the latent mean (e.g., baseline trend + seasonal additive bumps).  
+* Multiplicative: effect scales an existing base (e.g., revenue baseline multiplied by marketing lift).  
+
+You control this via `effect_mode` when constructing an effect (e.g. `LinearEffect(effect_mode="multiplicative")`).
+
+### Simple Linear Effects
+
+```python
+from prophetverse.effects import LinearEffect
+
+linear_media = LinearEffect(effect_mode="multiplicative")  # slope prior ~ Normal(0,0.1)
+
+model = Prophetverse(
+	exogenous_effects=[linear_media],  # applies to all columns of X by default
+)
+model.fit(y=y, X=X)
+```
+
+## 4. Carryover + Saturation (Chaining Effects)
+
+Real media response often has:
+
+* Carryover / memory (adstock) – spend today also influences tomorrow.  
+* Diminishing returns (saturation) – incremental effect flattens at higher spend.
+
+Prophetverse models this by chaining effects. For example: Geometric Adstock followed by a Hill saturation curve.
+
+```python
+from prophetverse.effects import GeometricAdstockEffect, HillEffect, ChainedEffects
+
+adstock = GeometricAdstockEffect()                 # learns decay parameter
+saturation = HillEffect(effect_mode="multiplicative")  # learns half_max & slope
+
+media_chain = ChainedEffects([
+	("adstock", adstock),
+	("saturation", saturation),
+])
+
+model = Prophetverse(
+	exogenous_effects=[media_chain],
+)
+model.fit(y=y, X=X)
+```
+
+Currently the `ChainedEffects` implementation applies the first step (adstock) then predicts through the chain internally. This captures transformed media inputs before entering the likelihood.
+
+## 5. Inspect Component Contributions
+
+After fitting you can decompose the forecast into components to understand driver contributions.
+
+```python
+components = model.predict_components(fh=fh)
+components.keys()  # e.g. ['trend', 'exogenous', 'likelihood_noise'] depending on config
+```
+
+You can compare cumulative posterior means to gauge ROI, or compute elasticities by perturbing `X` and refitting/sampling (advanced topic).
+
+## 6. Extending Your Model
+
+Common next steps:
+
+* Add seasonalities via an sktime FourierFeatures transformer passed as `feature_transformer`.
+* Use different likelihoods for count or skewed data: `likelihood="negbinomial"` or pass `NegativeBinomialTargetLikelihood()`.
+* Specify different effects per channel by supplying multiple effect instances and mapping them (future advanced tutorial).
+
+## 7. Troubleshooting Quick Checklist
+
+* Index mismatch? Ensure `y.index.equals(X.index)` before fit.  
+* Missing future exogenous data? Pass `X_future` to `predict` with matching fh length.  
+* Sampling slow? Reduce number of samples via the inference engine configuration or start with variational inference (see docs).  
+* Divergences? Consider rescaling variables (e.g., divide spend by 1000) or adjusting priors.
+
+## 8. Full Minimal Script
+
+```python
+from prophetverse.datasets import load_peyton_manning
+from prophetverse.sktime import Prophetverse
+from prophetverse.effects import GeometricAdstockEffect, HillEffect, ChainedEffects
+import pandas as pd, numpy as np
+
+df = load_peyton_manning().rename(columns={"y": "revenue"})
+y = df.iloc[-120:]
+rs = np.random.default_rng(42)
+X = pd.DataFrame({
+	'tv_spend': rs.gamma(2., 150., size=len(y))*10,
+	'search_spend': rs.gamma(5., 40., size=len(y)),
+	'social_spend': rs.gamma(3., 60., size=len(y)),
+}, index=y.index)
+
+adstock = GeometricAdstockEffect()
+saturation = HillEffect(effect_mode="multiplicative")
+media_chain = ChainedEffects([
+	("adstock", adstock),
+	("saturation", saturation),
+])
+
+model = Prophetverse(exogenous_effects=[media_chain])
+model.fit(y=y, X=X)
+
+from sktime.forecasting.base import ForecastingHorizon
+fh = ForecastingHorizon(range(1, 15), is_relative=True)
+forecast = model.predict(fh=fh)
+print(forecast.head())
+```
+
+---
+Next: Dive deeper into budget allocation and calibration in the following pages.
+
+

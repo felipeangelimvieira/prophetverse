@@ -46,7 +46,7 @@ class HurdleTargetLikelihood(BaseTargetEffect):
 
     def __init__(
         self,
-        likelihood_family: Literal["poisson", "negbinomial"] = "poisson",
+        likelihood_family: Literal["poisson", "negbinomial"] = "negbinomial",
         noise_scale: float = 1.0,
         zero_proba_effects_prefix: str = "zero_proba__",
         proba_transform: Callable[[jnp.ndarray], jnp.ndarray] = expit,

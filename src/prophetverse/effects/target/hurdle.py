@@ -1,33 +1,32 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Callable
 from typing import Literal
 
-import jax.numpy as jnp
-import numpy as np
+import jax.nn
 import numpyro.handlers
-import pandas as pd
 from jax.scipy.special import expit
 import numpyro.distributions as dist
-from numpyro.distributions.transforms import (
-    AffineTransform,
-    RecursiveLinearTransform,
-    SigmoidTransform,
-)
 import jax.numpy as jnp
-import pandas as pd
 
 import numpyro
-from prophetverse.effects.base import BaseEffect
-from prophetverse.utils.frame_to_array import series_to_tensor_or_array
-from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects.target.base import BaseTargetEffect
 
 from prophetverse.distributions import HurdleDistribution, TruncatedDiscrete
-from prophetverse.sktime.base import BaseBayesianForecaster
-from prophetverse.effects.target.univariate import _build_positive_smooth_clipper
 
 
 class HurdleTargetLikelihood(BaseTargetEffect):
-    """Hurdle Target Effect"""
+    """Hurdle Target Effect
+
+    Implements a Hurdle target effect for intermittent demand modeling.
+
+    Parameters
+    ----------
+    noise_scale (float): Scale of the prior of the scale in the demand distribution, only applicable for
+        likelihoods parameterized by a scale parameter (e.g., Negative Binomial).
+    likelihood_family (str): Family of the likelihood for the demand distribution.
+    zero_proba_effects_prefix (str): Prefix for the effects modeling the zero probability.
+    proba_transform (callable): Transformation function to map linear predictors to probabilities.
+    demand_transform (callable): Transformation function to ensure positive demand predictions.
+    """
 
     discrete_support = True
 
@@ -43,23 +42,21 @@ class HurdleTargetLikelihood(BaseTargetEffect):
 
     def __init__(
         self,
-        noise_scale=0.05,
         likelihood_family: Literal["poisson", "negbinomial"] = "poisson",
-        zero_proba_effects_prefix="zero_proba__",
-        proba_transform=expit,
-        eps=1e-7,
+        noise_scale: float = 1.0,
+        zero_proba_effects_prefix: str = "zero_proba__",
+        proba_transform: Callable[[jnp.ndarray], jnp.ndarray] = expit,
+        demand_transform: Callable[[jnp.ndarray], jnp.ndarray] = jax.nn.softplus,
     ):
-
         self.noise_scale = noise_scale
         self.zero_proba_effects_prefix = zero_proba_effects_prefix
         self.likelihood_family = likelihood_family
-        self.eps = eps
         self.proba_transform = proba_transform
-        self.link_function = _build_positive_smooth_clipper(eps)
+        self.demand_transform = demand_transform
 
         super().__init__()
 
-    def _fit(self, y, X, scale=1):
+    def _fit(self, y, X, scale=1.0):
         self.scale_ = scale
 
     def _predict(
@@ -69,24 +66,6 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         *args,
         **kwargs,
     ) -> jnp.ndarray:
-        """Apply and return the effect values.
-
-        Parameters
-        ----------
-        data : Any
-            Data obtained from the transformed method.
-
-        predicted_effects : Dict[str, jnp.ndarray], optional
-            A dictionary containing the predicted effects, by default None.
-
-        Returns
-        -------
-        jnp.ndarray
-            An array with shape (T,1) for univariate timeseries, or (N, T, 1) for
-            multivariate timeseries, where T is the number of timepoints and N is the
-            number of series.
-        """
-
         zero_prob_effects = {
             k: v
             for k, v in predicted_effects.items()
@@ -123,7 +102,6 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         truncated = TruncatedDiscrete(dist_nonzero, low=0)
 
         with numpyro.plate("data", len(demand), dim=-2):
-
             samples = numpyro.sample(
                 "obs",
                 HurdleDistribution(gate_prob, truncated),
@@ -137,9 +115,7 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         return jnp.zeros_like(demand)
 
     def _compute_mean(self, predicted_effects: Dict[str, jnp.ndarray]) -> jnp.ndarray:
-        mean = 0
-        for _, effect in predicted_effects.items():
-            mean += effect
+        mean = sum(predicted_effects.values())
+        mean = self.demand_transform(mean)
 
-        mean = self.link_function(mean) if self.link_function else mean
         return mean

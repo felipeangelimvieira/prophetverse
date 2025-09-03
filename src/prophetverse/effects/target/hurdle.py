@@ -1,31 +1,35 @@
-from typing import Any, Dict, Optional, Callable
-from typing import Literal
+"""Hurdle Target Effect for Intermittent Demand Modeling."""
+
+from typing import Any, Callable, Dict, Literal
 
 import jax.nn
+import jax.numpy as jnp
+import numpyro
+import numpyro.distributions as dist
 import numpyro.handlers
 from jax.scipy.special import expit
-import numpyro.distributions as dist
-import jax.numpy as jnp
-
-import numpyro
-from prophetverse.effects.target.base import BaseTargetEffect
 
 from prophetverse.distributions import HurdleDistribution, TruncatedDiscrete
+from prophetverse.effects.target.base import BaseTargetEffect
 
 
 class HurdleTargetLikelihood(BaseTargetEffect):
-    """Hurdle Target Effect
+    """Hurdle Target Effect.
 
     Implements a Hurdle target effect for intermittent demand modeling.
 
     Parameters
     ----------
-    noise_scale (float): Scale of the prior of the scale in the demand distribution, only applicable for
-        likelihoods parameterized by a scale parameter (e.g., Negative Binomial).
+    noise_scale (float): Scale of the prior of the scale in the demand distribution,
+        only applicable for likelihoods parameterized by a scale parameter
+        (e.g., Negative Binomial).
     likelihood_family (str): Family of the likelihood for the demand distribution.
-    zero_proba_effects_prefix (str): Prefix for the effects modeling the zero probability.
-    proba_transform (callable): Transformation function to map linear predictors to probabilities.
-    demand_transform (callable): Transformation function to ensure positive demand predictions.
+    zero_proba_effects_prefix (str): Prefix for the effects modeling the zero
+        probability.
+    proba_transform (callable): Transformation function to map linear predictors to
+        probabilities.
+    demand_transform (callable): Transformation function to ensure positive demand
+        predictions.
     """
 
     discrete_support = True

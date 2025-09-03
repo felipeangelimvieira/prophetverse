@@ -15,6 +15,7 @@ from numpyro.infer.autoguide import (
     AutoLowRankMultivariateNormal,
     AutoMultivariateNormal,
     AutoNormal,
+    AutoDelta,
 )
 from numpyro.infer.initialization import init_to_mean
 from numpyro.infer.svi import SVIRunResult
@@ -35,6 +36,7 @@ GUIDE_MAP = {
     "AutoMultivariateNormal": AutoMultivariateNormal, 
     "AutoDiagonalNormal": AutoDiagonalNormal,
     "AutoLowRankMultivariateNormal": AutoLowRankMultivariateNormal,
+    "AutoDelta": AutoDelta,
 }
 Guides = Literal["AutoNormal", "AutoMultivariateNormal", "AutoDiagonalNormal", "AutoLowRankMultivariateNormal", "AutoDelta"]
 
@@ -239,7 +241,7 @@ class VIInferenceEngine(BaseInferenceEngine):
         }
 
         conditioned_model = condition(self.model_, data=to_condition_on)
-        temp_guide = self._generate_guide(conditioned_model)
+        temp_guide = self._guide_class(conditioned_model)
         rng_key, _ = split(self.rng_key)
 
         # NB: not sure if we should overwrite, keep or simply discard the results?

@@ -59,7 +59,7 @@ Prophet formulation because effects are ordered, so that the output of previous 
 ## Likelihood
 
 In the original Prophet, the likelihood is a Normal distribution, but in Prophetverse
-it can be Normal, Gamma, or Negative Binomial. 
+it can be Normal, Gamma, Negative Binomial, or Beta. 
 
 
 $$
@@ -68,7 +68,7 @@ y \sim \mathcal{likelihood}(\phi(\hat{y}_{mean}), \sigma^2)\quad \text{where} \q
 $$
 
 where $\sigma_{hyper}$ is a hyperparameter and $\phi$ is a function that maps the mean to the support of the likelihood. For normal
-likelihood, $\phi$ is the identity function, but for Gamma and Negative Binomial, it is
+likelihood, $\phi$ is the identity function, but for Gamma, Negative Binomial, and Beta, it is
 
 $$
 \phi(k) = \begin{cases}
@@ -79,7 +79,7 @@ $$
 
 for some small threshold $z$. We set $z = 10^{-5}$ in our implementation. The reason for this
 is to avoid zero or negative values in the support of the likelihood, which can lead to
-error.
+error. For Beta likelihood, we also ensure values stay below 1 using a similar transformation.
 
 
 ## Trend

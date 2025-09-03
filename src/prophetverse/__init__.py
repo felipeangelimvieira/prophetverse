@@ -9,6 +9,7 @@ from .effects import (
     MultivariateNormal,
     GammaTargetLikelihood,
     NegativeBinomialTargetLikelihood,
+    BetaTargetLikelihood,
     # Exogenous effects
     HillEffect,
     LinearEffect,
@@ -22,6 +23,7 @@ from .engine import (
     MAPInferenceEngine,
     MCMCInferenceEngine,
     PriorPredictiveInferenceEngine,
+    VIInferenceEngine,
 )
 
 from .engine.optimizer import (
@@ -64,10 +66,12 @@ __all__ = [
     "ExactLikelihood",
     "GeometricAdstockEffect",
     "ChainedEffects",
+    "BetaTargetLikelihood",
     # Engine
     "MAPInferenceEngine",
     "MCMCInferenceEngine",
     "PriorPredictiveInferenceEngine",
+    "VIInferenceEngine",
     # Optimizers
     "LBFGSSolver",
     "CosineScheduleAdamOptimizer",

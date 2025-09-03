@@ -63,6 +63,18 @@ class HurdleTargetLikelihood(BaseTargetEffect):
 
         super().__init__()
 
+    def _get_observable(self, demand: jnp.ndarray) -> dist.Distribution:
+        if self.likelihood_family == "negbinomial":
+            noise_scale = numpyro.sample(
+                "noise_scale", dist.HalfNormal(self.noise_scale)
+            )
+            return dist.NegativeBinomial2(demand, noise_scale)
+
+        if self.likelihood_family == "poisson":
+            return dist.Poisson(demand)
+
+        raise ValueError(f"Unknown family: {self.likelihood_family}!")
+
     def _fit(self, y, X, scale=1.0):
         self.scale_ = scale
 
@@ -73,11 +85,6 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         *args,
         **kwargs,
     ) -> jnp.ndarray:
-        zero_prob_effects = {
-            k: v
-            for k, v in predicted_effects.items()
-            if k.startswith(self.zero_proba_effects_prefix)
-        }
         demand_effects = {
             k: v
             for k, v in predicted_effects.items()
@@ -85,6 +92,11 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         }
         demand = self._compute_mean(demand_effects) * self.scale_
 
+        zero_prob_effects = {
+            k: v
+            for k, v in predicted_effects.items()
+            if k.startswith(self.zero_proba_effects_prefix)
+        }
         # If len is zero, sample a fixed small probability
         if len(zero_prob_effects) == 0:
             gate_proba_const = numpyro.sample(
@@ -96,17 +108,8 @@ class HurdleTargetLikelihood(BaseTargetEffect):
             gate_prob = self._compute_mean(zero_prob_effects)
             gate_prob = self.proba_transform(gate_prob)
 
-        if self.likelihood_family == "negbinomial":
-            noise_scale = numpyro.sample(
-                "noise_scale", dist.HalfNormal(self.noise_scale)
-            )
-            dist_nonzero = dist.NegativeBinomial2(demand, noise_scale)
-        elif self.likelihood_family == "poisson":
-            dist_nonzero = dist.Poisson(demand)
-        else:
-            raise ValueError(f"Unknown family: {self.likelihood_family}!")
-
-        truncated = TruncatedDiscrete(dist_nonzero, low=0)
+        base_dist = self._get_observable(demand)
+        truncated = TruncatedDiscrete(base_dist, low=0)
 
         with numpyro.plate("data", len(demand), dim=-2):
             samples = numpyro.sample(

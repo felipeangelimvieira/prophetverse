@@ -3,59 +3,20 @@
 The classes in this module take a model, the data and perform inference using Numpyro.
 """
 
-import warnings
-from functools import partial
-from typing import Literal, Optional, Sequence
+from typing import Optional
 
-import jax.numpy as jnp
-import numpyro
-from jax.random import split
-from numpyro.handlers import condition
-from numpyro.infer import SVI, Trace_ELBO
-from numpyro.infer.autoguide import AutoDelta
-from numpyro.infer.initialization import init_to_mean
-from numpyro.infer.svi import SVIRunResult
-
-from prophetverse.engine.base import BaseInferenceEngine
+from prophetverse.engine.vi import VIInferenceEngine
 from prophetverse.engine.optimizer.optimizer import (
     AdamOptimizer,
     BaseOptimizer,
     LBFGSSolver,
 )
-from prophetverse.utils.deprecation import deprecation_warning
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
 DEFAULT_PROGRESS_BAR = False
 
 
-def _fit_svi(
-    rng_key,
-    model,
-    guide,
-    optimizer,
-    num_steps,
-    progress_bar,
-    stable_update,
-    forward_mode_differentiation,
-    **kwargs,
-) -> SVIRunResult:
-    svi_ = SVI(
-        model,
-        guide,
-        optimizer,
-        loss=Trace_ELBO(),
-    )
-    return svi_.run(
-        rng_key=rng_key,
-        progress_bar=progress_bar,
-        stable_update=stable_update,
-        num_steps=num_steps,
-        forward_mode_differentiation=forward_mode_differentiation,
-        **kwargs,
-    )
-
-
-class MAPInferenceEngine(BaseInferenceEngine):
+class MAPInferenceEngine(VIInferenceEngine):
     """
     Maximum a Posteriori (MAP) Inference Engine.
 
@@ -100,26 +61,20 @@ class MAPInferenceEngine(BaseInferenceEngine):
         forward_mode_differentiation=False,
         init_loc_fn=None,
     ):
-
-        self.optimizer = optimizer
-        self.num_steps = num_steps
-        self.num_samples = num_samples
-        self.progress_bar = progress_bar
-        self.stable_update = stable_update
-        self.forward_mode_differentiation = forward_mode_differentiation
-        self.init_loc_fn = init_loc_fn
-        super().__init__(rng_key)
-
         if optimizer is None:
             optimizer = LBFGSSolver()
 
-        self._optimizer = optimizer
-
-        self._init_loc_fn = init_loc_fn
-        if init_loc_fn is None:
-            self._init_loc_fn = init_to_mean()
-
-        self._num_steps = num_steps
+        super().__init__(
+            guide="AutoDelta",
+            optimizer=optimizer,
+            num_steps=num_steps,
+            num_samples=num_samples,
+            rng_key=rng_key,
+            progress_bar=progress_bar,
+            stable_update=stable_update,
+            forward_mode_differentiation=forward_mode_differentiation,
+            init_loc_fn=init_loc_fn,
+        )
 
         if self._optimizer.get_tag("is_solver", False):  # type: ignore[union-attr]
             # If solver, there's a single "solver step". For compatibility,
@@ -129,132 +84,6 @@ class MAPInferenceEngine(BaseInferenceEngine):
                 self._num_steps
             )
             self._num_steps = 1
-
-    def _generate_guide(self, model):
-        return AutoDelta(model, init_loc_fn=self._init_loc_fn)
-
-    def _infer(self, **kwargs):
-        """
-        Perform MAP inference.
-
-        Parameters
-        ----------
-        **kwargs
-            Additional keyword arguments to be passed to the model.
-
-        Returns
-        -------
-        self
-            The updated MAPInferenceEngine object.
-        """
-        self.guide_ = self._generate_guide(self.model_)
-
-        self.run_results_: SVIRunResult = _fit_svi(
-            self.rng_key,
-            self.model_,
-            self.guide_,
-            self._optimizer.create_optimizer(),
-            self._num_steps,
-            stable_update=self.stable_update,
-            progress_bar=self.progress_bar,
-            forward_mode_differentiation=self.forward_mode_differentiation,
-            **kwargs,
-        )
-
-        self.raise_error_if_nan_loss(self.run_results_)
-
-        self.posterior_samples_ = self.guide_.sample_posterior(
-            self.rng_key, params=self.run_results_.params, **kwargs
-        )
-        return self
-
-    def raise_error_if_nan_loss(self, run_results: SVIRunResult):
-        """
-        Raise an error if the loss is NaN.
-
-        Parameters
-        ----------
-        run_results : SVIRunResult
-            The result of the SVI run.
-
-        Raises
-        ------
-        MAPInferenceEngineError
-            If the last loss is NaN.
-        """
-        losses = run_results.losses
-        if jnp.isnan(losses)[-1]:
-            msg = "NaN losses in MAPInferenceEngine."
-            msg += " Try decreasing the learning rate or changing the model specs."
-            msg += " If the problem persists, please open an issue at"
-            msg += " https://github.com/felipeangelimvieira/prophetverse"
-            raise MAPInferenceEngineError(msg)
-
-    def _predict(self, **kwargs):
-        """
-        Generate predictions using the trained model.
-
-        Parameters
-        ----------
-        **kwargs
-            Additional keyword arguments to be passed to the model.
-
-        Returns
-        -------
-        dict
-            The predicted samples generated by the model.
-        """
-        predictive = numpyro.infer.Predictive(
-            self.model_,
-            params=self.run_results_.params,
-            guide=self.guide_,
-            # posterior_samples=self.posterior_samples_,
-            num_samples=self.num_samples,
-        )
-        self.samples_ = predictive(rng_key=self.rng_key, **kwargs)
-        return self.samples_
-
-    def _update(self, site_names, mode="mean", **kwargs):
-        assert (
-            self.posterior_samples_ is not None
-        ), "Can only update from a fitted instance!"
-
-        if mode != "mean":
-            warnings.warn(
-                "Only 'mean' mode is supported for MAPInferenceEngine. Ignoring the provided mode."
-            )
-
-        to_condition_on = {
-            k: v for k, v in self.posterior_samples_.items() if k not in site_names
-        }
-
-        conditioned_model = condition(self.model_, data=to_condition_on)
-        temp_guide = self._generate_guide(conditioned_model)
-        rng_key, _ = split(self.rng_key)
-
-        # NB: not sure if we should overwrite, keep or simply discard the results?
-        temp_results: SVIRunResult = _fit_svi(
-            rng_key,
-            conditioned_model,
-            temp_guide,
-            self._optimizer.create_optimizer(),
-            self._num_steps,
-            stable_update=self.stable_update,
-            progress_bar=self.progress_bar,
-            forward_mode_differentiation=self.forward_mode_differentiation,
-            **kwargs,
-        )
-
-        self.raise_error_if_nan_loss(temp_results)
-
-        updated_posterior = temp_guide.sample_posterior(
-            self.rng_key, params=temp_results.params, **kwargs
-        )
-
-        updated_posterior.update(to_condition_on)
-        self.posterior_samples_ = updated_posterior
-
-        return self
 
     @classmethod
     def get_test_params(*args, **kwargs):

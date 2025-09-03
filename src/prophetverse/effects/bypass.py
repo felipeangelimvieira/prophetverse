@@ -3,6 +3,7 @@
 from typing import Any, Dict, Optional
 
 import jax.numpy as jnp
+import pandas as pd
 
 from prophetverse.effects.base import BaseEffect
 
@@ -17,25 +18,71 @@ class BypassEffect(BaseEffect):
 
     The effect ignores all input data and always returns zeros with the
     appropriate shape for the forecast horizon.
+
+    Parameters
+    ----------
+    validate_empty_input : bool, optional
+        If True, validates that X is empty (has no columns) during fit.
+        If False, ignores X completely. Default is False.
     """
 
     _tags = {
         "capability:panel": True,
         "capability:multivariate_input": True,
-        "requires_X": False,  # Don't require X since we ignore it anyway
+        "requires_X": False,  # Default value, will be overridden in __init__
         "applies_to": "X",
         "filter_indexes_with_forecating_horizon_at_transform": False,
         "requires_fit_before_transform": False,
     }
 
-    def __init__(self):
-        """Initialize the BypassEffect."""
+    def __init__(self, validate_empty_input: bool = False):
+        """Initialize the BypassEffect.
+
+        Parameters
+        ----------
+        validate_empty_input : bool, optional
+            If True, validates that X is empty (has no columns) during fit.
+            If False, ignores X completely. Default is False.
+        """
+        self.validate_empty_input = validate_empty_input
         super().__init__()
 
+        # Set tags based on validation mode
+        self.set_tags(requires_X=self.validate_empty_input)
+
+    def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
+        """Fit the effect. If validation is enabled, check that X is empty.
+
+        Parameters
+        ----------
+        y : pd.DataFrame
+            The target time series data.
+        X : pd.DataFrame
+            The exogenous variables DataFrame.
+        scale : float, optional
+            The scale factor, by default 1.0.
+
+        Raises
+        ------
+        ValueError
+            If validate_empty_input is True and X is not empty (has columns).
+        """
+        if self.validate_empty_input and X is not None and len(X.columns) > 0:
+            raise ValueError(
+                f"BypassEffect with validate_empty_input=True requires X to be empty "
+                f"(no columns), but X has {len(X.columns)} columns: {list(X.columns)}"
+            )
+
     def _transform(self, X, fh):
-        """Transform input data - return None since we ignore inputs anyway."""
-        # We don't need the actual data since we ignore it in _predict
-        return None
+        """Transform input data - handle None and empty DataFrames properly."""
+        if X is None:
+            return None
+        if isinstance(X, pd.DataFrame) and len(X.columns) == 0:
+            return None
+        # Use default behavior for non-empty X
+        from prophetverse.utils.frame_to_array import series_to_tensor_or_array
+
+        return series_to_tensor_or_array(X)
 
     def _predict(
         self,
@@ -44,7 +91,7 @@ class BypassEffect(BaseEffect):
         *args,
         **kwargs,
     ) -> jnp.ndarray:
-        """Return zeros with the appropriate shape.
+        """Return zero.
 
         Parameters
         ----------
@@ -52,26 +99,11 @@ class BypassEffect(BaseEffect):
             Data obtained from the transformed method (ignored).
 
         predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
+            A dictionary containing the predicted effects (ignored).
 
         Returns
         -------
         jnp.ndarray
-            An array of zeros with shape matching the forecast horizon.
-            Shape is (T, 1) for univariate timeseries, or (N, T, 1) for
-            multivariate/panel timeseries.
+            Zero.
         """
-        # Get shape from trend if available, otherwise use data shape
-        if "trend" in predicted_effects:
-            return jnp.zeros_like(predicted_effects["trend"])
-
-        # Fallback: try to infer shape from data
-        if data is not None:
-            if isinstance(data, jnp.ndarray):
-                if data.ndim == 3:  # Panel data (N, T, features)
-                    return jnp.zeros((data.shape[0], data.shape[1], 1))
-                elif data.ndim == 2:  # Single series (T, features)
-                    return jnp.zeros((data.shape[0], 1))
-
-        # Final fallback: return scalar zero
-        return jnp.zeros((1, 1))
+        return jnp.array(0.0)

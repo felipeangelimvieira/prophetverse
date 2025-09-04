@@ -12,9 +12,12 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
 
     _tags = {"inference_method": "prior_predictive"}
 
-    def __init__(self, num_samples=1000, rng_key=None, substitute=None):
+    def __init__(
+        self, num_samples=1000, rng_key=None, substitute=None, return_sites=None
+    ):
         self.num_samples = num_samples
         self.substitute = substitute
+        self.return_sites = return_sites
         super().__init__(rng_key)
 
     def _infer(self, **kwargs):
@@ -26,6 +29,8 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
             model = handlers.substitute(model, self.substitute)
 
         trace = handlers.trace(handlers.seed(model, trace_key)).get_trace(**kwargs)
+        self.trace_ = trace
+
         sample_sites = [
             site_name
             for site_name in trace.keys()
@@ -53,13 +58,19 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
         _, predictive_key = random.split(self._rng_key)
         model = self.model_
 
+        if self.return_sites is None:
+            return_sites = None
+        elif self.return_sites == "all":
+            return_sites = list(self.trace_.keys())
+        else:
+            return_sites = self.return_sites
+
         predictive = Predictive(
             model,
             posterior_samples=self.posterior_samples_,
             num_samples=self.num_samples,
+            return_sites=return_sites,
         )
 
-        self.samples_predictive_ = predictive(predictive_key, **kwargs)
-        return self.samples_predictive_
         self.samples_predictive_ = predictive(predictive_key, **kwargs)
         return self.samples_predictive_

@@ -199,22 +199,24 @@ from numpyro import distributions as dist
 
 saturation = MichaelisMentenEffect(
     effect_mode="additive",
-    max_effect_prior=dist.HalfNormal(1),
-    half_saturation_prior=dist.HalfNormal(80000)
+    max_effect_prior=dist.HalfNormal(0.4),
+    half_saturation_prior=dist.HalfNormal(40000)
 )
 
+#saturation = LogEffect(effect_mode="additive", scale_prior=dist.#HalfNormal(0.2), rate_prior=dist.HalfNormal(0.0001))
+
+
+#saturation = LinearEffect(effect_mode="additive")
 saturation
 ```
 
 ```{python}
 
-saturation.fit(y, X[["ad_spend_search"]])
-predict_data = saturation.transform(X[["ad_spend_search"]], fh=fh)
+prior_samples = saturation.sample_prior(X[["ad_spend_search"]], as_pandas=True)
+```
 
-with numpyro.handlers.seed(rng_seed=42):
-    predict = saturation.predict(predict_data)
+```{python}
+from prophetverse.utils.plotting import plot_prior_predictive
 
-fig, ax = plt.subplots()
-ax.scatter(X[["ad_spend_search"]], predict)
-fig.show()
+plot_prior_predictive(saturation, X=X[["ad_spend_search"]], mode="ad_spend_search")
 ```

@@ -159,6 +159,28 @@ class TestAllEffects(TestAllObjects):
             out.shape == scenario.trend.shape
         ), f"Expected output shape {scenario.trend.shape}, but got {out.shape}"
 
+    @pytest.mark.parametrize("as_pandas", [True, False])
+    def test_sample_prior(self, object_instance, scenario, as_pandas):
+        y = scenario.y
+        X = scenario.X
+
+        requires_x = object_instance.get_tag("requires_X")
+        if requires_x and X is None:
+            pytest.skip("This effect requires X, but X is None.")
+
+        if X is None:
+            X = pd.DataFrame(index=y.index)
+
+        idx = X.index.get_level_values(-1).isin(scenario.fh)
+        samples = object_instance.sample_prior(
+            y=y.loc[idx],
+            X=X.loc[idx],
+            num_samples=1,
+            predicted_effects={"trend": scenario.trend},
+            as_pandas=as_pandas,
+        )
+        assert samples.ndim > 0
+
     def _validate_transform_output(self, obj):
 
         is_valid_dict = False

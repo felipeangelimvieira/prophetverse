@@ -2,15 +2,31 @@
 
 from typing import Any, Callable, Dict, Literal
 
-import jax.nn
+import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import numpyro.handlers
+from jax import Array
 from jax.scipy.special import expit
 
 from prophetverse.distributions import HurdleDistribution, TruncatedDiscrete
 from prophetverse.effects.target.base import BaseTargetEffect
+
+
+def softplus(x: Array) -> Array:
+    """Softplus activation function.
+
+    Parameters
+    ----------
+    x: Array
+        Input array.
+
+    Returns
+    -------
+    Returns the softplus of the input array.
+    """
+    return jax.nn.softplus(x)
 
 
 class HurdleTargetLikelihood(BaseTargetEffect):
@@ -50,11 +66,8 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         noise_scale: float = 1.0,
         zero_proba_effects_prefix: str = "zero_proba__",
         proba_transform: Callable[[jnp.ndarray], jnp.ndarray] = expit,
-        demand_transform: Callable[[jnp.ndarray], jnp.ndarray] = None,
+        demand_transform: Callable[[jnp.ndarray], jnp.ndarray] = softplus,
     ):
-        if demand_transform is None:
-            demand_transform = jax.nn.softplus
-
         self.noise_scale = noise_scale
         self.zero_proba_effects_prefix = zero_proba_effects_prefix
         self.likelihood_family = likelihood_family

@@ -100,7 +100,6 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         self.noise_scale = noise_scale
         self.likelihood_family = likelihood_family
         self.proba_transform = proba_transform
-        self.demand_transform = demand_transform
 
         self.gate_effect_names = gate_effect_names
         self.gate_effect_only = gate_effect_only

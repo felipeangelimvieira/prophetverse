@@ -69,10 +69,10 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         self,
         noise_scale=0.05,
         likelihood_family: Literal["poisson", "negbinomial"] = "poisson",
-        gate_effect_names: Optional[Union[str, List[str]]] = ".*",
-        gate_effect_only: Optional[Union[str, List[str]]] = None,
-        proba_transform=lambda x: jnp.clip(x, 1e-5, 1 - 1e-5),
-        eps=1e-7,
+        gate_effect_names: Optional[Union[str, List[str]]] = "zero_proba/.*",
+        gate_effect_only: Optional[Union[str, List[str]]] = "zero_proba/.*",
+        proba_transform=lambda x: 1 / (1 + jnp.exp(-x)),
+        eps=1e-9,
     ):
         """Hurdle likelihood with configurable gate (zero) effects.
 

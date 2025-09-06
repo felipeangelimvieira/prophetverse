@@ -172,8 +172,9 @@ class Prophetverse(BaseProphetForecaster):
         bool
             True if the likelihood is discrete; False otherwise.
         """
-        return self._likelihood in _DISCRETE_LIKELIHOODS or isinstance(
-            self._likelihood, NegativeBinomialTargetLikelihood
+        return self._likelihood in _DISCRETE_LIKELIHOODS or (
+            hasattr(self._likelihood, "discrete_support")
+            and self._likelihood.discrete_support
         )
 
     def _validate_hyperparams(self):

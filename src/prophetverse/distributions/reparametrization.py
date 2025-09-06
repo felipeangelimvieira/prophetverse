@@ -1,9 +1,4 @@
-"""
-Custom numpyro distributions for the ProphetVerse package.
-
-This module contains custom distributions that can be used as likelihoods or priors
-for the models in the ProphetVerse package.
-"""
+"""Gamma reparametrized distribution."""
 
 from numpyro import distributions as dist
 from numpyro.distributions import constraints

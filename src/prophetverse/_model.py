@@ -43,18 +43,17 @@ def model(
         with numpyro.handlers.scope(prefix="trend"):
             trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
 
-        predicted_effects["trend"] = trend
+        predicted_effects["trend"] = numpyro.deterministic("trend", trend)
 
-        numpyro.deterministic("trend", trend)
         # Exogenous effects
         if exogenous_effects is not None:
-
             for exog_effect_name, exog_effect in exogenous_effects.items():
                 transformed_data = data[exog_effect_name]  # type: ignore[index]
+
                 with numpyro.handlers.scope(prefix=exog_effect_name):
                     effect = exog_effect(transformed_data, predicted_effects)
-                effect = numpyro.deterministic(exog_effect_name, effect)
 
+                effect = numpyro.deterministic(exog_effect_name, effect)
                 predicted_effects[exog_effect_name] = effect
 
         target_model.predict(target_data, predicted_effects)

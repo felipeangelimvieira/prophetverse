@@ -1,56 +1,54 @@
-"""Hurdle Target Effect for Intermittent Demand Modeling."""
-
 from typing import Any, Dict, Optional, Union, List
 from typing import Literal
 import re
 
-
-from typing import Any, Callable, Dict, Literal
-
-import jax
 import jax.numpy as jnp
-import numpyro
-import numpyro.distributions as dist
+import numpy as np
 import numpyro.handlers
-from jax import Array
+import pandas as pd
 from jax.scipy.special import expit
+import numpyro.distributions as dist
+from numpyro.distributions.transforms import (
+    AffineTransform,
+    RecursiveLinearTransform,
+    SigmoidTransform,
+)
+import jax.numpy as jnp
+import pandas as pd
 
-from prophetverse.distributions import HurdleDistribution, TruncatedDiscrete
+import numpyro
+from prophetverse.effects.base import BaseEffect
+from prophetverse.utils.frame_to_array import series_to_tensor_or_array
+from prophetverse.distributions import GammaReparametrized
 from prophetverse.effects.target.base import BaseTargetEffect
 
-
-def softplus(x: Array) -> Array:
-    """Softplus activation function.
-
-    Parameters
-    ----------
-    x: Array
-        Input array.
-
-    Returns
-    -------
-    Returns the softplus of the input array.
-    """
-    return jax.nn.softplus(x)
+from prophetverse.distributions import HurdleDistribution, TruncatedDiscrete
+from prophetverse.sktime.base import BaseBayesianForecaster
+from prophetverse.effects.target.univariate import _build_positive_smooth_clipper
 
 
 class HurdleTargetLikelihood(BaseTargetEffect):
-    """Hurdle Target Effect.
-
-    Implements a Hurdle target effect for intermittent demand modeling.
+    """Hurdle likelihood with configurable gate (zero) effects.
 
     Parameters
     ----------
-    noise_scale (float): Scale of the prior of the scale in the demand distribution,
-        only applicable for likelihoods parameterized by a scale parameter
-        (e.g., Negative Binomial).
-    likelihood_family (str): Family of the likelihood for the demand distribution.
-    zero_proba_effects_prefix (str): Prefix for the effects modeling the zero
-        probability.
-    proba_transform (callable): Transformation function to map linear predictors to
-        probabilities.
-    demand_transform (callable): Transformation function to ensure positive demand
-        predictions.
+    noise_scale : float, default=0.05
+        Scale parameter (used for Negative Binomial noise).
+    likelihood_family : {"poisson", "negbinomial"}
+        Distribution for the positive (non–zero) component.
+    gate_effect_names : str | list[str] | None, default=".*"
+        Regex (or list of regex) patterns identifying effect names that
+        contribute to the gate probability. If None, no effects are used for the
+        gate (a prior Beta constant is then sampled).
+    gate_effect_only : str | list[str] | None, default=None
+        If not None, only the effects matching these patterns are used for the
+        gate. This can be useful to restrict the gate effects to a specific
+        subset.
+    proba_transform : callable, default=expit
+        Transformation applied to the (unbounded) gate linear predictor to map
+        it to (0,1).
+    eps : float, default=1e-7
+        Numerical stability for positive clipping of demand.
     """
 
     discrete_support = True
@@ -74,51 +72,19 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         proba_transform=lambda x: 1 / (1 + jnp.exp(-x)),
         eps=1e-9,
     ):
-        """Hurdle likelihood with configurable gate (zero) effects.
-
-        Parameters
-        ----------
-        noise_scale : float, default=0.05
-            Scale parameter (used for Negative Binomial noise).
-        likelihood_family : {"poisson", "negbinomial"}
-            Distribution for the positive (non–zero) component.
-        gate_effect_names : str | list[str] | None, default=".*"
-            Regex (or list of regex) patterns identifying effect names that
-            contribute to the gate probability. If None, no effects are used for the
-            gate (a prior Beta constant is then sampled).
-        gate_effect_only : str | list[str] | None, default=None
-            If not None, only the effects matching these patterns are used for the
-            gate. This can be useful to restrict the gate effects to a specific
-            subset.
-        proba_transform : callable, default=expit
-            Transformation applied to the (unbounded) gate linear predictor to map
-            it to (0,1).
-        eps : float, default=1e-7
-            Numerical stability for positive clipping of demand.
-        """
 
         self.noise_scale = noise_scale
         self.likelihood_family = likelihood_family
+        self.eps = eps
         self.proba_transform = proba_transform
+        self.link_function = _build_positive_smooth_clipper(eps)
 
         self.gate_effect_names = gate_effect_names
         self.gate_effect_only = gate_effect_only
 
         super().__init__()
 
-    def _get_observable(self, demand: jnp.ndarray) -> dist.Distribution:
-        if self.likelihood_family == "negbinomial":
-            noise_scale = numpyro.sample(
-                "noise_scale", dist.HalfNormal(self.noise_scale)
-            )
-            return dist.NegativeBinomial2(demand, noise_scale)
-
-        if self.likelihood_family == "poisson":
-            return dist.Poisson(demand)
-
-        raise ValueError(f"Unknown family: {self.likelihood_family}!")
-
-    def _fit(self, y, X, scale=1.0):
+    def _fit(self, y, X, scale=1):
         self.scale_ = scale
 
     def _predict(
@@ -178,10 +144,20 @@ class HurdleTargetLikelihood(BaseTargetEffect):
                 gate_linear += eff
             gate_prob = self.proba_transform(gate_linear)
 
-        base_dist = self._get_observable(demand)
-        truncated = TruncatedDiscrete(base_dist, low=0)
+        if self.likelihood_family == "negbinomial":
+            noise_scale = numpyro.sample(
+                "noise_scale", dist.HalfNormal(self.noise_scale)
+            )
+            dist_nonzero = dist.NegativeBinomial2(demand, noise_scale)
+        elif self.likelihood_family == "poisson":
+            dist_nonzero = dist.Poisson(demand)
+        else:
+            raise ValueError(f"Unknown family: {self.likelihood_family}!")
+
+        truncated = TruncatedDiscrete(dist_nonzero, low=0)
 
         with numpyro.plate("data", len(demand), dim=-2):
+
             samples = numpyro.sample(
                 "obs",
                 HurdleDistribution(gate_prob, truncated),
@@ -195,12 +171,11 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         return jnp.zeros_like(demand)
 
     def _compute_mean(self, predicted_effects: Dict[str, jnp.ndarray]) -> jnp.ndarray:
-        if not predicted_effects:
-            return 0.0
+        mean = 0
+        for _, effect in predicted_effects.items():
+            mean += effect
 
-        mean = sum(predicted_effects.values())
-        mean = self.demand_transform(mean)
-
+        mean = self.link_function(mean) if self.link_function else mean
         return mean
 
     # ---------------------------------------------------------------------

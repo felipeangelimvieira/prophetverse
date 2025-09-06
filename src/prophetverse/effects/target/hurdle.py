@@ -1,5 +1,6 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union, List
 from typing import Literal
+import re
 
 import jax.numpy as jnp
 import numpy as np
@@ -45,17 +46,42 @@ class HurdleTargetLikelihood(BaseTargetEffect):
         self,
         noise_scale=0.05,
         likelihood_family: Literal["poisson", "negbinomial"] = "poisson",
-        zero_proba_effects_prefix="zero_proba__",
-        proba_transform=expit,
+        gate_effect_names: Optional[Union[str, List[str]]] = ".*",
+        gate_effect_only: Optional[Union[str, List[str]]] = None,
+        proba_transform=lambda x: jnp.clip(x, 1e-5, 1 - 1e-5),
         eps=1e-7,
     ):
+        """Hurdle likelihood with configurable gate (zero) effects.
+
+        Parameters
+        ----------
+        noise_scale : float, default=0.05
+            Scale parameter (used for Negative Binomial noise).
+        likelihood_family : {"poisson", "negbinomial"}
+            Distribution for the positive (non–zero) component.
+        gate_effect_names : str | list[str] | None, default=".*"
+            Regex (or list of regex) patterns identifying effect names that
+            contribute to the gate probability. If None, no effects are used for the
+            gate (a prior Beta constant is then sampled).
+        gate_effect_only : str | list[str] | None, default=None
+            If not None, only the effects matching these patterns are used for the
+            gate. This can be useful to restrict the gate effects to a specific
+            subset.
+        proba_transform : callable, default=expit
+            Transformation applied to the (unbounded) gate linear predictor to map
+            it to (0,1).
+        eps : float, default=1e-7
+            Numerical stability for positive clipping of demand.
+        """
 
         self.noise_scale = noise_scale
-        self.zero_proba_effects_prefix = zero_proba_effects_prefix
         self.likelihood_family = likelihood_family
         self.eps = eps
         self.proba_transform = proba_transform
         self.link_function = _build_positive_smooth_clipper(eps)
+
+        self.gate_effect_names = gate_effect_names
+        self.gate_effect_only = gate_effect_only
 
         super().__init__()
 
@@ -87,28 +113,37 @@ class HurdleTargetLikelihood(BaseTargetEffect):
             number of series.
         """
 
-        zero_prob_effects = {
-            k: v
-            for k, v in predicted_effects.items()
-            if k.startswith(self.zero_proba_effects_prefix)
+        # Split effects according to gate pattern
+        gate_only_effects, common_effects, non_gate_effects = self._split_gate_effects(
+            predicted_effects
+        )
+
+        # Demand effect selection
+
+        gate_effects = {
+            **gate_only_effects,
+            **common_effects,
         }
+
         demand_effects = {
-            k: v
-            for k, v in predicted_effects.items()
-            if not k.startswith(self.zero_proba_effects_prefix)
+            **common_effects,
+            **non_gate_effects,
         }
+
         demand = self._compute_mean(demand_effects) * self.scale_
 
-        # If len is zero, sample a fixed small probability
-        if len(zero_prob_effects) == 0:
+        # Gate linear predictor
+        if len(gate_effects) == 0:
             gate_proba_const = numpyro.sample(
                 "zero_proba_const",
                 dist.Beta(2, 20),
             )
             gate_prob = jnp.ones(demand.shape) * gate_proba_const
         else:
-            gate_prob = self._compute_mean(zero_prob_effects)
-            gate_prob = self.proba_transform(gate_prob)
+            gate_linear = 0
+            for eff in gate_effects.values():
+                gate_linear += eff
+            gate_prob = self.proba_transform(gate_linear)
 
         if self.likelihood_family == "negbinomial":
             noise_scale = numpyro.sample(
@@ -143,3 +178,39 @@ class HurdleTargetLikelihood(BaseTargetEffect):
 
         mean = self.link_function(mean) if self.link_function else mean
         return mean
+
+    # ---------------------------------------------------------------------
+    # Helpers
+    # ---------------------------------------------------------------------
+    def _match_any(self, patterns: Optional[Union[str, List[str]]], name: str) -> bool:
+        """Return True if name matches provided pattern(s).
+
+        If a list is provided each element is treated as a regex pattern. If a
+        single string is provided it is compiled as regex. None returns False.
+        """
+        if patterns is None:
+            return False
+        if isinstance(patterns, str):
+            return re.search(patterns, name) is not None
+        # Assume iterable of patterns
+        for p in patterns:
+            if re.search(p, name):
+                return True
+        return False
+
+    def _split_gate_effects(
+        self, predicted_effects: Dict[str, jnp.ndarray]
+    ) -> tuple[Dict[str, jnp.ndarray], Dict[str, jnp.ndarray]]:
+        """Split effects into (gate_effects, non_gate_effects)."""
+        gate: Dict[str, jnp.ndarray] = {}
+        common: Dict[str, jnp.ndarray] = {}
+        rest: Dict[str, jnp.ndarray] = {}
+        for name, value in predicted_effects.items():
+
+            if self._match_any(self.gate_effect_only, name):
+                gate[name] = value
+            elif self._match_any(self.gate_effect_names, name):
+                common[name] = value
+            else:
+                rest[name] = value
+        return gate, common, rest

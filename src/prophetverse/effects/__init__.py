@@ -8,7 +8,6 @@ from .fourier import LinearFourierSeasonality
 from .hill import HillEffect
 from .lift_likelihood import LiftExperimentLikelihood
 from .linear import LinearEffect
-from .ar import AREffect
 from .log import LogEffect
 from .michaelis_menten import MichaelisMentenEffect
 from .target.multivariate import MultivariateNormal
@@ -31,7 +30,6 @@ __all__ = [
     "LinearFourierSeasonality",
     "GeometricAdstockEffect",
     "ChainedEffects",
-    "AREffect",
     "MultivariateNormal",
     "NormalTargetLikelihood",
     "GammaTargetLikelihood",

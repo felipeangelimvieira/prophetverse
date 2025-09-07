@@ -198,6 +198,71 @@ samples = model.predict_component_samples(fh=forecast_horizon)
 samples
 ```
 
+
+## Fitting with Variational Inference
+
+Another inference method available in Prophetverse is Variational Inference (VI). This method is generally faster than MCMC and can be used for larger datasets, while still providing probabilistic samples for the parameters.
+
+To use VI, we just need to change the `inference_engine` parameter to `VIInferenceEngine`. The rest of the code remains the same.
+
+::: {.callout-tip}
+
+Choose carefully the number of steps and the optimizer. The default optimizer might not work well for all use-cases
+
+:::
+
+```{python}
+from prophetverse.engine import VIInferenceEngine
+from prophetverse import LBFGSSolver, CosineScheduleAdamOptimizer
+
+
+optimizer = CosineScheduleAdamOptimizer()
+model.set_params(
+    inference_engine=VIInferenceEngine(
+        progress_bar=True, num_steps=100_000, optimizer=optimizer
+    )
+)
+
+
+model.fit(y=y)
+```
+
+```{python}
+quantiles = model.predict_quantiles(fh=forecast_horizon, alpha=[0.75, 0.25])
+fig, ax = plt.subplots(figsize=(8, 5))
+# Plot area between quantiles
+ax.fill_between(
+    quantiles.index.to_timestamp(),
+    quantiles.iloc[:, 0],
+    quantiles.iloc[:, -1],
+    alpha=0.5,
+)
+ax.scatter(y.index, y, marker="o", color="k", s=2, alpha=1)
+```
+
+We can then plot the seasonality with credible intervals, using the samples from the posterior distribution of the parameters.
+
+```{python}
+
+samples = model.predict_component_samples(fh=forecast_horizon)
+
+
+seasonality_intervals = (
+    samples["seasonality"].unstack(level=0).quantile([0.05, 0.95], axis=1).T
+)
+
+
+fig, ax = plt.subplots(figsize=(8, 5))
+
+ax.fill_between(
+    seasonality_intervals.index.to_timestamp(),
+    seasonality_intervals[0.05],
+    seasonality_intervals[0.95],
+    alpha=0.5,
+)
+ax.set_title("Seasonality with 90% credible interval")
+```
+
 ## Extra: syntax sugar
 
 In Prophetverse, we've implemented the `>>` operator, which makes it easier to set `trend`, `exogenous_effects` and `inference_engine` parameters.

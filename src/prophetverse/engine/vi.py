@@ -4,12 +4,13 @@ The VIInferenceEngine class performs Variational Inference using SVI with
 configurable autoguides specified as string parameters.
 """
 
-from typing import Optional
+from typing import Optional, Union, Callable
 
 import jax.numpy as jnp
 import numpyro
 from numpyro.infer import SVI, Trace_ELBO
 from numpyro.infer.autoguide import (
+    AutoGuide,
     AutoDiagonalNormal,
     AutoLowRankMultivariateNormal,
     AutoMultivariateNormal,
@@ -20,7 +21,7 @@ from numpyro.infer.svi import SVIRunResult
 
 from prophetverse.engine.base import BaseInferenceEngine
 from prophetverse.engine.optimizer.optimizer import (
-    AdamOptimizer,
+    CosineScheduleAdamOptimizer,
     BaseOptimizer,
 )
 
@@ -30,7 +31,7 @@ DEFAULT_PROGRESS_BAR = False
 # Mapping of guide string names to numpyro autoguide classes
 GUIDE_MAP = {
     "AutoNormal": AutoNormal,
-    "AutoMultivariateNormal": AutoMultivariateNormal, 
+    "AutoMultivariateNormal": AutoMultivariateNormal,
     "AutoDiagonalNormal": AutoDiagonalNormal,
     "AutoLowRankMultivariateNormal": AutoLowRankMultivariateNormal,
 }
@@ -45,9 +46,9 @@ class VIInferenceEngine(BaseInferenceEngine):
 
     Parameters
     ----------
-    guide : str, optional
-        The name of the autoguide to use for variational inference. 
-        Available options: "AutoNormal", "AutoMultivariateNormal", 
+    guide : str or AutoGuide, optional
+        The name of the autoguide to use for variational inference.
+        Available options: "AutoNormal", "AutoMultivariateNormal",
         "AutoDiagonalNormal", "AutoLowRankMultivariateNormal".
         Default is "AutoNormal".
     optimizer : Optional[BaseOptimizer]
@@ -66,6 +67,8 @@ class VIInferenceEngine(BaseInferenceEngine):
         Whether to use stable update during inference. Default is False.
     forward_mode_differentiation : bool, optional
         Whether to use forward mode differentiation. Default is False.
+    init_scale : float, optional
+        The scale for initializing the parameters. Default is 0.1.
     init_loc_fn : optional
         The function to initialize the location parameter. If not provided, the default is init_to_mean.
 
@@ -77,7 +80,7 @@ class VIInferenceEngine(BaseInferenceEngine):
 
     def __init__(
         self,
-        guide: str = "AutoNormal",
+        guide: Optional[Union[str, Callable]] = "AutoDiagonalNormal",
         optimizer: Optional[BaseOptimizer] = None,
         num_steps=10_000,
         num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
@@ -85,6 +88,7 @@ class VIInferenceEngine(BaseInferenceEngine):
         progress_bar: bool = DEFAULT_PROGRESS_BAR,
         stable_update=False,
         forward_mode_differentiation=False,
+        init_scale=0.1,
         init_loc_fn=None,
     ):
         self.guide = guide
@@ -94,25 +98,37 @@ class VIInferenceEngine(BaseInferenceEngine):
         self.progress_bar = progress_bar
         self.stable_update = stable_update
         self.forward_mode_differentiation = forward_mode_differentiation
+        self.init_scale = init_scale
         self.init_loc_fn = init_loc_fn
         super().__init__(rng_key)
 
         # Validate guide parameter
         if guide not in GUIDE_MAP:
             available_guides = list(GUIDE_MAP.keys())
-            raise ValueError(f"Unknown guide '{guide}'. Available guides: {available_guides}")
+            raise ValueError(
+                f"Unknown guide '{guide}'. Available guides: {available_guides}"
+            )
 
         if optimizer is None:
-            optimizer = AdamOptimizer()
+            optimizer = CosineScheduleAdamOptimizer()
 
         self._optimizer = optimizer
-        self._guide_class = GUIDE_MAP[guide]
+        self._guide_class = GUIDE_MAP[guide] if isinstance(guide, str) else None
 
         self._init_loc_fn = init_loc_fn
         if init_loc_fn is None:
             self._init_loc_fn = init_to_mean()
 
         self._num_steps = num_steps
+
+        if self._optimizer.get_tag("is_solver", False):  # type: ignore[union-attr]
+            # If solver, there's a single "solver step". For compatibility,
+            # we set num_steps to 1 and max_iter to the original num_steps.
+
+            self._optimizer = self._optimizer.set_max_iter(  # type: ignore[union-attr]
+                self._num_steps
+            )
+            self._num_steps = 1
 
     def _infer(self, **kwargs):
         """
@@ -128,7 +144,9 @@ class VIInferenceEngine(BaseInferenceEngine):
         self
             The updated VIInferenceEngine object.
         """
-        self.guide_ = self._guide_class(self.model_, init_loc_fn=self._init_loc_fn)
+        self.guide_ = self._guide_class(
+            self.model_, init_loc_fn=self._init_loc_fn, init_scale=self.init_scale
+        )
 
         def get_result(
             rng_key,
@@ -226,17 +244,17 @@ class VIInferenceEngine(BaseInferenceEngine):
         return [
             {
                 "guide": "AutoNormal",
-                "optimizer": AdamOptimizer(),
+                "optimizer": CosineScheduleAdamOptimizer(),
                 "num_steps": 100,
             },
             {
                 "guide": "AutoMultivariateNormal",
-                "optimizer": AdamOptimizer(),
+                "optimizer": CosineScheduleAdamOptimizer(),
                 "num_steps": 100,
             },
             {
                 "guide": "AutoDiagonalNormal",
-                "optimizer": AdamOptimizer(),
+                "optimizer": CosineScheduleAdamOptimizer(),
                 "num_steps": 100,
             },
         ]

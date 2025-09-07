@@ -49,7 +49,6 @@ class BaseAdstockEffect(BaseEffect):
             Scale factor for the effect (default is 1).
         """
         self._X = X.copy()
-        self._y = y.copy()
 
     def _transform(self, X, fh):
         """Transform the dataframe and horizon to array.
@@ -125,14 +124,25 @@ class GeometricAdstockEffect(BaseAdstockEffect):
         Prior distribution for the decay parameter (controls the rate of decay).
     raise_error_if_fh_changes : bool, optional
         Whether to raise an error if the forecasting horizon changes during predict
+    normalize : bool, optional, default False
+        If True, normalizes the adstock so that the cumulative effect of a
+        single-period impulse equals 1. Technically this multiplies the raw
+        geometric carryover series by ``(1 - decay)`` which produces weights
+        ``(1 - decay) * decay**k`` (k >= 0) that sum to 1. When False (the
+        historical default behaviour), an impulse has total mass
+        ``1 / (1 - decay)`` and the absolute scale of the adstock increases as
+        ``decay`` approaches 1. Keeping the default as False preserves
+        backwards compatibility with earlier versions.
     """
 
     def __init__(
         self,
         decay_prior: dist.Distribution = None,
         raise_error_if_fh_changes: bool = False,
+        normalize: bool = False,
     ):
         self.decay_prior = decay_prior  # Default Beta distribution for decay rate.
+        self.normalize = normalize
         super().__init__(raise_error_if_fh_changes=raise_error_if_fh_changes)
 
         self._decay_prior = self.decay_prior
@@ -179,6 +189,9 @@ class GeometricAdstockEffect(BaseAdstockEffect):
             xs=data_array.flatten(),
         )
         adstock = adstock.reshape(-1, 1)
+        # Optional normalization so that a unit impulse integrates to 1 over time
+        if self.normalize:
+            adstock = adstock * (1 - decay)
         adstock = adstock[ix]
         return adstock
 
@@ -227,6 +240,32 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         if self._concentration_prior is None:
             self._concentration_prior = GammaReparametrized(2, 1)
 
+    def _fit(self, y, X, scale=1):
+
+        # Determine max_lag if not provided
+        self.max_lag_ = self.max_lag
+        if self.max_lag_ is None:
+            # Use a heuristic based on Weibull parameters
+            # For Weibull distribution, most of the mass is within scale * concentration^(1/concentration) * 3
+            # This is a rough approximation for the 99th percentile
+            max_lag = (
+                jnp.ceil(
+                    scale
+                    * (
+                        self._concentration_prior.mean
+                        ** (1.0 / self._concentration_prior.mean)
+                    )
+                    * 3
+                )
+            ).astype(int) + 1
+            self.max_lag_ = jnp.clip(max_lag, 1, len(X))
+        else:
+            self.max_lag_ = min(max_lag, len(X))
+
+        self.lags_ = jnp.arange(1, self.max_lag_ + 1, dtype=jnp.float32)
+
+        return super()._fit(y, X, scale)
+
     def _predict(
         self,
         data: jnp.ndarray,
@@ -255,21 +294,8 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         scale = numpyro.sample("scale", self._scale_prior)
         concentration = numpyro.sample("concentration", self._concentration_prior)
 
-        # Determine max_lag if not provided
-        max_lag = self.max_lag
-        if max_lag is None:
-            # Use a heuristic based on Weibull parameters
-            # For Weibull distribution, most of the mass is within scale * concentration^(1/concentration) * 3
-            # This is a rough approximation for the 99th percentile
-            max_lag = (
-                int(jnp.ceil(scale * (concentration ** (1.0 / concentration)) * 3)) + 1
-            )
-            max_lag = jnp.clip(max_lag, 1, len(data_array))
-        else:
-            max_lag = min(max_lag, len(data_array))
-
         # Create lag indices
-        lags = jnp.arange(1, max_lag + 1, dtype=jnp.float32)
+        lags = self.lags_
 
         # Compute Weibull PDF weights for each lag
         weibull_dist = dist.Weibull(scale=scale, concentration=concentration)
@@ -297,7 +323,9 @@ class WeibullAdstockEffect(BaseAdstockEffect):
             return new_history, adstock_value
 
         # Initialize history buffer with zeros
-        initial_history = jnp.zeros(max_lag, dtype=data_array.dtype)
+        initial_history = jnp.ones(self.max_lag_, dtype=data_array.dtype) * (
+            data_array.flatten()[0]
+        )
 
         # Apply scan over the data
         _, adstock = jax.lax.scan(

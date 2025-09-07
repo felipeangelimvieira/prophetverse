@@ -58,7 +58,7 @@ The index type should always be the same for `y` and `X`, and every dataframe yo
 
 ::: 
 
-### Minimal Example
+#### Example of dataset
 
 Here we load a synthetic dataset:
 
@@ -87,24 +87,35 @@ y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=0.2
 
 ```
 
+## 2. Prophetverse model
+
+Think of Prophetverse as the conerstone of you MMM model. It is a flexible class that allows you to define the trend, seasonality, and custom exogenous effects of your model.
+
+### Simple Prophetverse model
+
 We can use a simple Prophetverse model with Linear effects and a seasonality component:
 
 ```{python}
 from prophetverse import Prophetverse, LinearEffect, LinearFourierSeasonality
 
-from prophetverse.utils.regex import starts_with
+from prophetverse.utils.regex import starts_with, no_input_columns
 
 
-seasonality_effect = LinearFourierSeasonality(sp_list=[365.25, 7], fourier_terms_list=[10, 3], prior_scale=0.1, freq="D", effect_mode="additive")
+seasonality_effect = LinearFourierSeasonality(
+    sp_list=[365.25, 7],
+    fourier_terms_list=[10, 3],
+    prior_scale=0.1,
+    freq="D",
+    effect_mode="additive",
+)
 
 ad_spend_effect = LinearEffect()
 
 model = Prophetverse(
-	exogenous_effects=[
-		("ad_spend", ad_spend_effect, starts_with("ad")),
-		("seasonality", seasonality_effect, None)
-	],
-	
+    exogenous_effects=[
+        ("ad_spend", ad_spend_effect, starts_with("ad")),
+        ("seasonality", seasonality_effect, no_input_columns),
+    ],
 )
 
 model.fit(y=y_train, X=X_train)
@@ -140,37 +151,6 @@ plot_forecasts(y_pred)
 ```
 
 
-#### Modifying the trend component
-
-We could've used a difference trend, and not the default, for this example:
-
-```{python}
-
-from prophetverse import PiecewiseLinearTrend
-
-
-model = Prophetverse(
-    trend=PiecewiseLinearTrend(
-		changepoint_interval=365, # One changepoint every 365 timeunits
-		changepoint_range=-120, # The last changepoint should be 120 days before the end of the training data,
-		changepoint_prior_scale=1e-3
-	),
-	exogenous_effects=[
-		("ad_spend", ad_spend_effect, starts_with("ad")),
-		("seasonality", seasonality_effect, None)
-	],
-)
-
-model
-```
-
-```{python}
-
-model.fit(y_train, X_train)
-y_pred = model.predict(fh=fh, X=X)
-```
-
-
 #### Getting the components
 
 To obtain the contribution of each component, you can use the `predict_components` method:
@@ -185,38 +165,4 @@ If you want to obtain all the sample to compute, for example, probabilistic inte
 ```{python}
 samples = model.predict_component_samples(fh=fh, X=X)
 samples
-```
-
-
-### Use saturation effects
-
-There are many available effects available by default on Prophetverse. 
-
-```{python}
-from prophetverse.effects import MichaelisMentenEffect, HillEffect, LogEffect
-import numpyro
-from numpyro import distributions as dist
-
-saturation = MichaelisMentenEffect(
-    effect_mode="additive",
-    max_effect_prior=dist.HalfNormal(0.4),
-    half_saturation_prior=dist.HalfNormal(40000)
-)
-
-#saturation = LogEffect(effect_mode="additive", scale_prior=dist.#HalfNormal(0.2), rate_prior=dist.HalfNormal(0.0001))
-
-
-#saturation = LinearEffect(effect_mode="additive")
-saturation
-```
-
-```{python}
-
-prior_samples = saturation.sample_prior(X[["ad_spend_search"]], as_pandas=True)
-```
-
-```{python}
-from prophetverse.utils.plotting import plot_prior_predictive
-
-plot_prior_predictive(saturation, X=X[["ad_spend_search"]], mode="ad_spend_search")
 ```

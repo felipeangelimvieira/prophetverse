@@ -536,3 +536,36 @@ def test_geometric_vs_weibull_adstock_comparison():
 
     # Results should be different (different adstock patterns)
     assert not jnp.allclose(geo_result, weibull_result, atol=1e-6)
+
+
+def test_geometric_adstock_normalize_option():
+    """Test that normalize=True scales the geometric adstock by (1-decay)."""
+    data = jnp.array([[1.0], [0.0], [0.0], [0.0]])  # impulse
+    X = pd.DataFrame(data, columns=["feature1"])
+    y = pd.DataFrame(jnp.ones_like(data), columns=["target"], index=X.index)
+
+    params = {"decay": jnp.array(0.6)}
+
+    # Without normalization
+    eff_raw = GeometricAdstockEffect()
+    eff_raw.fit(y=y, X=X)
+    geo_data_raw = eff_raw.transform(X, fh=X.index)
+    with numpyro.handlers.seed(rng_seed=0), numpyro.handlers.do(data=params):
+        raw_result = eff_raw.predict(geo_data_raw, {})
+
+    # With normalization
+    eff_norm = GeometricAdstockEffect(normalize=True)
+    eff_norm.fit(y=y, X=X)
+    geo_data_norm = eff_norm.transform(X, fh=X.index)
+    with numpyro.handlers.seed(rng_seed=0), numpyro.handlers.do(data=params):
+        norm_result = eff_norm.predict(geo_data_norm, {})
+
+    # Raw geometric impulse response: 1, 0.6, 0.6^2, 0.6^3
+    expected_raw = jnp.array([[1.0], [0.6], [0.36], [0.216]])
+    assert jnp.allclose(raw_result, expected_raw, atol=1e-6)
+
+    # Normalized multiplies by (1-decay)=0.4 so that weights sum to 1
+    expected_norm = expected_raw * (1 - params["decay"])
+    assert jnp.allclose(norm_result, expected_norm, atol=1e-6)
+    # Sum of normalized weights (approx over first 4 terms < 1 but approaching 1)
+    assert norm_result.sum() < raw_result.sum()

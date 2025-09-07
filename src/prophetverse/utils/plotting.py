@@ -58,6 +58,6 @@ def plot_prior_predictive(
         alpha=0.2,
     )
 
-    ax.plot(_x[argsort], samples.mean(axis=1)[argsort])
+    ax.plot(_x[argsort], samples.mean(axis=1).iloc[argsort])
 
     return fig, ax

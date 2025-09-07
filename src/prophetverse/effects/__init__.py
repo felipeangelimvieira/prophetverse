@@ -2,6 +2,7 @@
 
 from .adstock import GeometricAdstockEffect, WeibullAdstockEffect
 from .base import BaseEffect
+from .ignore_input import IgnoreInput
 from .chain import ChainedEffects
 from .exact_likelihood import ExactLikelihood
 from .fourier import LinearFourierSeasonality
@@ -21,6 +22,7 @@ from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
 
 __all__ = [
     "BaseEffect",
+    "IgnoreInput",
     "HillEffect",
     "LinearEffect",
     "LogEffect",

@@ -19,7 +19,7 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
 
     def _infer(self, **kwargs):
 
-        _, trace_key, predictive_key = random.split(self._rng_key, 3)
+        _, trace_key, predictive_key = random.split(self.rng_key, 3)
 
         model = self.model_
         if self.substitute is not None:
@@ -50,7 +50,7 @@ class PriorPredictiveInferenceEngine(BaseInferenceEngine):
         """
         Draw samples from the prior predictive distribution.
         """
-        _, predictive_key = random.split(self._rng_key)
+        _, predictive_key = random.split(self.rng_key)
         model = self.model_
 
         predictive = Predictive(

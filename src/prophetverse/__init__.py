@@ -17,6 +17,7 @@ from .effects import (
     LiftExperimentLikelihood,
     ExactLikelihood,
     GeometricAdstockEffect,
+    WeibullAdstockEffect,
     ChainedEffects,
 )
 from .engine import (
@@ -65,6 +66,7 @@ __all__ = [
     "LiftExperimentLikelihood",
     "ExactLikelihood",
     "GeometricAdstockEffect",
+    "WeibullAdstockEffect",
     "ChainedEffects",
     "BetaTargetLikelihood",
     # Engine

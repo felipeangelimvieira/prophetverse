@@ -14,10 +14,10 @@ __all__ = ["GeometricAdstockEffect", "WeibullAdstockEffect"]
 
 class BaseAdstockEffect(BaseEffect):
     """Base class for adstock effects.
-    
+
     Contains shared functionality for handling historical data concatenation
     and common preprocessing steps for adstock computations.
-    
+
     Parameters
     ----------
     raise_error_if_fh_changes : bool, optional
@@ -93,12 +93,12 @@ class BaseAdstockEffect(BaseEffect):
 
     def _extract_data_and_indices(self, data):
         """Extract data array and indices from the transform output.
-        
+
         Parameters
         ----------
         data : jnp.ndarray or tuple
             Data obtained from the transformed method.
-            
+
         Returns
         -------
         tuple
@@ -112,7 +112,7 @@ class BaseAdstockEffect(BaseEffect):
             ix = jnp.arange(data_array.shape[0], dtype=jnp.int32)
         else:
             raise ValueError(f"Unexpected data type: {type(data)}")
-        
+
         return data_array, ix
 
 
@@ -144,7 +144,7 @@ class GeometricAdstockEffect(BaseAdstockEffect):
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
         *args,
-        **kwargs
+        **kwargs,
     ) -> jnp.ndarray:
         """
         Apply and return the geometric adstock effect values.
@@ -174,20 +174,19 @@ class GeometricAdstockEffect(BaseAdstockEffect):
             return new_adstock, new_adstock
 
         _, adstock = jax.lax.scan(
-            adstock_step, init=jnp.array([0], dtype=data_array.dtype), xs=data_array.flatten()
+            adstock_step,
+            init=jnp.array([0], dtype=data_array.dtype),
+            xs=data_array.flatten(),
         )
         adstock = adstock.reshape(-1, 1)
         adstock = adstock[ix]
         return adstock
 
 
-
-
-
 class WeibullAdstockEffect(BaseAdstockEffect):
     """Represents a Weibull Adstock effect in a time series model.
 
-    The Weibull adstock applies a convolution of the input with a Weibull 
+    The Weibull adstock applies a convolution of the input with a Weibull
     probability density function, allowing for more flexible carryover patterns
     compared to geometric adstock.
 
@@ -214,16 +213,16 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         raise_error_if_fh_changes: bool = False,
     ):
         from prophetverse.distributions import GammaReparametrized
-        
+
         self.scale_prior = scale_prior
         self.concentration_prior = concentration_prior
         self.max_lag = max_lag
         super().__init__(raise_error_if_fh_changes=raise_error_if_fh_changes)
-            
+
         self._scale_prior = self.scale_prior
         if self._scale_prior is None:
             self._scale_prior = GammaReparametrized(2, 1)
-            
+
         self._concentration_prior = self.concentration_prior
         if self._concentration_prior is None:
             self._concentration_prior = GammaReparametrized(2, 1)
@@ -233,7 +232,7 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         data: jnp.ndarray,
         predicted_effects: Dict[str, jnp.ndarray],
         *args,
-        **kwargs
+        **kwargs,
     ) -> jnp.ndarray:
         """
         Apply and return the Weibull adstock effect values.
@@ -244,7 +243,7 @@ class WeibullAdstockEffect(BaseAdstockEffect):
             Data obtained from the transformed method (shape: T, 1) or tuple (data, ix).
         predicted_effects : Dict[str, jnp.ndarray]
             A dictionary containing the predicted effects.
-        
+
         Returns
         -------
         jnp.ndarray
@@ -255,54 +254,56 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         # Sample Weibull parameters
         scale = numpyro.sample("scale", self._scale_prior)
         concentration = numpyro.sample("concentration", self._concentration_prior)
-        
+
         # Determine max_lag if not provided
         max_lag = self.max_lag
         if max_lag is None:
             # Use a heuristic based on Weibull parameters
             # For Weibull distribution, most of the mass is within scale * concentration^(1/concentration) * 3
             # This is a rough approximation for the 99th percentile
-            max_lag = int(jnp.ceil(scale * (concentration ** (1.0 / concentration)) * 3)) + 1
+            max_lag = (
+                int(jnp.ceil(scale * (concentration ** (1.0 / concentration)) * 3)) + 1
+            )
             max_lag = jnp.clip(max_lag, 1, len(data_array))
         else:
             max_lag = min(max_lag, len(data_array))
-        
+
         # Create lag indices
         lags = jnp.arange(1, max_lag + 1, dtype=jnp.float32)
-        
+
         # Compute Weibull PDF weights for each lag
         weibull_dist = dist.Weibull(scale=scale, concentration=concentration)
         weights = jnp.exp(weibull_dist.log_prob(lags))
-        
+
         # Normalize weights so they sum to 1
         weights = weights / jnp.sum(weights)
-        
+
         # Apply Weibull adstock using convolution
         def weibull_adstock_step(carry, current_input):
             # carry contains the history buffer [x_{t-max_lag+1}, ..., x_{t-1}]
             history_buffer = carry
-            
+
             # Compute adstock as weighted sum of current input and history
             # adstock[t] = weights[0] * x[t] (if we include current period)
             # For traditional adstock, we usually exclude current period:
             # adstock[t] = sum_{i=1}^{max_lag} weights[i-1] * x[t-i]
             adstock_value = jnp.dot(weights, history_buffer)
-            
+
             # Update history buffer: shift left and add current input
-            new_history = jnp.concatenate([history_buffer[1:], current_input.reshape(1)])
-            
+            new_history = jnp.concatenate(
+                [history_buffer[1:], current_input.reshape(1)]
+            )
+
             return new_history, adstock_value
 
         # Initialize history buffer with zeros
         initial_history = jnp.zeros(max_lag, dtype=data_array.dtype)
-        
+
         # Apply scan over the data
         _, adstock = jax.lax.scan(
-            weibull_adstock_step, 
-            init=initial_history, 
-            xs=data_array.flatten()
+            weibull_adstock_step, init=initial_history, xs=data_array.flatten()
         )
-        
+
         adstock = adstock.reshape(-1, 1)
         adstock = adstock[ix]
         return adstock

@@ -244,17 +244,17 @@ class VIInferenceEngine(BaseInferenceEngine):
         return [
             {
                 "guide": "AutoNormal",
-                "optimizer": AdamOptimizer(),
+                "optimizer": CosineScheduleAdamOptimizer(),
                 "num_steps": 100,
             },
             {
                 "guide": "AutoMultivariateNormal",
-                "optimizer": AdamOptimizer(),
+                "optimizer": CosineScheduleAdamOptimizer(),
                 "num_steps": 100,
             },
             {
                 "guide": "AutoDiagonalNormal",
-                "optimizer": AdamOptimizer(),
+                "optimizer": CosineScheduleAdamOptimizer(),
                 "num_steps": 100,
             },
         ]

@@ -318,6 +318,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#probabilistic-forecasting" id="toc-probabilistic-forecasting" class="nav-link" data-scroll-target="#probabilistic-forecasting">Probabilistic forecasting</a></li>
   <li><a href="#timeseries-decomposition" id="toc-timeseries-decomposition" class="nav-link" data-scroll-target="#timeseries-decomposition">Timeseries decomposition</a></li>
   <li><a href="#fitting-with-mcmc" id="toc-fitting-with-mcmc" class="nav-link" data-scroll-target="#fitting-with-mcmc">Fitting with MCMC</a></li>
+  <li><a href="#fitting-with-variational-inference" id="toc-fitting-with-variational-inference" class="nav-link" data-scroll-target="#fitting-with-variational-inference">Fitting with Variational Inference</a></li>
   <li><a href="#extra-syntax-sugar" id="toc-extra-syntax-sugar" class="nav-link" data-scroll-target="#extra-syntax-sugar">Extra: syntax sugar</a></li>
   </ul>
 </nav>
@@ -357,11 +358,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p><code>predict(fh, X=None)</code>: This method is used to make predictions. It takes as input a forecast horizon <code>fh</code> and an optional exogenous variable <code>X</code>. The <code>fh</code> forecast horizon can be a relative or an absolute forecast horizon. The <code>X</code> variable must be a <code>pd.DataFrame</code> or <code>None</code>, according to the <code>X</code> variable used in the <code>fit</code> method.</p></li>
 </ul>
 <p>Later in this example, we will also show additional methods to make predictions, such as <code>predict_quantiles</code> and <code>predict_components</code>.</p>
-<div id="90836163" class="cell" data-execution_count="1">
+<div id="49b09a7f" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="f336613a" class="cell" data-execution_count="2">
+<div id="359825be" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -373,7 +374,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="import-dataset" class="level2">
 <h2 class="anchored" data-anchor-id="import-dataset">Import dataset</h2>
 <p>We import a dataset from Prophet’s original repository. We then put it into sktime-friendly format, where the index is a <code>pd.PeriodIndex</code> and the colums are the time series.</p>
-<div id="1796e59e" class="cell" data-execution_count="3">
+<div id="6be279bc" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.datasets.loaders <span class="im">import</span> load_peyton_manning</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> load_peyton_manning()</span>
@@ -421,7 +422,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>The full dataset looks like this:</p>
-<div id="2d734f37" class="cell" data-execution_count="4">
+<div id="19646023" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>y.plot.line(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
@@ -438,7 +439,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Here, we will show how you can fit a simple model with Prophetverse. We first fit a model without seasonal components, and then fit a full model. We also show how easy it is to switch between Maximum A Posteriori (MAP) inference and Markov Chain Monte Carlo (MCMC).</p>
 <section id="no-seasonality" class="level3">
 <h3 class="anchored" data-anchor-id="no-seasonality">No seasonality</h3>
-<div id="dc286e03" class="cell" data-execution_count="5">
+<div id="8fbaab96" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.trend <span class="im">import</span> PiecewiseLinearTrend</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.engine <span class="im">import</span> MAPInferenceEngine</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.sktime <span class="im">import</span> Prophetverse</span>
@@ -454,7 +455,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
-<style>#sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 {
+<style>#sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -479,15 +480,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a {
     color: var(--sklearn-color-text);
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 pre {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a pre {
     padding: 0;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 input.sk-hidden--visually {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -499,7 +500,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     width: 1px;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-dashed-wrapped {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -507,7 +508,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-container {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -517,7 +518,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-text-repr-fallback {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -533,14 +534,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Parallel-specific style estimator block */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-parallel-item::after {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-parallel {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -548,28 +549,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-parallel-item {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-parallel-item:first-child::after {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-parallel-item:last-child::after {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-parallel-item:only-child::after {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-serial {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -587,14 +588,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-toggleable {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 label.sk-toggleable__label {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -604,7 +605,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     text-align: center;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 label.sk-toggleable__label-arrow:before {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -612,13 +613,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     color: var(--sklearn-color-icon);
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 label.sk-toggleable__label-arrow:hover:before {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-toggleable__content {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -626,27 +627,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-toggleable__content pre {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -654,38 +655,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-label label.sk-toggleable__label,
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-label label {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-label label.sk-toggleable__label,
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-label:hover label.sk-toggleable__label {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-label label {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-label-container {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-estimator {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -695,7 +696,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* on hover */
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 div.sk-estimator:hover {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -752,7 +753,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 a.estimator_doc_link {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -767,22 +768,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* On hover */
-  #sk-71ebd487-72eb-47d8-aa39-8805b9b4f027 a.estimator_doc_link:hover {
+  #sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-71ebd487-72eb-47d8-aa39-8805b9b4f027" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(inference_engine=MAPInferenceEngine(),
+</style><div id="sk-e3f02599-5612-4213-8b0a-e6d2ab5f924a" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-250))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('adbf0fdc-9fed-4461-a505-8c0bf50b21c3')" type="checkbox"><label for="UUID('adbf0fdc-9fed-4461-a505-8c0bf50b21c3')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(inference_engine=MAPInferenceEngine(),
+                                        changepoint_range=-250))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('792d8b3a-90dc-47f1-b287-fdd3bfdec184')" type="checkbox"><label for="UUID('792d8b3a-90dc-47f1-b287-fdd3bfdec184')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-250))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ec474a72-9deb-4fa4-a9d0-74a56eeb15c7')" type="checkbox"><label for="UUID('ec474a72-9deb-4fa4-a9d0-74a56eeb15c7')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
-                     changepoint_range=-250)</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('86fb196d-f5d2-4aee-934a-0b5a5af342af')" type="checkbox"><label for="UUID('86fb196d-f5d2-4aee-934a-0b5a5af342af')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
+                                        changepoint_range=-250))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('d53ad1b1-855c-40eb-af75-ddecb94fd139')" type="checkbox"><label for="UUID('d53ad1b1-855c-40eb-af75-ddecb94fd139')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                     changepoint_range=-250)</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('392c7cef-e2e7-44c2-9fef-f9aa05e43817')" type="checkbox"><label for="UUID('392c7cef-e2e7-44c2-9fef-f9aa05e43817')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="187ce614" class="cell" data-execution_count="6">
+<div id="c937abd5" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>forecast_horizon <span class="op">=</span> pd.period_range(<span class="st">"2007-01-01"</span>, <span class="st">"2018-01-01"</span>, freq<span class="op">=</span><span class="st">"D"</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>preds <span class="op">=</span> model.predict(fh<span class="op">=</span>forecast_horizon)</span>
@@ -791,7 +792,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="univariate_files/figure-html/cell-7-output-1.png" width="658" height="411" class="figure-img"></p>
+<p><img src="univariate_files/figure-html/cell-7-output-1.png" width="660" height="425" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -802,7 +803,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Here, we fit the univariate Prophet and pass an exogenous effect as hyperparameter. The <code>exogenous_effects</code> parameter let us add new components to the model and control the relationship between exogenous variables and the target variable.</p>
 <p>In this case, the <code>LinearFourierSeasonality</code> effect creates sinusoidal and cosine terms to model the seasonality of the time series, which are then multiplied by linear coefficients and added to the model.</p>
 <p>This argument is a list of tuples of the form <code>(effect_name, effect, regex_to_filter_relevant_columns)</code>, where <code>effect_name</code> is a string and <code>effect</code> is an instance of a subclass of <code>prophetverse.effects.BaseEffect</code>. The regex is used to filter the columns of X that are relevant for the effect, but can also be <code>None</code> (or its alias <code>prophetverse.utils.no_input_columns</code>) if no input in <code>X</code> is needed for the effect.</p>
-<div id="51017785" class="cell" data-execution_count="7">
+<div id="27831c3f" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.fourier <span class="im">import</span> LinearFourierSeasonality</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.utils <span class="im">import</span> no_input_columns</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -829,7 +830,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
-<style>#sk-8bd62719-0cde-43f1-a096-c612f02a85be {
+<style>#sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -854,15 +855,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be pre {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 pre {
     padding: 0;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be input.sk-hidden--visually {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -874,7 +875,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     width: 1px;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-dashed-wrapped {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -882,7 +883,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-container {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -892,7 +893,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-text-repr-fallback {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -908,14 +909,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Parallel-specific style estimator block */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-parallel-item::after {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-parallel {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -923,28 +924,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-parallel-item {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-parallel-item:first-child::after {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-parallel-item:last-child::after {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-parallel-item:only-child::after {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-serial {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -962,14 +963,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-toggleable {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be label.sk-toggleable__label {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -979,7 +980,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     text-align: center;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be label.sk-toggleable__label-arrow:before {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -987,13 +988,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     color: var(--sklearn-color-icon);
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be label.sk-toggleable__label-arrow:hover:before {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-toggleable__content {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -1001,27 +1002,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-toggleable__content pre {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1029,38 +1030,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-label label.sk-toggleable__label,
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-label label {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-label label.sk-toggleable__label,
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-label:hover label.sk-toggleable__label {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-label label {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-label-container {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-estimator {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1070,7 +1071,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* on hover */
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be div.sk-estimator:hover {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1127,7 +1128,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be a.estimator_doc_link {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1142,12 +1143,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* On hover */
-  #sk-8bd62719-0cde-43f1-a096-c612f02a85be a.estimator_doc_link:hover {
+  #sk-127b3f21-e518-40af-9bc1-0b57c71a6a52 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-8bd62719-0cde-43f1-a096-c612f02a85be" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+</style><div id="sk-127b3f21-e518-40af-9bc1-0b57c71a6a52" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               10],
@@ -1158,7 +1159,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
              inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a4ebc2eb-c718-42c5-9752-f4706545271e')" type="checkbox"><label for="UUID('a4ebc2eb-c718-42c5-9752-f4706545271e')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('e886da00-d85b-4d2b-8707-8be7d0d6f454')" type="checkbox"><label for="UUID('e886da00-d85b-4d2b-8707-8be7d0d6f454')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               10],
@@ -1169,13 +1170,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
              inference_engine=MAPInferenceEngine(),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('11498e2d-7d51-445b-93d6-f14093d7b61f')" type="checkbox"><label for="UUID('11498e2d-7d51-445b-93d6-f14093d7b61f')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
-                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2d86992d-ea14-432f-8c85-694832b7d363')" type="checkbox"><label for="UUID('2d86992d-ea14-432f-8c85-694832b7d363')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
+                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('8e65cd6c-e068-4fb6-b66e-059a6f6608f9')" type="checkbox"><label for="UUID('8e65cd6c-e068-4fb6-b66e-059a6f6608f9')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c4bd5e26-dd62-4316-8ca2-bbc569e100e7')" type="checkbox"><label for="UUID('c4bd5e26-dd62-4316-8ca2-bbc569e100e7')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
                          fourier_terms_list=[3, 10], freq='D', prior_scale=0.1,
-                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ab1241db-c1c4-4696-a23e-9fff0ec3c55b')" type="checkbox"><label for="UUID('ab1241db-c1c4-4696-a23e-9fff0ec3c55b')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
+                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('5946de22-bb6a-4b09-8279-24090b1dc356')" type="checkbox"><label for="UUID('5946de22-bb6a-4b09-8279-24090b1dc356')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="4c80d387" class="cell" data-execution_count="8">
+<div id="37b46a4a" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>forecast_horizon <span class="op">=</span> pd.period_range(<span class="st">"2007-01-01"</span>, <span class="st">"2018-01-01"</span>, freq<span class="op">=</span><span class="st">"D"</span>)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>preds <span class="op">=</span> model.predict(fh<span class="op">=</span>forecast_horizon)</span>
@@ -1194,7 +1195,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="probabilistic-forecasting" class="level2">
 <h2 class="anchored" data-anchor-id="probabilistic-forecasting">Probabilistic forecasting</h2>
 <p>We can also make probabilistic forecasts with Prophetverse, in sktime fashion. The <code>predict_quantiles</code> method returns the quantiles of the predictive distribution in a <code>pd.DataFrame</code></p>
-<div id="0f46c065" class="cell" data-execution_count="9">
+<div id="8e095a85" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>quantiles <span class="op">=</span> model.predict_quantiles(fh<span class="op">=</span>forecast_horizon, alpha<span class="op">=</span>[<span class="fl">0.1</span>, <span class="fl">0.9</span>])</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>quantiles.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
@@ -1246,7 +1247,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>The plot below shows the (0.1, 0.9) quantiles of the predictive distribution</p>
-<div id="8fc24c95" class="cell" data-execution_count="10">
+<div id="1b14b5fb" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot area between quantiles</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>ax.fill_between(</span>
@@ -1268,7 +1269,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="timeseries-decomposition" class="level2">
 <h2 class="anchored" data-anchor-id="timeseries-decomposition">Timeseries decomposition</h2>
 <p>We can easily extract the components of the time series with the <code>predict_components</code> method. This method, in particular, is not implemented in sktime’s <code>BaseForecaster</code>, but it is a method of <code>prophetverse.Prophetverse</code> class.</p>
-<div id="175e3533" class="cell" data-execution_count="11">
+<div id="2d85d7bd" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sites <span class="op">=</span> model.predict_components(fh<span class="op">=</span>forecast_horizon)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sites.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
@@ -1327,7 +1328,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="2769cb8a" class="cell" data-execution_count="12">
+<div id="cbf6bf11" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> column <span class="kw">in</span> sites.columns:</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">2</span>))</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    ax.plot(sites.index.to_timestamp(), sites[column], label<span class="op">=</span>column)</span>
@@ -1367,7 +1368,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="fitting-with-mcmc">Fitting with MCMC</h2>
 <p>In the previous examples, we used MAP inference to fit the model. However, we can also use Markov Chain Monte Carlo (MCMC) to fit the model. To do this, we just need to change the <code>inference_engine</code> parameter to <code>MCMCInferenceEngine</code>. The rest of the code remains the same.</p>
 <p>The <code>set_params</code> method is used to set the parameters of the model, in sklearn fashion.</p>
-<div id="97f8d750" class="cell" data-execution_count="13">
+<div id="b76a70d4" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.engine <span class="im">import</span> MCMCInferenceEngine</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>model.set_params(inference_engine<span class="op">=</span>MCMCInferenceEngine(num_warmup<span class="op">=</span><span class="dv">1000</span>))</span>
@@ -1375,7 +1376,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
-<style>#sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 {
+<style>#sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -1400,15 +1401,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c {
     color: var(--sklearn-color-text);
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 pre {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c pre {
     padding: 0;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 input.sk-hidden--visually {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -1420,7 +1421,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     width: 1px;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-dashed-wrapped {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -1428,7 +1429,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-container {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -1438,7 +1439,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-text-repr-fallback {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -1454,14 +1455,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Parallel-specific style estimator block */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-parallel-item::after {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-parallel {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -1469,28 +1470,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-parallel-item {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-parallel-item:first-child::after {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-parallel-item:last-child::after {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-parallel-item:only-child::after {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-serial {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1508,14 +1509,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-toggleable {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 label.sk-toggleable__label {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -1525,7 +1526,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     text-align: center;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 label.sk-toggleable__label-arrow:before {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -1533,13 +1534,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     color: var(--sklearn-color-icon);
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 label.sk-toggleable__label-arrow:hover:before {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-toggleable__content {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -1547,27 +1548,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-toggleable__content pre {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1575,38 +1576,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-label label.sk-toggleable__label,
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-label label {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-label label.sk-toggleable__label,
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-label:hover label.sk-toggleable__label {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-label label {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-label-container {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-estimator {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1616,7 +1617,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* on hover */
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 div.sk-estimator:hover {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1673,7 +1674,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 a.estimator_doc_link {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1688,12 +1689,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* On hover */
-  #sk-3062217e-c8d8-40c9-af3f-62e4735a6b93 a.estimator_doc_link:hover {
+  #sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-3062217e-c8d8-40c9-af3f-62e4735a6b93" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+</style><div id="sk-9cf1d2bb-67d9-4694-9462-ad9e579d715c" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               10],
@@ -1704,7 +1705,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
              inference_engine=MCMCInferenceEngine(num_warmup=1000),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('caceb60a-1e57-4643-a4d5-7378304a022c')" type="checkbox"><label for="UUID('caceb60a-1e57-4643-a4d5-7378304a022c')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('9e075057-ff25-49c3-8a50-d2b6a298ba6b')" type="checkbox"><label for="UUID('9e075057-ff25-49c3-8a50-d2b6a298ba6b')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               10],
@@ -1715,13 +1716,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
              inference_engine=MCMCInferenceEngine(num_warmup=1000),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c0ec143e-b642-4a04-932b-69bbea44b7d6')" type="checkbox"><label for="UUID('c0ec143e-b642-4a04-932b-69bbea44b7d6')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
-                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('09e3c57a-53da-4308-aa70-ddf66fe71926')" type="checkbox"><label for="UUID('09e3c57a-53da-4308-aa70-ddf66fe71926')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
+                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b34999d4-fd9e-4921-9f76-4cc634ef8850')" type="checkbox"><label for="UUID('b34999d4-fd9e-4921-9f76-4cc634ef8850')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6cf90456-e573-4bab-a0a7-27008fee63e4')" type="checkbox"><label for="UUID('6cf90456-e573-4bab-a0a7-27008fee63e4')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
                          fourier_terms_list=[3, 10], freq='D', prior_scale=0.1,
-                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b24c6717-a45b-4036-8251-ffedb3b37f12')" type="checkbox"><label for="UUID('b24c6717-a45b-4036-8251-ffedb3b37f12')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine(num_warmup=1000)</pre></div></div></div></div></div></div></div></div></div></div>
+                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6c886e7d-fd5c-49d5-a332-dff510470d06')" type="checkbox"><label for="UUID('6c886e7d-fd5c-49d5-a332-dff510470d06')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine(num_warmup=1000)</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="0d34f19d" class="cell" data-execution_count="14">
+<div id="f990c850" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>quantiles <span class="op">=</span> model.predict_quantiles(fh<span class="op">=</span>forecast_horizon, alpha<span class="op">=</span>[<span class="fl">0.75</span>, <span class="fl">0.25</span>])</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot area between quantiles</span></span>
@@ -1741,7 +1742,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>One interesting feature of MCMC is that it allows us to obtain samples from the posterior distribution of the parameters. In other words, we can also obtain probabilistic forecasts for the TS components.</p>
-<div id="308873be" class="cell" data-execution_count="15">
+<div id="12dd3e62" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>samples <span class="op">=</span> model.predict_component_samples(fh<span class="op">=</span>forecast_horizon)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>samples</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="15">
@@ -1856,34 +1857,42 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </section>
-<section id="extra-syntax-sugar" class="level2">
-<h2 class="anchored" data-anchor-id="extra-syntax-sugar">Extra: syntax sugar</h2>
-<p>In Prophetverse, we’ve implemented the <code>&gt;&gt;</code> operator, which makes it easier to set <code>trend</code>, <code>exogenous_effects</code> and <code>inference_engine</code> parameters.</p>
-<div id="90b04aff" class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>trend <span class="op">=</span> PiecewiseLinearTrend(</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    changepoint_interval<span class="op">=</span><span class="dv">300</span>,</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    changepoint_prior_scale<span class="op">=</span><span class="fl">0.0001</span>,</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    changepoint_range<span class="op">=</span><span class="fl">0.8</span>,</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>exogenous_effects <span class="op">=</span> [</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    (</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"seasonality"</span>,</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>        LinearFourierSeasonality(</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>            freq<span class="op">=</span><span class="st">"D"</span>,</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>            sp_list<span class="op">=</span>[<span class="dv">7</span>, <span class="fl">365.25</span>],</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>            fourier_terms_list<span class="op">=</span>[<span class="dv">3</span>, <span class="dv">10</span>],</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>            prior_scale<span class="op">=</span><span class="fl">0.1</span>,</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>            effect_mode<span class="op">=</span><span class="st">"multiplicative"</span>,</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>        ),</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>        no_input_columns,</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>]</span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>inference_engine <span class="op">=</span> MAPInferenceEngine()</span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Prophetverse() <span class="op">&gt;&gt;</span> trend <span class="op">&gt;&gt;</span> exogenous_effects <span class="op">&gt;&gt;</span> inference_engine</span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="fitting-with-variational-inference" class="level2">
+<h2 class="anchored" data-anchor-id="fitting-with-variational-inference">Fitting with Variational Inference</h2>
+<p>Another inference method available in Prophetverse is Variational Inference (VI). This method is generally faster than MCMC and can be used for larger datasets, while still providing probabilistic samples for the parameters.</p>
+<p>To use VI, we just need to change the <code>inference_engine</code> parameter to <code>VIInferenceEngine</code>. The rest of the code remains the same.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Choose carefully the number of steps and the optimizer. The default optimizer might not work well for all use-cases</p>
+</div>
+</div>
+<div id="8411bc3e" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.engine <span class="im">import</span> VIInferenceEngine</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse <span class="im">import</span> LBFGSSolver, CosineScheduleAdamOptimizer</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>optimizer <span class="op">=</span> CosineScheduleAdamOptimizer()</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>model.set_params(</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    inference_engine<span class="op">=</span>VIInferenceEngine(</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        progress_bar<span class="op">=</span><span class="va">True</span>, num_steps<span class="op">=</span><span class="dv">100_000</span>, optimizer<span class="op">=</span>optimizer</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>  0%|          | 0/100000 [00:00&lt;?, ?it/s]  0%|          | 1/100000 [00:00&lt;20:32:55,  1.35it/s]  0%|          | 417/100000 [00:00&lt;02:27, 674.28it/s]  1%|          | 796/100000 [00:00&lt;01:18, 1259.21it/s]  1%|          | 1175/100000 [00:01&lt;00:55, 1794.37it/s]  2%|▏         | 1562/100000 [00:01&lt;00:43, 2274.96it/s]  2%|▏         | 1973/100000 [00:01&lt;00:35, 2731.46it/s]  2%|▏         | 2399/100000 [00:01&lt;00:31, 3131.57it/s]  3%|▎         | 2790/100000 [00:01&lt;00:29, 3336.59it/s]  3%|▎         | 3186/100000 [00:01&lt;00:27, 3510.48it/s]  4%|▎         | 3584/100000 [00:01&lt;00:26, 3643.22it/s]  4%|▍         | 4022/100000 [00:01&lt;00:24, 3854.86it/s]  4%|▍         | 4437/100000 [00:01&lt;00:24, 3938.85it/s]  5%|▍         | 4876/100000 [00:01&lt;00:23, 4069.64it/s]  5%|▌         | 5294/100000 [00:02&lt;00:24, 3939.52it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  6%|▌         | 5719/100000 [00:02&lt;00:23, 4026.66it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  6%|▌         | 6128/100000 [00:02&lt;00:23, 3953.13it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  7%|▋         | 6528/100000 [00:02&lt;00:23, 3938.21it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  7%|▋         | 6925/100000 [00:02&lt;00:23, 3912.95it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  7%|▋         | 7319/100000 [00:02&lt;00:23, 3910.62it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  8%|▊         | 7748/100000 [00:02&lt;00:22, 4021.87it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  8%|▊         | 8152/100000 [00:02&lt;00:23, 3969.45it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  9%|▊         | 8558/100000 [00:02&lt;00:22, 3993.41it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  9%|▉         | 8982/100000 [00:02&lt;00:22, 4066.12it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927]  9%|▉         | 9425/100000 [00:03&lt;00:21, 4173.37it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927] 10%|▉         | 9854/100000 [00:03&lt;00:21, 4207.87it/s, init loss: 22917835223.3965, avg. loss [1-5000]: 8902531163.0927] 10%|█         | 10276/100000 [00:03&lt;00:22, 4067.86it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 11%|█         | 10685/100000 [00:03&lt;00:22, 4044.97it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 11%|█         | 11115/100000 [00:03&lt;00:21, 4118.67it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 12%|█▏        | 11528/100000 [00:03&lt;00:21, 4113.53it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 12%|█▏        | 11956/100000 [00:03&lt;00:21, 4160.42it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 12%|█▏        | 12383/100000 [00:03&lt;00:20, 4192.78it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 13%|█▎        | 12803/100000 [00:03&lt;00:21, 4130.02it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 13%|█▎        | 13222/100000 [00:03&lt;00:20, 4145.27it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 14%|█▎        | 13637/100000 [00:04&lt;00:20, 4112.73it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 14%|█▍        | 14049/100000 [00:04&lt;00:21, 4026.60it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 14%|█▍        | 14453/100000 [00:04&lt;00:21, 3985.96it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 15%|█▍        | 14897/100000 [00:04&lt;00:20, 4117.91it/s, init loss: 22917835223.3965, avg. loss [5001-10000]: 365463518.6272] 15%|█▌        | 15310/100000 [00:04&lt;00:20, 4065.45it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 16%|█▌        | 15718/100000 [00:04&lt;00:20, 4014.56it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 16%|█▌        | 16122/100000 [00:04&lt;00:20, 4019.91it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 17%|█▋        | 16525/100000 [00:04&lt;00:20, 3990.72it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 17%|█▋        | 16954/100000 [00:04&lt;00:20, 4075.79it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 17%|█▋        | 17362/100000 [00:05&lt;00:20, 4047.78it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 18%|█▊        | 17806/100000 [00:05&lt;00:19, 4162.91it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 18%|█▊        | 18223/100000 [00:05&lt;00:20, 4081.93it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 19%|█▊        | 18632/100000 [00:05&lt;00:20, 4023.44it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 19%|█▉        | 19035/100000 [00:05&lt;00:20, 3988.60it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 19%|█▉        | 19435/100000 [00:05&lt;00:20, 3963.45it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 20%|█▉        | 19841/100000 [00:05&lt;00:20, 3989.68it/s, init loss: 22917835223.3965, avg. loss [10001-15000]: 32986751.0654] 20%|██        | 20263/100000 [00:05&lt;00:19, 4057.56it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186]  21%|██        | 20684/100000 [00:05&lt;00:19, 4100.57it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 21%|██        | 21110/100000 [00:05&lt;00:19, 4144.84it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 22%|██▏       | 21525/100000 [00:06&lt;00:19, 4053.41it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 22%|██▏       | 21931/100000 [00:06&lt;00:19, 3970.93it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 22%|██▏       | 22331/100000 [00:06&lt;00:19, 3977.03it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 23%|██▎       | 22730/100000 [00:06&lt;00:19, 3936.56it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 23%|██▎       | 23139/100000 [00:06&lt;00:19, 3978.75it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 24%|██▎       | 23538/100000 [00:06&lt;00:19, 3975.38it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 24%|██▍       | 23936/100000 [00:06&lt;00:19, 3960.70it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 24%|██▍       | 24376/100000 [00:06&lt;00:18, 4089.49it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 25%|██▍       | 24786/100000 [00:06&lt;00:18, 4050.12it/s, init loss: 22917835223.3965, avg. loss [15001-20000]: 3276970.1186] 25%|██▌       | 25192/100000 [00:06&lt;00:18, 3970.32it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764]  26%|██▌       | 25590/100000 [00:07&lt;00:19, 3911.65it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 26%|██▌       | 25982/100000 [00:07&lt;00:18, 3906.27it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 26%|██▋       | 26410/100000 [00:07&lt;00:18, 4013.44it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 27%|██▋       | 26812/100000 [00:07&lt;00:18, 3975.71it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 27%|██▋       | 27225/100000 [00:07&lt;00:18, 4020.06it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 28%|██▊       | 27647/100000 [00:07&lt;00:17, 4078.95it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 28%|██▊       | 28056/100000 [00:07&lt;00:17, 4042.89it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 28%|██▊       | 28461/100000 [00:07&lt;00:17, 3983.01it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 29%|██▉       | 28904/100000 [00:07&lt;00:17, 4113.12it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 29%|██▉       | 29316/100000 [00:07&lt;00:17, 4054.63it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 30%|██▉       | 29749/100000 [00:08&lt;00:16, 4134.21it/s, init loss: 22917835223.3965, avg. loss [20001-25000]: 338664.2764] 30%|███       | 30163/100000 [00:08&lt;00:16, 4115.18it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611]  31%|███       | 30575/100000 [00:08&lt;00:17, 4073.48it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 31%|███       | 30983/100000 [00:08&lt;00:17, 4035.43it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 31%|███▏      | 31407/100000 [00:08&lt;00:16, 4094.08it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 32%|███▏      | 31828/100000 [00:08&lt;00:16, 4126.21it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 32%|███▏      | 32241/100000 [00:08&lt;00:16, 4108.33it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 33%|███▎      | 32652/100000 [00:08&lt;00:16, 4086.79it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 33%|███▎      | 33061/100000 [00:08&lt;00:16, 4071.34it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 33%|███▎      | 33469/100000 [00:09&lt;00:16, 4068.78it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 34%|███▍      | 33876/100000 [00:09&lt;00:16, 4015.38it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 34%|███▍      | 34282/100000 [00:09&lt;00:16, 4028.04it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 35%|███▍      | 34685/100000 [00:09&lt;00:16, 4008.46it/s, init loss: 22917835223.3965, avg. loss [25001-30000]: 47149.1611] 35%|███▌      | 35086/100000 [00:09&lt;00:16, 3928.94it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 35%|███▌      | 35498/100000 [00:09&lt;00:16, 3984.96it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 36%|███▌      | 35945/100000 [00:09&lt;00:15, 4126.46it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 36%|███▋      | 36359/100000 [00:09&lt;00:15, 4120.53it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 37%|███▋      | 36779/100000 [00:09&lt;00:15, 4141.95it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 37%|███▋      | 37194/100000 [00:09&lt;00:15, 4082.22it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 38%|███▊      | 37624/100000 [00:10&lt;00:15, 4145.00it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 38%|███▊      | 38039/100000 [00:10&lt;00:15, 4113.04it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 38%|███▊      | 38451/100000 [00:10&lt;00:15, 4038.47it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 39%|███▉      | 38891/100000 [00:10&lt;00:14, 4144.00it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 39%|███▉      | 39306/100000 [00:10&lt;00:14, 4067.05it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 40%|███▉      | 39745/100000 [00:10&lt;00:14, 4161.19it/s, init loss: 22917835223.3965, avg. loss [30001-35000]: 16997.5104] 40%|████      | 40162/100000 [00:10&lt;00:14, 4132.08it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 41%|████      | 40585/100000 [00:10&lt;00:14, 4160.80it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 41%|████      | 41002/100000 [00:10&lt;00:14, 4112.39it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 41%|████▏     | 41414/100000 [00:10&lt;00:14, 4053.64it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 42%|████▏     | 41833/100000 [00:11&lt;00:14, 4091.06it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 42%|████▏     | 42281/100000 [00:11&lt;00:13, 4205.17it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 43%|████▎     | 42702/100000 [00:11&lt;00:14, 4071.93it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 43%|████▎     | 43131/100000 [00:11&lt;00:13, 4133.11it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 44%|████▎     | 43546/100000 [00:11&lt;00:13, 4116.47it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 44%|████▍     | 43959/100000 [00:11&lt;00:13, 4072.05it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 44%|████▍     | 44391/100000 [00:11&lt;00:13, 4144.61it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 45%|████▍     | 44835/100000 [00:11&lt;00:13, 4230.18it/s, init loss: 22917835223.3965, avg. loss [35001-40000]: 10272.4040] 45%|████▌     | 45259/100000 [00:11&lt;00:13, 4205.84it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165]  46%|████▌     | 45685/100000 [00:11&lt;00:12, 4219.08it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 46%|████▌     | 46108/100000 [00:12&lt;00:12, 4185.27it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 47%|████▋     | 46552/100000 [00:12&lt;00:12, 4258.49it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 47%|████▋     | 46979/100000 [00:12&lt;00:12, 4170.61it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 47%|████▋     | 47397/100000 [00:12&lt;00:12, 4105.33it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 48%|████▊     | 47808/100000 [00:12&lt;00:12, 4089.21it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 48%|████▊     | 48222/100000 [00:12&lt;00:12, 4103.23it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 49%|████▊     | 48662/100000 [00:12&lt;00:12, 4189.56it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 49%|████▉     | 49110/100000 [00:12&lt;00:11, 4273.03it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 50%|████▉     | 49538/100000 [00:12&lt;00:11, 4231.19it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 50%|████▉     | 49962/100000 [00:13&lt;00:12, 4114.59it/s, init loss: 22917835223.3965, avg. loss [40001-45000]: 6127.6165] 50%|█████     | 50375/100000 [00:13&lt;00:12, 3996.22it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 51%|█████     | 50776/100000 [00:13&lt;00:12, 3965.66it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 51%|█████     | 51175/100000 [00:13&lt;00:12, 3971.05it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 52%|█████▏    | 51615/100000 [00:13&lt;00:11, 4095.22it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 52%|█████▏    | 52042/100000 [00:13&lt;00:11, 4145.60it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 52%|█████▏    | 52479/100000 [00:13&lt;00:11, 4209.57it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 53%|█████▎    | 52901/100000 [00:13&lt;00:11, 4156.00it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 53%|█████▎    | 53318/100000 [00:13&lt;00:11, 4039.97it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 54%|█████▍    | 53754/100000 [00:13&lt;00:11, 4130.36it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 54%|█████▍    | 54168/100000 [00:14&lt;00:11, 4058.12it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 55%|█████▍    | 54575/100000 [00:14&lt;00:11, 4017.27it/s, init loss: 22917835223.3965, avg. loss [45001-50000]: 3776.0849] 55%|█████▌    | 55002/100000 [00:14&lt;00:11, 4089.60it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 55%|█████▌    | 55444/100000 [00:14&lt;00:10, 4185.17it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 56%|█████▌    | 55891/100000 [00:14&lt;00:10, 4268.62it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 56%|█████▋    | 56319/100000 [00:14&lt;00:10, 4213.67it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 57%|█████▋    | 56741/100000 [00:14&lt;00:10, 4109.07it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 57%|█████▋    | 57170/100000 [00:14&lt;00:10, 4160.27it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 58%|█████▊    | 57587/100000 [00:14&lt;00:10, 4048.49it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 58%|█████▊    | 57993/100000 [00:14&lt;00:10, 4004.19it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 58%|█████▊    | 58395/100000 [00:15&lt;00:10, 4007.24it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 59%|█████▉    | 58797/100000 [00:15&lt;00:10, 3975.80it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 59%|█████▉    | 59195/100000 [00:15&lt;00:10, 3966.41it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 60%|█████▉    | 59592/100000 [00:15&lt;00:10, 3925.13it/s, init loss: 22917835223.3965, avg. loss [50001-55000]: 2335.9004] 60%|██████    | 60015/100000 [00:15&lt;00:09, 4013.54it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 60%|██████    | 60441/100000 [00:15&lt;00:09, 4084.63it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 61%|██████    | 60850/100000 [00:15&lt;00:09, 4039.22it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 61%|██████▏   | 61256/100000 [00:15&lt;00:09, 4043.93it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 62%|██████▏   | 61701/100000 [00:15&lt;00:09, 4162.15it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 62%|██████▏   | 62118/100000 [00:15&lt;00:09, 4112.49it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 63%|██████▎   | 62530/100000 [00:16&lt;00:09, 4058.18it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 63%|██████▎   | 62937/100000 [00:16&lt;00:09, 4001.40it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 63%|██████▎   | 63338/100000 [00:16&lt;00:09, 3949.17it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 64%|██████▍   | 63785/100000 [00:16&lt;00:08, 4099.65it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 64%|██████▍   | 64196/100000 [00:16&lt;00:08, 4037.27it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 65%|██████▍   | 64601/100000 [00:16&lt;00:08, 4008.61it/s, init loss: 22917835223.3965, avg. loss [55001-60000]: 1136.8837] 65%|██████▌   | 65003/100000 [00:16&lt;00:08, 3926.49it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418]  65%|██████▌   | 65397/100000 [00:16&lt;00:08, 3885.44it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 66%|██████▌   | 65786/100000 [00:16&lt;00:08, 3861.66it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 66%|██████▌   | 66226/100000 [00:17&lt;00:08, 4018.33it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 67%|██████▋   | 66672/100000 [00:17&lt;00:08, 4146.29it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 67%|██████▋   | 67088/100000 [00:17&lt;00:08, 4061.40it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 67%|██████▋   | 67495/100000 [00:17&lt;00:08, 4012.84it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 68%|██████▊   | 67928/100000 [00:17&lt;00:07, 4103.87it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 68%|██████▊   | 68339/100000 [00:17&lt;00:07, 4001.65it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 69%|██████▉   | 68756/100000 [00:17&lt;00:07, 4049.02it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 69%|██████▉   | 69162/100000 [00:17&lt;00:07, 3965.16it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 70%|██████▉   | 69572/100000 [00:17&lt;00:07, 4002.36it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 70%|██████▉   | 69973/100000 [00:17&lt;00:07, 3939.01it/s, init loss: 22917835223.3965, avg. loss [60001-65000]: 158.2418] 70%|███████   | 70368/100000 [00:18&lt;00:07, 3907.25it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 71%|███████   | 70811/100000 [00:18&lt;00:07, 4057.86it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 71%|███████   | 71219/100000 [00:18&lt;00:07, 4063.03it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 72%|███████▏  | 71626/100000 [00:18&lt;00:07, 4010.82it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 72%|███████▏  | 72028/100000 [00:18&lt;00:07, 3969.03it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 72%|███████▏  | 72426/100000 [00:18&lt;00:06, 3971.60it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 73%|███████▎  | 72824/100000 [00:18&lt;00:06, 3956.20it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 73%|███████▎  | 73236/100000 [00:18&lt;00:06, 4003.25it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 74%|███████▎  | 73656/100000 [00:18&lt;00:06, 4059.69it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 74%|███████▍  | 74081/100000 [00:18&lt;00:06, 4113.57it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 74%|███████▍  | 74493/100000 [00:19&lt;00:06, 4058.69it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 75%|███████▍  | 74934/100000 [00:19&lt;00:06, 4162.57it/s, init loss: 22917835223.3965, avg. loss [65001-70000]: -600.7649] 75%|███████▌  | 75351/100000 [00:19&lt;00:05, 4128.43it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 76%|███████▌  | 75765/100000 [00:19&lt;00:05, 4085.73it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 76%|███████▌  | 76174/100000 [00:19&lt;00:05, 4015.16it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 77%|███████▋  | 76592/100000 [00:19&lt;00:05, 4061.99it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 77%|███████▋  | 76999/100000 [00:19&lt;00:05, 4021.63it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 77%|███████▋  | 77428/100000 [00:19&lt;00:05, 4099.34it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 78%|███████▊  | 77850/100000 [00:19&lt;00:05, 4134.51it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 78%|███████▊  | 78264/100000 [00:20&lt;00:05, 4050.68it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 79%|███████▊  | 78706/100000 [00:20&lt;00:05, 4156.10it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 79%|███████▉  | 79152/100000 [00:20&lt;00:04, 4244.16it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 80%|███████▉  | 79588/100000 [00:20&lt;00:04, 4277.42it/s, init loss: 22917835223.3965, avg. loss [70001-75000]: -1263.6386] 80%|████████  | 80019/100000 [00:20&lt;00:04, 4285.93it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 80%|████████  | 80448/100000 [00:20&lt;00:04, 4135.63it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 81%|████████  | 80863/100000 [00:20&lt;00:04, 4135.71it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 81%|████████▏ | 81299/100000 [00:20&lt;00:04, 4198.50it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 82%|████████▏ | 81720/100000 [00:20&lt;00:04, 4198.55it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 82%|████████▏ | 82141/100000 [00:20&lt;00:04, 4075.42it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 83%|████████▎ | 82550/100000 [00:21&lt;00:04, 4005.26it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 83%|████████▎ | 82992/100000 [00:21&lt;00:04, 4123.63it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 83%|████████▎ | 83406/100000 [00:21&lt;00:04, 4058.71it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 84%|████████▍ | 83850/100000 [00:21&lt;00:03, 4167.93it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 84%|████████▍ | 84268/100000 [00:21&lt;00:03, 4057.36it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 85%|████████▍ | 84675/100000 [00:21&lt;00:03, 3978.03it/s, init loss: 22917835223.3965, avg. loss [75001-80000]: -1886.9540] 85%|████████▌ | 85074/100000 [00:21&lt;00:03, 3905.46it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 85%|████████▌ | 85466/100000 [00:21&lt;00:03, 3878.19it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 86%|████████▌ | 85859/100000 [00:21&lt;00:03, 3892.82it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 86%|████████▋ | 86270/100000 [00:21&lt;00:03, 3956.22it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 87%|████████▋ | 86667/100000 [00:22&lt;00:03, 3912.24it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 87%|████████▋ | 87059/100000 [00:22&lt;00:03, 3870.63it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 87%|████████▋ | 87481/100000 [00:22&lt;00:03, 3971.12it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 88%|████████▊ | 87879/100000 [00:22&lt;00:03, 3919.51it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 88%|████████▊ | 88272/100000 [00:22&lt;00:03, 3904.97it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 89%|████████▊ | 88668/100000 [00:22&lt;00:02, 3918.90it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 89%|████████▉ | 89061/100000 [00:22&lt;00:02, 3903.06it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 89%|████████▉ | 89499/100000 [00:22&lt;00:02, 4041.71it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 90%|████████▉ | 89904/100000 [00:22&lt;00:02, 4021.67it/s, init loss: 22917835223.3965, avg. loss [80001-85000]: -2397.8516] 90%|█████████ | 90329/100000 [00:22&lt;00:02, 4088.50it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 91%|█████████ | 90739/100000 [00:23&lt;00:02, 4029.08it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 91%|█████████ | 91143/100000 [00:23&lt;00:02, 3951.28it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 92%|█████████▏| 91539/100000 [00:23&lt;00:02, 3916.54it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 92%|█████████▏| 91931/100000 [00:23&lt;00:02, 3912.47it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 92%|█████████▏| 92354/100000 [00:23&lt;00:01, 4003.77it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 93%|█████████▎| 92755/100000 [00:23&lt;00:01, 3955.27it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 93%|█████████▎| 93186/100000 [00:23&lt;00:01, 4057.52it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 94%|█████████▎| 93606/100000 [00:23&lt;00:01, 4098.38it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 94%|█████████▍| 94017/100000 [00:23&lt;00:01, 4036.87it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 94%|█████████▍| 94422/100000 [00:24&lt;00:01, 3966.48it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 95%|█████████▍| 94843/100000 [00:24&lt;00:01, 4036.09it/s, init loss: 22917835223.3965, avg. loss [85001-90000]: -2841.6718] 95%|█████████▌| 95256/100000 [00:24&lt;00:01, 4061.06it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 96%|█████████▌| 95663/100000 [00:24&lt;00:01, 4017.91it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 96%|█████████▌| 96066/100000 [00:24&lt;00:00, 3961.88it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 96%|█████████▋| 96496/100000 [00:24&lt;00:00, 4060.17it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 97%|█████████▋| 96903/100000 [00:24&lt;00:00, 3991.39it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 97%|█████████▋| 97309/100000 [00:24&lt;00:00, 4010.43it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 98%|█████████▊| 97728/100000 [00:24&lt;00:00, 4060.91it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 98%|█████████▊| 98166/100000 [00:24&lt;00:00, 4153.31it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 99%|█████████▊| 98586/100000 [00:25&lt;00:00, 4165.05it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 99%|█████████▉| 99032/100000 [00:25&lt;00:00, 4251.23it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188] 99%|█████████▉| 99481/100000 [00:25&lt;00:00, 4320.94it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188]100%|█████████▉| 99914/100000 [00:25&lt;00:00, 4179.29it/s, init loss: 22917835223.3965, avg. loss [90001-95000]: -3190.8188]100%|██████████| 100000/100000 [00:25&lt;00:00, 3940.90it/s, init loss: 22917835223.3965, avg. loss [95001-100000]: -3381.6672]</code></pre>
+</div>
 <div class="cell-output cell-output-display" data-execution_count="16">
-<style>#sk-7bb3224d-4035-482c-b509-aa305ac990f6 {
+<style>#sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -1908,15 +1917,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 pre {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 pre {
     padding: 0;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 input.sk-hidden--visually {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -1928,7 +1937,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     width: 1px;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-dashed-wrapped {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -1936,7 +1945,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-container {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -1946,7 +1955,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-text-repr-fallback {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -1962,14 +1971,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Parallel-specific style estimator block */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-parallel-item::after {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-parallel {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -1977,28 +1986,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-parallel-item {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-parallel-item:first-child::after {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-parallel-item:last-child::after {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-parallel-item:only-child::after {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-serial {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2016,14 +2025,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-toggleable {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 label.sk-toggleable__label {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -2033,7 +2042,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     text-align: center;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 label.sk-toggleable__label-arrow:before {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -2041,13 +2050,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     color: var(--sklearn-color-icon);
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 label.sk-toggleable__label-arrow:hover:before {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-toggleable__content {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -2055,27 +2064,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-toggleable__content pre {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -2083,38 +2092,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-label label.sk-toggleable__label,
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-label label {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-label label.sk-toggleable__label,
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-label:hover label.sk-toggleable__label {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-label label {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-label-container {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-estimator {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -2124,7 +2133,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* on hover */
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 div.sk-estimator:hover {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -2181,7 +2190,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 a.estimator_doc_link {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -2196,12 +2205,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* On hover */
-  #sk-7bb3224d-4035-482c-b509-aa305ac990f6 a.estimator_doc_link:hover {
+  #sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-7bb3224d-4035-482c-b509-aa305ac990f6" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+</style><div id="sk-7890bfae-3f6c-4b54-8683-1cfc7b8dea39" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               10],
@@ -2209,9 +2218,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                                                           prior_scale=0.1,
                                                           sp_list=[7, 365.25]),
                                  '^$')],
-             inference_engine=MAPInferenceEngine(),
-             trend=PiecewiseLinearTrend(changepoint_interval=300,
-                                        changepoint_prior_scale=0.0001))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('607f3b28-80d9-4126-a857-c4ac592eacc7')" type="checkbox"><label for="UUID('607f3b28-80d9-4126-a857-c4ac592eacc7')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+             inference_engine=VIInferenceEngine(num_steps=100000,
+                                                optimizer=CosineScheduleAdamOptimizer(),
+                                                progress_bar=True),
+             trend=PiecewiseLinearTrend(changepoint_interval=500,
+                                        changepoint_prior_scale=1e-05,
+                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('431f1fff-ff35-49ee-85c6-f4cd02c509ea')" type="checkbox"><label for="UUID('431f1fff-ff35-49ee-85c6-f4cd02c509ea')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               10],
@@ -2219,23 +2231,448 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                                                           prior_scale=0.1,
                                                           sp_list=[7, 365.25]),
                                  '^$')],
-             inference_engine=MAPInferenceEngine(),
-             trend=PiecewiseLinearTrend(changepoint_interval=300,
-                                        changepoint_prior_scale=0.0001))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('57a21277-aaee-45b0-bdbf-9dd6caad776d')" type="checkbox"><label for="UUID('57a21277-aaee-45b0-bdbf-9dd6caad776d')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=300, changepoint_prior_scale=0.0001)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('709e150c-dab1-4889-92f0-1cb8725dcc7c')" type="checkbox"><label for="UUID('709e150c-dab1-4889-92f0-1cb8725dcc7c')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
+             inference_engine=VIInferenceEngine(num_steps=100000,
+                                                optimizer=CosineScheduleAdamOptimizer(),
+                                                progress_bar=True),
+             trend=PiecewiseLinearTrend(changepoint_interval=500,
+                                        changepoint_prior_scale=1e-05,
+                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('fe82475b-3e49-4a7d-91d5-7cff0099bba6')" type="checkbox"><label for="UUID('fe82475b-3e49-4a7d-91d5-7cff0099bba6')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f10eb6d3-d852-4954-b84f-523dfd1aaf7e')" type="checkbox"><label for="UUID('f10eb6d3-d852-4954-b84f-523dfd1aaf7e')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
                          fourier_terms_list=[3, 10], freq='D', prior_scale=0.1,
-                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4ccdb7f3-85f4-4000-8393-4ee61fcfdf15')" type="checkbox"><label for="UUID('4ccdb7f3-85f4-4000-8393-4ee61fcfdf15')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
+                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3f053632-65f3-4117-bd03-82931c13abf2')" type="checkbox"><label for="UUID('3f053632-65f3-4117-bd03-82931c13abf2')" class="sk-toggleable__label sk-toggleable__label-arrow">VIInferenceEngine</label><div class="sk-toggleable__content"><pre>VIInferenceEngine(num_steps=100000, optimizer=CosineScheduleAdamOptimizer(),
+                  progress_bar=True)</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="2e1c5ff8" class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>forecast_horizon <span class="op">=</span> pd.period_range(<span class="st">"2007-01-01"</span>, <span class="st">"2018-01-01"</span>, freq<span class="op">=</span><span class="st">"D"</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>preds <span class="op">=</span> model.predict(fh<span class="op">=</span>forecast_horizon)</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>preds.plot.line(ax<span class="op">=</span>ax)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>ax.scatter(y.index, y, marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"k"</span>, s<span class="op">=</span><span class="dv">2</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="6d20f155" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>quantiles <span class="op">=</span> model.predict_quantiles(fh<span class="op">=</span>forecast_horizon, alpha<span class="op">=</span>[<span class="fl">0.75</span>, <span class="fl">0.25</span>])</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot area between quantiles</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>ax.fill_between(</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    quantiles.index.to_timestamp(),</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    quantiles.iloc[:, <span class="dv">0</span>],</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    quantiles.iloc[:, <span class="op">-</span><span class="dv">1</span>],</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>ax.scatter(y.index, y, marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"k"</span>, s<span class="op">=</span><span class="dv">2</span>, alpha<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="univariate_files/figure-html/cell-18-output-1.png" width="658" height="411" class="figure-img"></p>
+<p><img src="univariate_files/figure-html/cell-18-output-1.png" width="641" height="411" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We can then plot the seasonality with credible intervals, using the samples from the posterior distribution of the parameters.</p>
+<div id="14ffabec" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>samples <span class="op">=</span> model.predict_component_samples(fh<span class="op">=</span>forecast_horizon)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>seasonality_intervals <span class="op">=</span> (</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    samples[<span class="st">"seasonality"</span>].unstack(level<span class="op">=</span><span class="dv">0</span>).quantile([<span class="fl">0.05</span>, <span class="fl">0.95</span>], axis<span class="op">=</span><span class="dv">1</span>).T</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>ax.fill_between(</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    seasonality_intervals.index.to_timestamp(),</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>    seasonality_intervals[<span class="fl">0.05</span>],</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    seasonality_intervals[<span class="fl">0.95</span>],</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.5</span>,</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">"Seasonality with 90</span><span class="sc">% c</span><span class="st">redible interval"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="18">
+<pre><code>Text(0.5, 1.0, 'Seasonality with 90% credible interval')</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="univariate_files/figure-html/cell-19-output-2.png" width="656" height="431" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="extra-syntax-sugar" class="level2">
+<h2 class="anchored" data-anchor-id="extra-syntax-sugar">Extra: syntax sugar</h2>
+<p>In Prophetverse, we’ve implemented the <code>&gt;&gt;</code> operator, which makes it easier to set <code>trend</code>, <code>exogenous_effects</code> and <code>inference_engine</code> parameters.</p>
+<div id="913c9366" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>trend <span class="op">=</span> PiecewiseLinearTrend(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    changepoint_interval<span class="op">=</span><span class="dv">300</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    changepoint_prior_scale<span class="op">=</span><span class="fl">0.0001</span>,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    changepoint_range<span class="op">=</span><span class="fl">0.8</span>,</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>exogenous_effects <span class="op">=</span> [</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    (</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"seasonality"</span>,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>        LinearFourierSeasonality(</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>            freq<span class="op">=</span><span class="st">"D"</span>,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>            sp_list<span class="op">=</span>[<span class="dv">7</span>, <span class="fl">365.25</span>],</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>            fourier_terms_list<span class="op">=</span>[<span class="dv">3</span>, <span class="dv">10</span>],</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>            prior_scale<span class="op">=</span><span class="fl">0.1</span>,</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>            effect_mode<span class="op">=</span><span class="st">"multiplicative"</span>,</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>        no_input_columns,</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>inference_engine <span class="op">=</span> MAPInferenceEngine()</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Prophetverse() <span class="op">&gt;&gt;</span> trend <span class="op">&gt;&gt;</span> exogenous_effects <span class="op">&gt;&gt;</span> inference_engine</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="19">
+<style>#sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 {
+    /* Definition of color scheme common for light and dark mode */
+    --sklearn-color-text: black;
+    --sklearn-color-line: gray;
+    /* Definition of color scheme for objects */
+    --sklearn-color-level-0: #fff5e6;
+    --sklearn-color-level-1: #f6e4d2;
+    --sklearn-color-level-2: #ffe0b3;
+    --sklearn-color-level-3: chocolate;
+
+    /* Specific color for light theme */
+    --sklearn-color-text-on-default-background: var(--theme-code-foreground, var(--jp-content-font-color1, black));
+    --sklearn-color-background: var(--theme-background, var(--jp-layout-color0, white));
+    --sklearn-color-border-box: var(--theme-code-foreground, var(--jp-content-font-color1, black));
+    --sklearn-color-icon: #696969;
+
+    @media (prefers-color-scheme: dark) {
+      /* Redefinition of color scheme for dark theme */
+      --sklearn-color-text-on-default-background: var(--theme-code-foreground, var(--jp-content-font-color1, white));
+      --sklearn-color-background: var(--theme-background, var(--jp-layout-color0, #111));
+      --sklearn-color-border-box: var(--theme-code-foreground, var(--jp-content-font-color1, white));
+      --sklearn-color-icon: #878787;
+    }
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 {
+    color: var(--sklearn-color-text);
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 pre {
+    padding: 0;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 input.sk-hidden--visually {
+    border: 0;
+    clip: rect(1px 1px 1px 1px);
+    clip: rect(1px, 1px, 1px, 1px);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-dashed-wrapped {
+    border: 1px dashed var(--sklearn-color-line);
+    margin: 0 0.4em 0.5em 0.4em;
+    box-sizing: border-box;
+    padding-bottom: 0.4em;
+    background-color: var(--sklearn-color-background);
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-container {
+    /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
+       but bootstrap.min.css set `[hidden] { display: none !important; }`
+       so we also need the `!important` here to be able to override the
+       default hidden behavior on the sphinx rendered scikit-learn.org.
+       See: https://github.com/scikit-learn/scikit-learn/issues/21755 */
+    display: inline-block !important;
+    position: relative;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-text-repr-fallback {
+    display: none;
+  }
+
+  div.sk-parallel-item,
+  div.sk-serial,
+  div.sk-item {
+    /* draw centered vertical line to link estimators */
+    background-image: linear-gradient(var(--sklearn-color-text-on-default-background), var(--sklearn-color-text-on-default-background));
+    background-size: 2px 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+  }
+
+  /* Parallel-specific style estimator block */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-parallel-item::after {
+    content: "";
+    width: 100%;
+    border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
+    flex-grow: 1;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-parallel {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    background-color: var(--sklearn-color-background);
+    position: relative;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-parallel-item {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-parallel-item:first-child::after {
+    align-self: flex-end;
+    width: 50%;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-parallel-item:last-child::after {
+    align-self: flex-start;
+    width: 50%;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-parallel-item:only-child::after {
+    width: 0;
+  }
+
+  /* Serial-specific style estimator block */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-serial {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--sklearn-color-background);
+    padding-right: 1em;
+    padding-left: 1em;
+  }
+
+
+  /* Toggleable style: style used for estimator/Pipeline/ColumnTransformer box that is
+  clickable and can be expanded/collapsed.
+  - Pipeline and ColumnTransformer use this feature and define the default style
+  - Estimators will overwrite some part of the style using the `sk-estimator` class
+  */
+
+  /* Pipeline and ColumnTransformer style (default) */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-toggleable {
+    /* Default theme specific background. It is overwritten whether we have a
+    specific estimator or a Pipeline/ColumnTransformer */
+    background-color: var(--sklearn-color-background);
+  }
+
+  /* Toggleable label */
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 label.sk-toggleable__label {
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    margin-bottom: 0;
+    padding: 0.5em;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 label.sk-toggleable__label-arrow:before {
+    /* Arrow on the left of the label */
+    content: "▸";
+    float: left;
+    margin-right: 0.25em;
+    color: var(--sklearn-color-icon);
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 label.sk-toggleable__label-arrow:hover:before {
+    color: var(--sklearn-color-text);
+  }
+
+  /* Toggleable content - dropdown */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-toggleable__content {
+    max-height: 0;
+    max-width: 0;
+    overflow: hidden;
+    text-align: left;
+    background-color: var(--sklearn-color-level-0);
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-toggleable__content pre {
+    margin: 0.2em;
+    border-radius: 0.25em;
+    color: var(--sklearn-color-text);
+    background-color: var(--sklearn-color-level-0);
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+    /* Expand drop-down */
+    max-height: 200px;
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+    content: "▾";
+  }
+
+  /* Pipeline/ColumnTransformer-specific style */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+    color: var(--sklearn-color-text);
+    background-color: var(--sklearn-color-level-2);
+  }
+
+  /* Estimator-specific style */
+
+  /* Colorize estimator box */
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+    /* unfitted */
+    background-color: var(--sklearn-color-level-2);
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-label label.sk-toggleable__label,
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-label label {
+    /* The background is the default theme color */
+    color: var(--sklearn-color-text-on-default-background);
+  }
+
+  /* On hover, darken the color of the background */
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-label:hover label.sk-toggleable__label {
+    color: var(--sklearn-color-text);
+    background-color: var(--sklearn-color-level-2);
+  }
+
+  /* Estimator label */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-label label {
+    font-family: monospace;
+    font-weight: bold;
+    display: inline-block;
+    line-height: 1.2em;
+  }
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-label-container {
+    text-align: center;
+  }
+
+  /* Estimator-specific */
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-estimator {
+    font-family: monospace;
+    border: 1px dotted var(--sklearn-color-border-box);
+    border-radius: 0.25em;
+    box-sizing: border-box;
+    margin-bottom: 0.5em;
+    background-color: var(--sklearn-color-level-0);
+  }
+
+  /* on hover */
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 div.sk-estimator:hover {
+    background-color: var(--sklearn-color-level-2);
+  }
+
+  /* Specification for estimator info */
+
+  .sk-estimator-doc-link,
+  a:link.sk-estimator-doc-link,
+  a:visited.sk-estimator-doc-link {
+    float: right;
+    font-size: smaller;
+    line-height: 1em;
+    font-family: monospace;
+    background-color: var(--sklearn-color-background);
+    border-radius: 1em;
+    height: 1em;
+    width: 1em;
+    text-decoration: none !important;
+    margin-left: 1ex;
+    border: var(--sklearn-color-level-1) 1pt solid;
+    color: var(--sklearn-color-level-1);
+  }
+
+  /* On hover */
+  div.sk-estimator:hover .sk-estimator-doc-link:hover,
+  .sk-estimator-doc-link:hover,
+  div.sk-label-container:hover .sk-estimator-doc-link:hover,
+  .sk-estimator-doc-link:hover {
+    background-color: var(--sklearn-color-level-3);
+    color: var(--sklearn-color-background);
+    text-decoration: none;
+  }
+
+  /* Span, style for the box shown on hovering the info icon */
+  .sk-estimator-doc-link span {
+    display: none;
+    z-index: 9999;
+    position: relative;
+    font-weight: normal;
+    right: .2ex;
+    padding: .5ex;
+    margin: .5ex;
+    width: min-content;
+    min-width: 20ex;
+    max-width: 50ex;
+    color: var(--sklearn-color-text);
+    box-shadow: 2pt 2pt 4pt #999;
+    background: var(--sklearn-color-level-0);
+    border: .5pt solid var(--sklearn-color-level-3);
+  }
+
+  .sk-estimator-doc-link:hover span {
+    display: block;
+  }
+
+  /* "?"-specific style due to the `<a>` HTML tag */
+
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 a.estimator_doc_link {
+    float: right;
+    font-size: 1rem;
+    line-height: 1em;
+    font-family: monospace;
+    background-color: var(--sklearn-color-background);
+    border-radius: 1rem;
+    height: 1rem;
+    width: 1rem;
+    text-decoration: none;
+    color: var(--sklearn-color-level-1);
+    border: var(--sklearn-color-level-1) 1pt solid;
+  }
+
+  /* On hover */
+  #sk-7b9f0c48-71be-4038-bc7c-4de5921314b4 a.estimator_doc_link:hover {
+    background-color: var(--sklearn-color-level-3);
+    color: var(--sklearn-color-background);
+    text-decoration: none;
+  }
+</style><div id="sk-7b9f0c48-71be-4038-bc7c-4de5921314b4" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+                                 LinearFourierSeasonality(effect_mode='multiplicative',
+                                                          fourier_terms_list=[3,
+                                                                              10],
+                                                          freq='D',
+                                                          prior_scale=0.1,
+                                                          sp_list=[7, 365.25]),
+                                 '^$')],
+             inference_engine=MAPInferenceEngine(),
+             trend=PiecewiseLinearTrend(changepoint_interval=300,
+                                        changepoint_prior_scale=0.0001))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4d4e88fe-1069-421b-8883-c9c6976a41ef')" type="checkbox"><label for="UUID('4d4e88fe-1069-421b-8883-c9c6976a41ef')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+                                 LinearFourierSeasonality(effect_mode='multiplicative',
+                                                          fourier_terms_list=[3,
+                                                                              10],
+                                                          freq='D',
+                                                          prior_scale=0.1,
+                                                          sp_list=[7, 365.25]),
+                                 '^$')],
+             inference_engine=MAPInferenceEngine(),
+             trend=PiecewiseLinearTrend(changepoint_interval=300,
+                                        changepoint_prior_scale=0.0001))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('5a020782-043f-4cf9-9f08-9255f245bdf6')" type="checkbox"><label for="UUID('5a020782-043f-4cf9-9f08-9255f245bdf6')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=300, changepoint_prior_scale=0.0001)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('30da6aaa-7851-456b-aaa4-9ed12793078a')" type="checkbox"><label for="UUID('30da6aaa-7851-456b-aaa4-9ed12793078a')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
+                         fourier_terms_list=[3, 10], freq='D', prior_scale=0.1,
+                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6144d58e-36b4-48ec-8693-f58cc59dbf8e')" type="checkbox"><label for="UUID('6144d58e-36b4-48ec-8693-f58cc59dbf8e')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
+</div>
+</div>
+<div id="562005d3" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>forecast_horizon <span class="op">=</span> pd.period_range(<span class="st">"2007-01-01"</span>, <span class="st">"2018-01-01"</span>, freq<span class="op">=</span><span class="st">"D"</span>)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>preds <span class="op">=</span> model.predict(fh<span class="op">=</span>forecast_horizon)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>preds.plot.line(ax<span class="op">=</span>ax)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>ax.scatter(y.index, y, marker<span class="op">=</span><span class="st">"o"</span>, color<span class="op">=</span><span class="st">"k"</span>, s<span class="op">=</span><span class="dv">2</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="univariate_files/figure-html/cell-21-output-1.png" width="658" height="411" class="figure-img"></p>
 </figure>
 </div>
 </div>

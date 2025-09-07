@@ -27,7 +27,7 @@ class IgnoreInput(BaseEffect):
     """
 
     _tags = {
-        "requires_X": False,  # Default value, will be overridden in __init__
+        "requires_X": True,  # Default value, will be overridden in __init__
         "applies_to": "X",
     }
 
@@ -93,4 +93,4 @@ class IgnoreInput(BaseEffect):
         jnp.ndarray
             Zero.
         """
-        return jnp.array(0.0)
+        return jnp.zeros_like(data)

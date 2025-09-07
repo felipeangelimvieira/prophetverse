@@ -11,6 +11,7 @@ from .effects import (
     NegativeBinomialTargetLikelihood,
     BetaTargetLikelihood,
     # Exogenous effects
+    MultiplyEffects,
     HillEffect,
     LinearEffect,
     LinearFourierSeasonality,

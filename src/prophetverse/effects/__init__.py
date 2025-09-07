@@ -19,6 +19,7 @@ from .target.univariate import (
     BetaTargetLikelihood,
 )
 from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
+from .multiply import MultiplyEffects
 
 __all__ = [
     "BaseEffect",
@@ -41,4 +42,5 @@ __all__ = [
     "PiecewiseLinearTrend",
     "PiecewiseLogisticTrend",
     "FlatTrend",
+    "MultiplyEffects",
 ]

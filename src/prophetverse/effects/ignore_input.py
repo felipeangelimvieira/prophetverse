@@ -7,10 +7,10 @@ import pandas as pd
 
 from prophetverse.effects.base import BaseEffect
 
-__all__ = ["BypassEffect"]
+__all__ = ["IgnoreInput"]
 
 
-class BypassEffect(BaseEffect):
+class IgnoreInput(BaseEffect):
     """Effect that ignores all inputs and returns zeros during prediction.
 
     This effect can be used as a placeholder or to disable specific effects
@@ -21,21 +21,17 @@ class BypassEffect(BaseEffect):
 
     Parameters
     ----------
-    validate_empty_input : bool, optional
+    raise_error : bool, optional
         If True, validates that X is empty (has no columns) during fit.
         If False, ignores X completely. Default is False.
     """
 
     _tags = {
-        "capability:panel": True,
-        "capability:multivariate_input": True,
         "requires_X": False,  # Default value, will be overridden in __init__
         "applies_to": "X",
-        "filter_indexes_with_forecating_horizon_at_transform": False,
-        "requires_fit_before_transform": False,
     }
 
-    def __init__(self, validate_empty_input: bool = False):
+    def __init__(self, raise_error: bool = False):
         """Initialize the BypassEffect.
 
         Parameters
@@ -44,11 +40,8 @@ class BypassEffect(BaseEffect):
             If True, validates that X is empty (has no columns) during fit.
             If False, ignores X completely. Default is False.
         """
-        self.validate_empty_input = validate_empty_input
+        self.raise_error = raise_error
         super().__init__()
-
-        # Set tags based on validation mode
-        self.set_tags(requires_X=self.validate_empty_input)
 
     def _fit(self, y: pd.DataFrame, X: pd.DataFrame, scale: float = 1.0):
         """Fit the effect. If validation is enabled, check that X is empty.
@@ -67,22 +60,16 @@ class BypassEffect(BaseEffect):
         ValueError
             If validate_empty_input is True and X is not empty (has columns).
         """
-        if self.validate_empty_input and X is not None and len(X.columns) > 0:
+        if self.raise_error and X is not None and len(X.columns) > 0:
             raise ValueError(
-                f"BypassEffect with validate_empty_input=True requires X to be empty "
+                f"BypassEffect with raise_error=True requires X to be empty "
                 f"(no columns), but X has {len(X.columns)} columns: {list(X.columns)}"
             )
 
     def _transform(self, X, fh):
-        """Transform input data - handle None and empty DataFrames properly."""
         if X is None:
             return None
-        if isinstance(X, pd.DataFrame) and len(X.columns) == 0:
-            return None
-        # Use default behavior for non-empty X
-        from prophetverse.utils.frame_to_array import series_to_tensor_or_array
-
-        return series_to_tensor_or_array(X)
+        return super()._transform(X, fh)
 
     def _predict(
         self,

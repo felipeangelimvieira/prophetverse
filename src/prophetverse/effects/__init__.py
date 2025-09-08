@@ -20,6 +20,7 @@ from .target.univariate import (
 )
 from .forward import Forward
 from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
+from .multiply import MultiplyEffects
 
 __all__ = [
     "BaseEffect",
@@ -43,4 +44,5 @@ __all__ = [
     "PiecewiseLogisticTrend",
     "FlatTrend",
     "Forward",
+    "MultiplyEffects",
 ]

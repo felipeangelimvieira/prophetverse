@@ -2,9 +2,11 @@ from prophetverse.utils.plotting import plot_prior_predictive
 from prophetverse import LinearEffect
 import pandas as pd
 import jax.numpy as jnp
+import pytest
 
 
-def test_plot_prior_predictive():
+@pytest.mark.parametrize("mode", ["time", "x"])
+def test_plot_prior_predictive(mode):
     """Test the plot_prior_predictive function."""
     instance = LinearEffect()
     X = pd.DataFrame(
@@ -16,6 +18,7 @@ def test_plot_prior_predictive():
         X=X,
         y=y,
         predicted_effects={"trend": jnp.array([[2], [4], [6], [8], [10]])},
+        mode=mode,
     )
 
     assert fig is not None

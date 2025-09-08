@@ -171,6 +171,10 @@ class LinearFourierSeasonality(BaseEffect):
             predicted_effects=predicted_effects,
         )
 
+    def _update_data(self, data, arr):
+        """Do nothing, return data as is."""
+        return data
+
     @classmethod
     def get_test_params(cls, parameter_set="default"):
         return [

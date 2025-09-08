@@ -27,7 +27,7 @@ class IgnoreInput(BaseEffect):
     """
 
     _tags = {
-        "requires_X": True,  # Default value, will be overridden in __init__
+        "requires_X": False,
         "applies_to": "X",
     }
 

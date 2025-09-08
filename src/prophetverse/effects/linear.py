@@ -185,3 +185,9 @@ class PanelBHLinearEffect(BaseAdditiveOrMultiplicativeEffect):
             )
 
         return data @ coefficients.reshape((-1, 1, 1))
+
+    def _update_data(self, data, arr):
+        """Update data with new array, ensuring correct dimensions."""
+        if arr.ndim < 3:
+            arr = jnp.reshape(arr, (1, -1, 1))
+        return super()._update_data(data, arr)

@@ -159,6 +159,50 @@ class TestAllEffects(TestAllObjects):
             out.shape == scenario.trend.shape
         ), f"Expected output shape {scenario.trend.shape}, but got {out.shape}"
 
+    def test_update_data(self, object_instance, scenario):
+        """
+        First version of update_data test.
+
+        This test should be improved, but depends on enhancements of tag system.
+        """
+
+        X = scenario.X
+        y = scenario.y
+
+        applies_to = object_instance.get_tag("applies_to")
+
+        if X is None:
+            pytest.skip("Test requires X to be not None.")
+        if applies_to != "X":
+            pytest.skip("Test requires applies_to to be 'X'.")
+        if X.shape[1] != 1:
+            pytest.skip("Test requires X to have only one column.")
+        if object_instance.get_tag("requires_X") is False:
+            pytest.skip("Test requires requires_X to be True.")
+
+        object_instance.fit(y=y, X=X, scale=1)
+
+        def _transform_predict(X):
+            predict_data = object_instance.transform(X, fh=scenario.fh)
+            with numpyro.handlers.seed(rng_seed=0):
+                out = object_instance.predict(
+                    data=predict_data, predicted_effects={"trend": scenario.trend}
+                )
+            return out, predict_data
+
+        out, predict_data = _transform_predict(X)
+
+        updated_predict_data = object_instance._update_data(
+            predict_data, jnp.ones((len(scenario.fh), 1))
+        )
+
+        with numpyro.handlers.seed(rng_seed=0):
+            updated_out = object_instance.predict(
+                data=updated_predict_data, predicted_effects={"trend": scenario.trend}
+            )
+
+        assert not jnp.allclose(out, updated_out), "Updated output should match out"
+
     def _validate_transform_output(self, obj):
 
         is_valid_dict = False

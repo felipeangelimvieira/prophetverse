@@ -32,7 +32,7 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
         "requires_X": True,
         # Should only the indexes related to the forecasting horizon be passed to
         "filter_indexes_with_forecating_horizon_at_transform": True,
-        "named_object_parameters": "effects",
+        "named_object_parameters": "named_effects",
     }
 
     def __init__(self, effects: List[Tuple[str, BaseEffect]]):
@@ -45,7 +45,7 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
                 self.named_effects.append(val)
             elif isinstance(val, BaseEffect):
                 self.named_effects.append((str(i), val))
-            else:
+            else:  # pragma: no cover
                 raise ValueError(
                     f"Invalid type {type(val)} for step {i}. Must be a tuple or BaseEffect."
                 )
@@ -137,11 +137,7 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
                     ("linear2", LinearEffect()),
                 ]
             },
-            {
-                "effects": [
-                    ("linear1", LinearEffect()),
-                ]
-            },
+            {"effects": [LinearEffect()]},
         ]
 
     def _update_data(self, data, arr):

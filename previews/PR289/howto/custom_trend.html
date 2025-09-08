@@ -433,7 +433,7 @@ Note
 <p>This dataset was obtained from https://github.com/emanuelef/daily-stars-explorer</p>
 </div>
 </div>
-<div id="f8fb6e8c" class="cell" data-execution_count="1">
+<div id="7e86a539" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -496,7 +496,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 \end{align*}
 \]</span></p>
 <p>That curve can be used as trend to model a diffusion process. Below, we plot it for a combination of parameters</p>
-<div id="caa65bda" class="cell" data-execution_count="2">
+<div id="c46c1f90" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -569,12 +569,12 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <section id="splitting-the-dataset" class="level2">
 <h2 class="anchored" data-anchor-id="splitting-the-dataset">Splitting the dataset</h2>
 <p>We leave 7 years to forecast, and 1.5 year to train. Note that, without the prior information on the nature of the curve, a model could simply forecast a linear growth of the number of stars, which would be a very poor forecast.</p>
-<div id="cf58ae1a" class="cell" data-execution_count="3">
+<div id="5a2561c4" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>split_at <span class="op">=</span> <span class="op">-</span><span class="bu">int</span>(<span class="dv">365</span> <span class="op">*</span> <span class="dv">5</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> y.iloc[<span class="dv">20</span>:]</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>y_train, y_test <span class="op">=</span> y.iloc[:split_at], y.iloc[split_at:]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="85c1c90d" class="cell" data-execution_count="4">
+<div id="60b05ca1" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(nrows<span class="op">=</span><span class="dv">2</span>, sharex<span class="op">=</span><span class="va">True</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">6</span>))</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> axs[<span class="dv">0</span>]</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> y_train[<span class="st">"day-stars"</span>].rename(<span class="st">"Train"</span>).plot.line(legend<span class="op">=</span><span class="va">True</span>, ax<span class="op">=</span>ax)</span>
@@ -622,7 +622,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <section id="step-1-define-helper-functions" class="level3">
 <h3 class="anchored" data-anchor-id="step-1-define-helper-functions">Step 1: Define helper functions</h3>
 <p>The GenLogisticTrend class will use the following helper functions:</p>
-<div id="42fea1a7" class="cell" data-execution_count="5">
+<div id="4365c758" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -654,7 +654,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <section id="step-2-define-the-custom-trend-model-class" class="level3">
 <h3 class="anchored" data-anchor-id="step-2-define-the-custom-trend-model-class">Step 2: Define the Custom Trend Model Class</h3>
 <p>Create a new class that extends the TrendModel abstract base class. Implement the abstract methods initialize, prepare_input_data, and compute_trend.</p>
-<div id="15b9c21f" class="cell" data-execution_count="6">
+<div id="2ebd6058" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> numpyro <span class="im">import</span> distributions <span class="im">as</span> dist</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -787,7 +787,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </section>
 <section id="fit-the-model-and-make-predictions" class="level2">
 <h2 class="anchored" data-anchor-id="fit-the-model-and-make-predictions">Fit the model and make predictions</h2>
-<div id="df58f95a" class="cell" data-execution_count="7">
+<div id="07066ae1" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.transformations.series.fourier <span class="im">import</span> FourierFeatures</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -834,12 +834,10 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 /home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:157: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
   deprecation_warning(
 /home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:157: FutureWarning: Warning: 'noise_scale' is deprecated and will be removed in version 0.7.0. Please update your code to avoid issues. Use the noise_scale parameter in the likelihood instead. You can import the likelihood from prophetverse.effects import NormalTargetLikelihood
-  deprecation_warning(
-/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:252: UserWarning: No columns match the regex ^$
-  self._fit_effects(X, y)</code></pre>
+  deprecation_warning(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="7">
-<style>#sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 {
+<style>#sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -864,15 +862,15 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     }
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b {
     color: var(--sklearn-color-text);
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 pre {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b pre {
     padding: 0;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 input.sk-hidden--visually {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -884,7 +882,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     width: 1px;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-dashed-wrapped {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -892,7 +890,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-container {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -902,7 +900,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     position: relative;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-text-repr-fallback {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -918,14 +916,14 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 
   /* Parallel-specific style estimator block */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-parallel-item::after {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-parallel {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -933,28 +931,28 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     position: relative;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-parallel-item {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-parallel-item:first-child::after {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-parallel-item:last-child::after {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-parallel-item:only-child::after {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-serial {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -972,14 +970,14 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-toggleable {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 label.sk-toggleable__label {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -989,7 +987,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     text-align: center;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 label.sk-toggleable__label-arrow:before {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -997,13 +995,13 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     color: var(--sklearn-color-icon);
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 label.sk-toggleable__label-arrow:hover:before {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-toggleable__content {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -1011,27 +1009,27 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-toggleable__content pre {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1039,38 +1037,38 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-label label.sk-toggleable__label,
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-label label {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-label label.sk-toggleable__label,
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-label:hover label.sk-toggleable__label {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-label label {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-label-container {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-estimator {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1080,7 +1078,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   }
 
   /* on hover */
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 div.sk-estimator:hover {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1137,7 +1135,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 a.estimator_doc_link {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1152,12 +1150,12 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   }
 
   /* On hover */
-  #sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0 a.estimator_doc_link:hover {
+  #sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-5c1b4d04-a090-4b2b-80ad-6f87b3f93bf0" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+</style><div id="sk-c2a34427-22f0-4f93-b7ec-97b9ad73572b" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               8],
@@ -1168,7 +1166,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
              inference_engine=MCMCInferenceEngine(num_samples=500,
                                                   num_warmup=1000),
              likelihood='negbinomial', noise_scale=10, scale=1,
-             trend=GenLogisticTrend())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ad91f125-11a4-4c9d-8cc2-be984823c081')" type="checkbox"><label for="UUID('ad91f125-11a4-4c9d-8cc2-be984823c081')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+             trend=GenLogisticTrend())</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('09473c52-0b7b-402d-833b-e7c9b9106584')" type="checkbox"><label for="UUID('09473c52-0b7b-402d-833b-e7c9b9106584')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[3,
                                                                               8],
@@ -1179,12 +1177,12 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
              inference_engine=MCMCInferenceEngine(num_samples=500,
                                                   num_warmup=1000),
              likelihood='negbinomial', noise_scale=10, scale=1,
-             trend=GenLogisticTrend())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('fcdec97a-b2db-4bda-a0df-04c35d2ca3e4')" type="checkbox"><label for="UUID('fcdec97a-b2db-4bda-a0df-04c35d2ca3e4')" class="sk-toggleable__label sk-toggleable__label-arrow">GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('29f182a9-4180-46cf-be8a-20745b617514')" type="checkbox"><label for="UUID('29f182a9-4180-46cf-be8a-20745b617514')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
+             trend=GenLogisticTrend())</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('063897d8-0709-4501-bfb9-d048d7dd42a1')" type="checkbox"><label for="UUID('063897d8-0709-4501-bfb9-d048d7dd42a1')" class="sk-toggleable__label sk-toggleable__label-arrow">GenLogisticTrend</label><div class="sk-toggleable__content"><pre>GenLogisticTrend()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('fc72fb6a-c4d0-4a91-9bb2-84c9fdaf6fa1')" type="checkbox"><label for="UUID('fc72fb6a-c4d0-4a91-9bb2-84c9fdaf6fa1')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative',
                          fourier_terms_list=[3, 8], freq='D', prior_scale=0.1,
-                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('59a5efcd-f0c8-4d85-881f-2a37a95897cc')" type="checkbox"><label for="UUID('59a5efcd-f0c8-4d85-881f-2a37a95897cc')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine(num_samples=500, num_warmup=1000)</pre></div></div></div></div></div></div></div></div></div></div>
+                         sp_list=[7, 365.25])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('7d19f426-9558-418f-b281-ccbf9554f3dd')" type="checkbox"><label for="UUID('7d19f426-9558-418f-b281-ccbf9554f3dd')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine(num_samples=500, num_warmup=1000)</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-<div id="07fdb777" class="cell" data-execution_count="8">
+<div id="365b372f" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1239,7 +1237,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="6153a59d" class="cell" data-execution_count="9">
+<div id="6263e51b" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>interval.columns <span class="op">=</span> interval.columns.droplevel([<span class="dv">0</span>, <span class="dv">1</span>])</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>interval.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="9">
@@ -1289,7 +1287,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </section>
 <section id="plotting-the-results" class="level2">
 <h2 class="anchored" data-anchor-id="plotting-the-results">Plotting the results</h2>
-<div id="72fa96e1" class="cell" data-execution_count="10">
+<div id="c4b5fc29" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Just the scatter of y, without lines</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">5</span>))</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> (</span>
@@ -1329,7 +1327,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="cb52e454" class="cell" data-execution_count="11">
+<div id="58df9506" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Forecast samples</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>yhat_samples <span class="op">=</span> model.predict_samples(fh<span class="op">=</span>fh)</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Samples of all sites (capacity, for example, that we had set as deterministic with numpyro.deterministic)</span></span>
@@ -1341,7 +1339,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
   deprecation_warning(</code></pre>
 </div>
 </div>
-<div id="e482fd5c" class="cell" data-execution_count="12">
+<div id="f05e48cf" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Set number of columns to display to 4 temporarily</span></span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>pd.set_option(<span class="st">"display.max_columns"</span>, <span class="dv">4</span>)</span>
@@ -1409,7 +1407,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="3040de08" class="cell" data-execution_count="13">
+<div id="b0e602f1" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get quantile 0.25, 0.75 and mean</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
@@ -1432,7 +1430,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 <span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>site_quantiles.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_2760/2904010725.py:14: FutureWarning: The provided callable &lt;function mean at 0x7fe90ce6f7e0&gt; is currently using SeriesGroupBy.mean. In a future version of pandas, the provided callable will be used directly. To keep current behavior pass the string "mean" instead.
+<pre><code>/tmp/ipykernel_2706/2904010725.py:14: FutureWarning: The provided callable &lt;function mean at 0x7fc4dc5537e0&gt; is currently using SeriesGroupBy.mean. In a future version of pandas, the provided callable will be used directly. To keep current behavior pass the string "mean" instead.
   site_quantiles = site_samples.groupby(level=[-1]).agg(</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="13">
@@ -1504,7 +1502,7 @@ g(t) &amp;= \alpha\left(1 - \frac{G(T)}{C_1(t-t_0) + C_2}\right) G(T)  + \frac{C
 </div>
 </div>
 </div>
-<div id="308cecb0" class="cell" data-execution_count="14">
+<div id="b258a1fa" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>

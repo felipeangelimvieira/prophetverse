@@ -899,7 +899,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
                 warnings.warn(msg, UserWarning, stacklevel=2)
 
-            if not len(columns):
+            if not len(columns) and not (regex is None or regex == "^$"):
                 msg = f"No columns match the regex {regex}"
                 warnings.warn(msg, UserWarning, stacklevel=2)
 

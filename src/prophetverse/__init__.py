@@ -12,6 +12,7 @@ from .effects import (
     BetaTargetLikelihood,
     # Exogenous effects
     MultiplyEffects,
+    MichaelisMentenEffect,
     HillEffect,
     LinearEffect,
     LinearFourierSeasonality,
@@ -61,6 +62,8 @@ __all__ = [
     "MultivariateNormal",
     "GammaTargetLikelihood",
     "NegativeBinomialTargetLikelihood",
+    "MultiplyEffects",
+    "MichaelisMentenEffect",
     "HillEffect",
     "LinearEffect",
     "LinearFourierSeasonality",

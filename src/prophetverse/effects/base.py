@@ -8,6 +8,7 @@ from skbase.base import BaseObject
 import numpyro
 from prophetverse.utils.deprecation import deprecation_warning
 from prophetverse.utils import series_to_tensor_or_array
+from prophetverse.utils.numpyro import CacheMessenger
 from collections import OrderedDict, defaultdict
 import copy
 
@@ -395,13 +396,13 @@ class BaseEffect(BaseObject):
                 x = 0
                 for i, _data in enumerate(data):
                     effect_ = self.effects_[self.columns_[i]]
-                    with numpyro.handlers.scope(prefix=self.columns_[i]):
+                    with numpyro.handlers.scope(prefix=str(self.columns_[i])):
                         out = effect_.predict(
                             data=_data,
                             predicted_effects=predicted_effects,
                             params=params,
                         )
-                    out = numpyro.deterministic(self.columns_[i], out)
+                    out = numpyro.deterministic(str(self.columns_[i]), out)
                     x += out
             elif self._broadcasted == "panel":
                 x = []
@@ -609,6 +610,71 @@ class BaseEffect(BaseObject):
             k: v for k, v in params.items() if k not in distribution_params
         }
         return super().set_params(**not_distribution_params)
+
+    def sample_prior(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame = None,
+        num_samples=10,
+        predicted_effects=None,
+        seed=42,
+        as_pandas=False,
+    ):
+        """
+        Sample from the prior distribution.
+
+        Parameters
+        ----------
+        y: pd.DataFrame
+            The target variable.
+        X : pd.DataFrame
+            The input data for which to sample from the prior distribution.
+        num_samples : int, optional
+            The number of samples to draw from the prior distribution, by default 10.
+        predicted_effects : Optional[Dict[str, jnp.ndarray]], optional
+            A dictionary of predicted effects to condition on, by default None.
+        seed : int, optional
+            The random seed to use for sampling, by default 42.
+        as_pandas: bool, optional
+            Whether to return the samples as a pandas DataFrame, by default False.
+
+        Returns
+        -------
+        jnp.ndarray
+            The output of shape (X.shape[0], num_samples)
+        """
+
+        from prophetverse.engine.prior import PriorPredictiveInferenceEngine
+
+        # Clone and fit
+        instance = self.clone()
+        instance.fit(y=y, X=X)
+
+        z = X
+        if instance.get_tag("applies_to", "X") == "y":
+            z = y
+        predict_data = instance.transform(z, fh=X.index.get_level_values(-1).unique())
+
+        def wrapper(**kwargs):
+            with CacheMessenger(), numpyro.handlers.scope(prefix="effect"):
+                out = instance.predict(**kwargs)
+            return numpyro.deterministic("__out", out)
+
+        # Get prior engine
+        engine = PriorPredictiveInferenceEngine(
+            return_sites="all", num_samples=num_samples
+        )
+        engine.infer(wrapper, data=predict_data, predicted_effects=predicted_effects)
+        samples = engine.predict(data=predict_data, predicted_effects=predicted_effects)
+        samples = samples["__out"]
+        if not as_pandas:
+            return samples
+        return pd.concat(
+            {
+                i: pd.DataFrame(samples[i].flatten(), index=X.index)
+                for i in range(samples.shape[0])
+            }
+        )
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):

@@ -1,0 +1,168 @@
+---
+title: Basics of Prophetverse API
+---
+
+Prophetverse is a powerful tool for building customized and glass-box forecasting and mix models.
+In Prophetverse, we define each component of the model as a separate effect, making this library extremely flexible to attend your specific needs.
+
+In this page, we will:
+
+
+1. Understand the structure of `y` (the target) and `X` (media & control variables) using the sktime interface.  
+2. Understand the hyperparameters of Prophetverse
+3. Fit your first Bayesian MMM and generate forecasts.  
+
+## 1. Data Structures (`y` and `X`)
+
+Prophetverse uses the sktime forecasting API. The essentials:
+
+* `y`: a pandas DataFrame indexed by a time index (`pd.DatetimeIndex` or `pd.PeriodIndex`). Single column for univariate MMM (e.g. `revenue`):
+
+```{python}
+# | echo: false
+import numpy as np
+import pandas as pd
+
+y = pd.DataFrame(
+    index=pd.period_range("2020-01-01", "2020-12-31", freq="D"),
+    data={"revenue": np.random.rand(366)},
+)
+y.head()
+```
+
+
+For panel datasets (e.g. in the case of multiple products or regions), use a MultiIndex, where the first index level is the entity (e.g. product or region) and the second level is the time.
+
+
+```{python}
+# | echo: false
+
+import pandas as pd
+
+y = pd.DataFrame(
+    index=pd.period_range("2020-01-01", "2020-12-31", freq="D"),
+    data={"revenue": np.random.rand(366)},
+)
+y = pd.concat(
+    [y] * 3, keys=["product_a", "product_b", "product_c"], names=["product", None]
+)
+y
+```
+
+
+* `X`: a pandas DataFrame *aligned on the same index* containing exogenous variables (media spend, price, promotions, macro, etc.). Columns are arbitrary names.
+
+::: {.callout-note appearance="simple"}
+
+The index type should always be the same for `y` and `X`, and every dataframe you use. After choosing Datetime or Period index for `y`, use the same type for `X`.
+
+::: 
+
+#### Example of dataset
+
+Here we load a synthetic dataset:
+
+```{python}
+from prophetverse.datasets._mmm.dataset1 import get_dataset
+
+(y, X, *_) = get_dataset()
+
+
+y.head()
+```
+
+The `X` looks like this:
+
+
+```{python}
+X.head()
+```
+
+We will split the dataset into training and testing sets.
+
+```{python}
+from sktime.split import temporal_train_test_split
+
+y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=0.2)
+
+```
+
+## 2. Prophetverse model
+
+Think of Prophetverse as the conerstone of you MMM model. It is a flexible class that allows you to define the trend, seasonality, and custom exogenous effects of your model.
+
+### Simple Prophetverse model
+
+We can use a simple Prophetverse model with Linear effects and a seasonality component:
+
+```{python}
+from prophetverse import Prophetverse, LinearEffect, LinearFourierSeasonality
+
+from prophetverse.utils.regex import starts_with, no_input_columns
+
+
+seasonality_effect = LinearFourierSeasonality(
+    sp_list=[365.25, 7],
+    fourier_terms_list=[10, 3],
+    prior_scale=0.1,
+    freq="D",
+    effect_mode="additive",
+)
+
+ad_spend_effect = LinearEffect()
+
+model = Prophetverse(
+    exogenous_effects=[
+        ("ad_spend", ad_spend_effect, starts_with("ad")),
+        ("seasonality", seasonality_effect, no_input_columns),
+    ],
+)
+
+model.fit(y=y_train, X=X_train)
+
+```
+
+By default, the model will run a MCMC inference to obtain the parameters. We can, however, easily switch to a MAP inference by setting `inference_engine=MAPInferenceEngine()` in the model constructor. The MAP inference is generally faster but provides point estimates of the parameters.
+
+To run in-sample and out-of-sample forecasts of total revenue, we can simply call predict. We need to pass a "forecasting horizon" (fh) object, that should preferably be an index of the type of our `y` and `X`'s index. Since we want to forecast for both train and test timepoints, we use `y.index` as fh, and pass the full `X` as exogenous variables.
+
+```{python}
+fh = y.index
+
+y_pred = model.predict(fh=fh, X=X)
+
+y_pred
+```
+
+
+```{python}
+import matplotlib.pyplot as plt
+
+
+def plot_forecasts(y_pred):
+	fig, ax = plt.subplots(figsize=(10,5))
+
+	ax.plot(y.index.to_timestamp(), y)
+	ax.plot(y_pred.index, y_pred)
+	ax.axvline(y_train.index.max().to_timestamp(), color="black", linestyle="--", label="Train/Test split")
+	fig.show()
+
+plot_forecasts(y_pred)
+```
+
+
+#### Getting the components
+
+To obtain the contribution of each component, you can use the `predict_components` method:
+
+```{python}
+components = model.predict_components(fh=fh, X=X)
+components.head()
+```
+
+If you want to obtain all the sample to compute, for example, probabilistic intervals and measure the risk, you can use the `predict_component_samples` method:
+
+```{python}
+samples = model.predict_component_samples(fh=fh, X=X)
+samples
+```

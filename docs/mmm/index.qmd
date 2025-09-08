@@ -77,6 +77,134 @@ Prophetverse has the following features that make it a great choice for MMM:
 
 * __Versatility__: The effects API can be used not only for adding new components but also for adding new likelihood terms, such as those used for lift tests.
 
+
+Particularly, Prophetverse has a practical interface, based on initialization, fit and predict, that allows users to quickly build and evaluate custom MMM models.
+
+A typical Prophetverse model workflow is as follows:
+
+### 1. Define the baseline components
+
+Typical components of a MMM model are trend and seasonality. We have builtin components for these:
+
+```{python}
+
+from prophetverse import (
+    LinearFourierSeasonality,
+    PiecewiseLinearTrend,
+)
+
+# Trend
+trend = PiecewiseLinearTrend(
+    changepoint_interval=365,  # One changepoint every 365 timeunits
+    changepoint_range=-120,  # The last changepoint should be 120 days before the end of the training data,
+    changepoint_prior_scale=1e-3,
+)
+
+
+# Seasonality
+seasonality_effect = LinearFourierSeasonality(
+    sp_list=[365.25, 7],
+    fourier_terms_list=[10, 3],
+    prior_scale=0.1,
+    freq="D",
+    effect_mode="multiplicative",
+)
+```
+
+
+### 2. Define custom exogenous effects
+
+Now, it is time to define how the investment variables affect the target variable. In MMM, it is common to use adstock and saturation effects to model the impact of advertising spend on sales. 
+
+
+```{python}
+
+
+from prophetverse import (
+    MichaelisMentenEffect,
+    ChainedEffects,
+    GeometricAdstockEffect,
+    PiecewiseLinearTrend,
+)
+import numpyro.distributions as dist
+
+saturation = MichaelisMentenEffect(
+    effect_mode="additive",
+    max_effect_prior=dist.HalfNormal(0.5),
+    half_saturation_prior=dist.HalfNormal(0.5),
+)
+
+
+# Chained effect: saturation + adstock (after)
+# Depending on your use case, you might want to use the saturation before or after the adstock.
+saturation_with_adstock = ChainedEffects(
+    steps=[
+        ("saturation", saturation),
+        (
+            "adstock",
+            GeometricAdstockEffect(
+                decay_prior=dist.Beta(2, 2),
+            ),
+        ),
+    ]
+)
+```
+
+
+
+### 3. Create the Prophetverse model
+
+Now, we can create the Prophetverse model by combining the components defined above.
+The `exogenous_effects` argument accepts a list of tuples with three elements:
+
+* A name for the effect. This will be the name that the output of this effect will have in the dataframe obtained from `predict_components` method.
+* The effect instance.
+* A regex to select the columns from the input dataframe `X` that will be used for this effect. You can use the utility functions from `prophetverse.utils.regex`, or define your own regex (which is easy nowadays with LLMs!).
+  
+
+```{python}
+from prophetverse import Prophetverse
+from prophetverse.utils.regex import starts_with, no_input_columns
+
+model = Prophetverse(
+    trend=trend,
+    exogenous_effects=[
+        ("channelA", saturation_with_adstock, starts_with("channelA")),
+        ("channelB", saturation, starts_with("channelB")),
+        ("seasonality", seasonality_effect, no_input_columns),
+    ],
+)
+```
+
+### 4. Fit and predict
+
+Then, with your data ready, you can fit and predict with the model:
+
+```python
+model.fit(y=y, X=X)
+# Dates to predict
+fh = pd.period_range(start="2023-01-01", end="2023-06-30", freq="D")
+y_pred_components = model.predict_components(fh=fh, X=X)
+```
+
+The `predict_components` method returns a dataframe where the columns represent components of the model. The "mean" column is the sum of all components, which is the prediction of the model.
+
+Note that some columns might be latent variables and not necessarily are used to compute the final prediction (it depends on how you defined your model). 
+
+## Available Effects
+
+You can get a list of all available effects in Prophetverse by running the following code:
+
+```{python}
+from skbase.lookup import all_objects
+from prophetverse.effects import BaseEffect
+
+all_objects(
+    object_types=[BaseEffect], package_name="prophetverse", as_dataframe=True
+)
+
+```
+
 The following effects may be of interest if you are working on MMM:
 
 * [**GeometricAdstockEffect**](/reference/GeometricAdstockEffect.qmd): The geometric adstock effect is a widely used technique in MMM to account for the lagged effect of advertising on sales. It is based on the idea that the effect of an ad on sales decays over time and that the decay follows a geometric progression.

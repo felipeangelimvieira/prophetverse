@@ -249,7 +249,7 @@ def get_simulated_lift_test(X, model, true_effect, rng, n=10):
     return tuple(outs)
 
 
-def get_dataset():
+def get_dataset(return_y_and_X_only=False):
     """
     Generate a complete dataset.
 
@@ -272,5 +272,6 @@ def get_dataset():
     y = model.predict(X=X, fh=index)
     true_effect = model.predict_components(X=X, fh=index)
     lift_test = get_simulated_lift_test(X, model, true_effect, n=30, rng=rng)
-
+    if return_y_and_X_only:
+        return y, X
     return y, X, lift_test, true_effect, model

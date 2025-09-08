@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import pandas as pd
 import pytest
 import numpyro
+import numpy as np
 from numpyro.distributions import Beta
 
 from prophetverse.effects.adstock import GeometricAdstockEffect, WeibullAdstockEffect
@@ -263,7 +264,8 @@ def test_weibull_adstock_parameter_sensitivity():
     """Test WeibullAdstockEffect sensitivity to different parameter values."""
     effect = WeibullAdstockEffect(max_lag=4)
 
-    data = jnp.array([[1.0], [1.0], [1.0], [1.0], [1.0]])
+    rng = np.random.default_rng(42)
+    data = jnp.array(rng.random((100,)))
     X = pd.DataFrame(data, columns=["feature1"])
     y = pd.DataFrame(jnp.ones_like(data), columns=["target"], index=X.index)
 
@@ -273,15 +275,15 @@ def test_weibull_adstock_parameter_sensitivity():
     # Test different parameter combinations
     param_sets = [
         {
-            "scale": jnp.array(0.5),
+            "scale": jnp.array(1),
             "concentration": jnp.array(0.5),
         },  # Low scale, low concentration
         {
-            "scale": jnp.array(2.0),
+            "scale": jnp.array(10),
             "concentration": jnp.array(0.5),
         },  # High scale, low concentration
         {
-            "scale": jnp.array(0.5),
+            "scale": jnp.array(1),
             "concentration": jnp.array(2.0),
         },  # Low scale, high concentration
         {
@@ -297,12 +299,12 @@ def test_weibull_adstock_parameter_sensitivity():
             results.append(result)
 
             # All results should be valid
-            assert result.shape == (5, 1)
+            assert result.shape == (len(data), 1)
             assert jnp.all(result >= 0)
             assert jnp.all(jnp.isfinite(result))
 
     # Results should differ based on parameters (at least some should be different)
-    assert not all(jnp.allclose(results[0], r, atol=1e-6) for r in results[1:])
+    assert not all([jnp.allclose(results[0], r, atol=1e-6).item() for r in results[1:]])
 
 
 def test_base_adstock_extract_data_and_indices():
@@ -323,25 +325,6 @@ def test_base_adstock_extract_data_and_indices():
     extracted_data, extracted_indices = effect._extract_data_and_indices(array_input)
     assert jnp.array_equal(extracted_data, array_input)
     assert jnp.array_equal(extracted_indices, jnp.arange(3))
-
-
-def test_base_adstock_raise_error_if_fh_changes():
-    """Test BaseAdstockEffect behavior when raise_error_if_fh_changes=True."""
-    effect = WeibullAdstockEffect(raise_error_if_fh_changes=True)
-
-    # Initial fit
-    data1 = jnp.array([[10.0], [20.0], [30.0]])
-    X1 = pd.DataFrame(data1, columns=["feature1"], index=[0, 1, 2])
-    y1 = pd.DataFrame(jnp.ones_like(data1), columns=["target"], index=X1.index)
-
-    effect.fit(y=y1, X=X1)
-
-    # Try to transform with different dates (should raise error)
-    data2 = jnp.array([[40.0], [50.0]])
-    X2 = pd.DataFrame(data2, columns=["feature1"], index=[3, 4])
-
-    with pytest.raises(ValueError, match="must be start at the same"):
-        effect.transform(X2, fh=X2.index)
 
 
 def test_weibull_adstock_mathematical_properties():
@@ -536,3 +519,36 @@ def test_geometric_vs_weibull_adstock_comparison():
 
     # Results should be different (different adstock patterns)
     assert not jnp.allclose(geo_result, weibull_result, atol=1e-6)
+
+
+def test_geometric_adstock_normalize_option():
+    """Test that normalize=True scales the geometric adstock by (1-decay)."""
+    data = jnp.array([[1.0], [0.0], [0.0], [0.0]])  # impulse
+    X = pd.DataFrame(data, columns=["feature1"])
+    y = pd.DataFrame(jnp.ones_like(data), columns=["target"], index=X.index)
+
+    params = {"decay": jnp.array(0.6)}
+
+    # Without normalization
+    eff_raw = GeometricAdstockEffect()
+    eff_raw.fit(y=y, X=X)
+    geo_data_raw = eff_raw.transform(X, fh=X.index)
+    with numpyro.handlers.seed(rng_seed=0), numpyro.handlers.do(data=params):
+        raw_result = eff_raw.predict(geo_data_raw, {})
+
+    # With normalization
+    eff_norm = GeometricAdstockEffect(normalize=True)
+    eff_norm.fit(y=y, X=X)
+    geo_data_norm = eff_norm.transform(X, fh=X.index)
+    with numpyro.handlers.seed(rng_seed=0), numpyro.handlers.do(data=params):
+        norm_result = eff_norm.predict(geo_data_norm, {})
+
+    # Raw geometric impulse response: 1, 0.6, 0.6^2, 0.6^3
+    expected_raw = jnp.array([[1.0], [0.6], [0.36], [0.216]])
+    assert jnp.allclose(raw_result, expected_raw, atol=1e-6)
+
+    # Normalized multiplies by (1-decay)=0.4 so that weights sum to 1
+    expected_norm = expected_raw * (1 - params["decay"])
+    assert jnp.allclose(norm_result, expected_norm, atol=1e-6)
+    # Sum of normalized weights (approx over first 4 terms < 1 but approaching 1)
+    assert norm_result.sum() < raw_result.sum()

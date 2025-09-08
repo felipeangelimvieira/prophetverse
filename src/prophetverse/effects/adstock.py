@@ -260,7 +260,7 @@ class WeibullAdstockEffect(BaseAdstockEffect):
             ).astype(int) + 1
             self.max_lag_ = jnp.clip(max_lag, 1, len(X))
         else:
-            self.max_lag_ = min(max_lag, len(X))
+            self.max_lag_ = min(self.max_lag_, len(X))
 
         self.lags_ = jnp.arange(1, self.max_lag_ + 1, dtype=jnp.float32)
 

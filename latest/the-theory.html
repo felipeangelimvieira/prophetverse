@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.32">
+<meta name="generator" content="quarto-1.7.34">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -37,10 +37,10 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-c8ad9e5dbd60b7b70b38521ab19b7da4.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-f2b1ffb2c002503e75678245303c6e51.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-80522642ec485bfe782ddd35948259a8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -165,6 +165,10 @@ window.Quarto = {
         <li>
     <a class="dropdown-item" href="./howto/composite_effects.html">
  <span class="dropdown-text">Creating composite effects</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./howto/beta_percentage_forecast.html">
+ <span class="dropdown-text">Forecasting percentages</span></a>
   </li>  
     </ul>
   </li>
@@ -322,19 +326,19 @@ y_{mean} &amp;= \sum\limits_{i=1}^n f_i(x_i(t), \{f_j(x_j)\}_{j&lt;i}) \\
 <p>This definition superseeds the Prophet formulation because effects are ordered, so that the output of previous effects can be used as input for the next ones. This allows for complex interactions between exogenous variables.</p>
 <section id="likelihood" class="level2">
 <h2 class="anchored" data-anchor-id="likelihood">Likelihood</h2>
-<p>In the original Prophet, the likelihood is a Normal distribution, but in Prophetverse it can be Normal, Gamma, or Negative Binomial.</p>
+<p>In the original Prophet, the likelihood is a Normal distribution, but in Prophetverse it can be Normal, Gamma, Negative Binomial, or Beta.</p>
 <p><span class="math display">\[
 y \sim \mathcal{likelihood}(\phi(\hat{y}_{mean}), \sigma^2)\quad \text{where} \quad
 \sigma \sim HalfNormal(\sigma_{hyper})
 \]</span></p>
-<p>where <span class="math inline">\(\sigma_{hyper}\)</span> is a hyperparameter and <span class="math inline">\(\phi\)</span> is a function that maps the mean to the support of the likelihood. For normal likelihood, <span class="math inline">\(\phi\)</span> is the identity function, but for Gamma and Negative Binomial, it is</p>
+<p>where <span class="math inline">\(\sigma_{hyper}\)</span> is a hyperparameter and <span class="math inline">\(\phi\)</span> is a function that maps the mean to the support of the likelihood. For normal likelihood, <span class="math inline">\(\phi\)</span> is the identity function, but for Gamma, Negative Binomial, and Beta, it is</p>
 <p><span class="math display">\[
 \phi(k) = \begin{cases}
 k &amp; \text{if } k &gt; z \\
 z\exp(k-z) &amp; \text{if } k \leq z
 \end{cases}
 \]</span></p>
-<p>for some small threshold <span class="math inline">\(z\)</span>. We set <span class="math inline">\(z = 10^{-5}\)</span> in our implementation. The reason for this is to avoid zero or negative values in the support of the likelihood, which can lead to error.</p>
+<p>for some small threshold <span class="math inline">\(z\)</span>. We set <span class="math inline">\(z = 10^{-5}\)</span> in our implementation. The reason for this is to avoid zero or negative values in the support of the likelihood, which can lead to error. For Beta likelihood, we also ensure values stay below 1 using a similar transformation.</p>
 </section>
 <section id="trend" class="level2">
 <h2 class="anchored" data-anchor-id="trend">Trend</h2>

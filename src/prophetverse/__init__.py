@@ -20,6 +20,7 @@ from .effects import (
     GeometricAdstockEffect,
     WeibullAdstockEffect,
     ChainedEffects,
+    Forward,
 )
 from .engine import (
     MAPInferenceEngine,
@@ -93,4 +94,5 @@ __all__ = [
     "TotalInvestmentTransform",
     "InvestmentPerSeries",
     "IdentityTransform",
+    "Forward",
 ]

@@ -6,9 +6,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="description" content="Recipe: use likelihood=‘beta’ for (0,1) targets">
 
-<title>Forecasting Percentages – prophetverse</title>
+<title>Basics of Prophetverse API – prophetverse</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -263,7 +262,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../howto/beta_percentage_forecast.html">Forecasting percentages</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../mmm/getting_familiar.html">Basics of MMM with Prophetverse</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -277,32 +276,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../howto/effect_api_intro.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Introduction to Effects</span></a>
+  <a href="../mmm/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Welcome!</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../howto/custom_trend.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Custom trend</span></a>
+  <a href="../mmm/getting_familiar.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Basics of MMM with Prophetverse</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../howto/custom_effects.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Custom exogenous effect</span></a>
+  <a href="../mmm/saturation_and_adstock.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Saturation and Adstock</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../howto/composite_effects.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Creating composite effects</span></a>
+  <a href="../mmm/fitting_and_calibration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Fitting, calibrating and Unified Marketing Measurement</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../howto/beta_percentage_forecast.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Forecasting percentages</span></a>
+  <a href="../mmm/budget_allocation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Budget Optimization</span></a>
   </div>
 </li>
     </ul>
@@ -315,12 +314,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#load-data-and-build-a-01-target" id="toc-load-data-and-build-a-01-target" class="nav-link active" data-scroll-target="#load-data-and-build-a-01-target">1. Load data and build a (0,1) target</a></li>
-  <li><a href="#specify-model-components" id="toc-specify-model-components" class="nav-link" data-scroll-target="#specify-model-components">2. Specify model components</a></li>
-  <li><a href="#forecast-the-next-180-days" id="toc-forecast-the-next-180-days" class="nav-link" data-scroll-target="#forecast-the-next-180-days">3. Forecast the next 180 days</a></li>
-  <li><a href="#plot" id="toc-plot" class="nav-link" data-scroll-target="#plot">4. Plot</a></li>
-  <li><a href="#probabilistic-forecast-quantiles" id="toc-probabilistic-forecast-quantiles" class="nav-link" data-scroll-target="#probabilistic-forecast-quantiles">5. Probabilistic forecast (quantiles)</a></li>
-  <li><a href="#notes-tips" id="toc-notes-tips" class="nav-link" data-scroll-target="#notes-tips">Notes &amp; Tips</a></li>
+  <li><a href="#data-structures-y-and-x" id="toc-data-structures-y-and-x" class="nav-link active" data-scroll-target="#data-structures-y-and-x">1. Data Structures (<code>y</code> and <code>X</code>)</a></li>
+  <li><a href="#prophetverse-model" id="toc-prophetverse-model" class="nav-link" data-scroll-target="#prophetverse-model">2. Prophetverse model</a>
+  <ul class="collapse">
+  <li><a href="#simple-prophetverse-model" id="toc-simple-prophetverse-model" class="nav-link" data-scroll-target="#simple-prophetverse-model">Simple Prophetverse model</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -329,14 +327,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Forecasting Percentages</h1>
+<h1 class="title">Basics of Prophetverse API</h1>
 </div>
 
-<div>
-  <div class="description">
-    Recipe: use likelihood=‘beta’ for (0,1) targets
-  </div>
-</div>
 
 
 <div class="quarto-title-meta">
@@ -351,80 +344,256 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>This how‑to shows how to use the Beta likelihood for a proportion / percentage target using the <strong>same sktime-style API</strong> demonstrated in other tutorials.</p>
-<p>Why Beta? Because the target is naturally bounded in (0,1), and Beta likelihood can provide probabilistic intervals in (0,1). The <code>likelihood="beta"</code> option internally applies a link that guarantees valid predictions.</p>
-<section id="load-data-and-build-a-01-target" class="level2">
-<h2 class="anchored" data-anchor-id="load-data-and-build-a-01-target">1. Load data and build a (0,1) target</h2>
-<div id="c34a1e5e" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.split <span class="im">import</span> temporal_train_test_split</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>num_obs <span class="op">=</span> <span class="dv">1000</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> pd.DataFrame(</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    data<span class="op">=</span>{<span class="st">"value"</span> : np.sin(np.arange(num_obs)<span class="op">*</span><span class="dv">2</span><span class="op">*</span>np.pi<span class="op">/</span><span class="dv">30</span>)<span class="op">*</span><span class="fl">0.45</span> <span class="op">+</span> <span class="fl">0.5</span>},</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    index<span class="op">=</span>pd.period_range(</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">"2025-01-01"</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        periods<span class="op">=</span>num_obs,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        freq<span class="op">=</span><span class="st">"D"</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>) </span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>y <span class="op">+=</span> np.random.normal(<span class="dv">0</span>, <span class="fl">0.1</span>, size<span class="op">=</span>y.shape)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> y.clip(<span class="fl">1e-6</span>, <span class="dv">1</span> <span class="op">-</span> <span class="fl">1e-6</span>)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>y_train, y_test <span class="op">=</span> temporal_train_test_split(y, test_size<span class="op">=</span><span class="fl">0.4</span>)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>y_train.plot.line()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
+<p>Prophetverse is a powerful tool for building customized and glass-box forecasting and mix models. In Prophetverse, we define each component of the model as a separate effect, making this library extremely flexible to attend your specific needs.</p>
+<p>In this page, we will:</p>
+<ol type="1">
+<li>Understand the structure of <code>y</code> (the target) and <code>X</code> (media &amp; control variables) using the sktime interface.<br>
+</li>
+<li>Understand the hyperparameters of Prophetverse</li>
+<li>Fit your first Bayesian MMM and generate forecasts.</li>
+</ol>
+<section id="data-structures-y-and-x" class="level2">
+<h2 class="anchored" data-anchor-id="data-structures-y-and-x">1. Data Structures (<code>y</code> and <code>X</code>)</h2>
+<p>Prophetverse uses the sktime forecasting API. The essentials:</p>
+<ul>
+<li><code>y</code>: a pandas DataFrame indexed by a time index (<code>pd.DatetimeIndex</code> or <code>pd.PeriodIndex</code>). Single column for univariate MMM (e.g.&nbsp;<code>revenue</code>):</li>
+</ul>
+<div id="8f3768e7" class="cell" data-execution_count="1">
+<div class="cell-output cell-output-display" data-execution_count="1">
 <div>
-<figure class="figure">
-<p><img src="beta_percentage_forecast_files/figure-html/cell-2-output-1.png" width="571" height="426" class="figure-img"></p>
-</figure>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">revenue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-01-01</td>
+<td>0.603522</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2020-01-02</td>
+<td>0.369473</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-01-03</td>
+<td>0.646423</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2020-01-04</td>
+<td>0.217097</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-01-05</td>
+<td>0.775562</td>
+</tr>
+</tbody>
+</table>
+
 </div>
 </div>
 </div>
-</section>
-<section id="specify-model-components" class="level2">
-<h2 class="anchored" data-anchor-id="specify-model-components">2. Specify model components</h2>
-<p>We use a piecewise linear trend plus weekly and yearly seasonality. The API mirrors the univariate tutorial: pass <code>trend=...</code>, supply <code>exogenous_effects</code> as a list of tuples, and choose <code>likelihood="beta"</code>.</p>
-<div id="45c162c7" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.trend <span class="im">import</span> PiecewiseLinearTrend</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.fourier <span class="im">import</span> LinearFourierSeasonality</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.target.univariate <span class="im">import</span> BetaTargetLikelihood</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.utils <span class="im">import</span> no_input_columns</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.engine <span class="im">import</span> MAPInferenceEngine</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.sktime <span class="im">import</span> Prophetverse</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>numpyro.enable_x64()</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>seasonality <span class="op">=</span> (</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"seasonality"</span>,</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    LinearFourierSeasonality(</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        freq<span class="op">=</span><span class="st">"D"</span>,</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        sp_list<span class="op">=</span>[<span class="dv">30</span>],  <span class="co"># weekly + yearly</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        fourier_terms_list<span class="op">=</span>[<span class="dv">30</span>],</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        prior_scale<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        effect_mode<span class="op">=</span><span class="st">"additive"</span>,</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    ),</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    no_input_columns,</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Prophetverse(</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    trend<span class="op">=</span><span class="st">"flat"</span>,</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    exogenous_effects<span class="op">=</span>[seasonality],</span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    likelihood<span class="op">=</span>BetaTargetLikelihood(noise_scale<span class="op">=</span><span class="fl">0.2</span>),  <span class="co"># &lt;— key change</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    inference_engine<span class="op">=</span>MAPInferenceEngine(),</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    scale<span class="op">=</span><span class="dv">1</span>,</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y_train)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For panel datasets (e.g.&nbsp;in the case of multiple products or regions), use a MultiIndex, where the first index level is the entity (e.g.&nbsp;product or region) and the second level is the time.</p>
+<div id="3db22c58" class="cell" data-execution_count="2">
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">revenue</th>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">product</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td rowspan="5" data-quarto-table-cell-role="th" data-valign="top">product_a</td>
+<td data-quarto-table-cell-role="th">2020-01-01</td>
+<td>0.734168</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2020-01-02</td>
+<td>0.238158</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-01-03</td>
+<td>0.644836</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2020-01-04</td>
+<td>0.972159</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-01-05</td>
+<td>0.930421</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td rowspan="5" data-quarto-table-cell-role="th" data-valign="top">product_c</td>
+<td data-quarto-table-cell-role="th">2020-12-27</td>
+<td>0.511857</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2020-12-28</td>
+<td>0.514725</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-12-29</td>
+<td>0.317594</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2020-12-30</td>
+<td>0.901366</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2020-12-31</td>
+<td>0.275005</td>
+</tr>
+</tbody>
+</table>
+
+<p>1098 rows × 1 columns</p>
+</div>
+</div>
+</div>
+<ul>
+<li><code>X</code>: a pandas DataFrame <em>aligned on the same index</em> containing exogenous variables (media spend, price, promotions, macro, etc.). Columns are arbitrary names.</li>
+</ul>
+<div class="callout callout-style-simple callout-note">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-body-container">
+<p>The index type should always be the same for <code>y</code> and <code>X</code>, and every dataframe you use. After choosing Datetime or Period index for <code>y</code>, use the same type for <code>X</code>.</p>
+</div>
+</div>
+</div>
+<section id="example-of-dataset" class="level4">
+<h4 class="anchored" data-anchor-id="example-of-dataset">Example of dataset</h4>
+<p>Here we load a synthetic dataset:</p>
+<div id="92aa5318" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.datasets._mmm.dataset1 <span class="im">import</span> get_dataset</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>(y, X, <span class="op">*</span>_) <span class="op">=</span> get_dataset()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>y.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="2">
-<style>#sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa {
+<div class="cell-output cell-output-display" data-execution_count="3">
+<pre><code>2000-01-01    10815512.0
+2000-01-02    11120677.0
+2000-01-03    11260387.0
+2000-01-04    11322533.0
+2000-01-05    11321180.0
+Freq: D, dtype: float32</code></pre>
+</div>
+</div>
+<p>The <code>X</code> looks like this:</p>
+<div id="0d99006a" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>X.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">ad_spend_search</th>
+<th data-quarto-table-cell-role="th">ad_spend_social_media</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2000-01-01</td>
+<td>89076.191178</td>
+<td>98587.488958</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2000-01-02</td>
+<td>88891.993106</td>
+<td>99066.321168</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2000-01-03</td>
+<td>89784.955064</td>
+<td>97334.106903</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2000-01-04</td>
+<td>89931.220681</td>
+<td>101747.300585</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2000-01-05</td>
+<td>89184.319596</td>
+<td>93825.221809</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>We will split the dataset into training and testing sets.</p>
+<div id="78a0d96d" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sktime.split <span class="im">import</span> temporal_train_test_split</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>y_train, y_test, X_train, X_test <span class="op">=</span> temporal_train_test_split(y, X, test_size<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="prophetverse-model" class="level2">
+<h2 class="anchored" data-anchor-id="prophetverse-model">2. Prophetverse model</h2>
+<p>Think of Prophetverse as the conerstone of you MMM model. It is a flexible class that allows you to define the trend, seasonality, and custom exogenous effects of your model.</p>
+<section id="simple-prophetverse-model" class="level3">
+<h3 class="anchored" data-anchor-id="simple-prophetverse-model">Simple Prophetverse model</h3>
+<p>We can use a simple Prophetverse model with Linear effects and a seasonality component:</p>
+<div id="cb59d7ef" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse <span class="im">import</span> Prophetverse, LinearEffect, LinearFourierSeasonality</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.utils.regex <span class="im">import</span> starts_with, no_input_columns</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>seasonality_effect <span class="op">=</span> LinearFourierSeasonality(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    sp_list<span class="op">=</span>[<span class="fl">365.25</span>, <span class="dv">7</span>],</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    fourier_terms_list<span class="op">=</span>[<span class="dv">10</span>, <span class="dv">3</span>],</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    prior_scale<span class="op">=</span><span class="fl">0.1</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    freq<span class="op">=</span><span class="st">"D"</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    effect_mode<span class="op">=</span><span class="st">"additive"</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>ad_spend_effect <span class="op">=</span> LinearEffect()</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Prophetverse(</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    exogenous_effects<span class="op">=</span>[</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        (<span class="st">"ad_spend"</span>, ad_spend_effect, starts_with(<span class="st">"ad"</span>)),</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        (<span class="st">"seasonality"</span>, seasonality_effect, no_input_columns),</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y_train, X<span class="op">=</span>X_train)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<style>#sk-9fac560d-9938-4b6e-a459-6b776dde9680 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -449,15 +618,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa pre {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 pre {
     padding: 0;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa input.sk-hidden--visually {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -469,7 +638,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     width: 1px;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-dashed-wrapped {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -477,7 +646,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-container {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -487,7 +656,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-text-repr-fallback {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -503,14 +672,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Parallel-specific style estimator block */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-parallel-item::after {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-parallel {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -518,28 +687,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-parallel-item {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-parallel-item:first-child::after {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-parallel-item:last-child::after {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-parallel-item:only-child::after {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-serial {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -557,14 +726,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-toggleable {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa label.sk-toggleable__label {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -574,7 +743,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     text-align: center;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa label.sk-toggleable__label-arrow:before {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -582,13 +751,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     color: var(--sklearn-color-icon);
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa label.sk-toggleable__label-arrow:hover:before {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-toggleable__content {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -596,27 +765,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-toggleable__content pre {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -624,38 +793,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-label label.sk-toggleable__label,
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-label label {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-label label.sk-toggleable__label,
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-label:hover label.sk-toggleable__label {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-label label {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-label-container {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-estimator {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -665,7 +834,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* on hover */
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa div.sk-estimator:hover {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -722,7 +891,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa a.estimator_doc_link {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -737,41 +906,80 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* On hover */
-  #sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa a.estimator_doc_link:hover {
+  #sk-9fac560d-9938-4b6e-a459-6b776dde9680 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-a9fe840e-cdaf-4a03-99f9-5edc029838aa" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
-                                 LinearFourierSeasonality(fourier_terms_list=[30],
+</style><div id="sk-9fac560d-9938-4b6e-a459-6b776dde9680" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('ad_spend', LinearEffect(), '^(?:ad)'),
+                                ('seasonality',
+                                 LinearFourierSeasonality(fourier_terms_list=[10,
+                                                                              3],
                                                           freq='D',
-                                                          prior_scale=1,
-                                                          sp_list=[30]),
-                                 '^$')],
-             inference_engine=MAPInferenceEngine(),
-             likelihood=BetaTargetLikelihood(noise_scale=0.2), scale=1,
-             trend='flat')</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3d467014-f200-4723-8798-8caab3d142b6')" type="checkbox"><label for="UUID('3d467014-f200-4723-8798-8caab3d142b6')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
-                                 LinearFourierSeasonality(fourier_terms_list=[30],
+                                                          prior_scale=0.1,
+                                                          sp_list=[365.25, 7]),
+                                 '^$')])</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('66cc3bf4-251f-42fe-85ae-9ceebeb928a8')" type="checkbox"><label for="UUID('66cc3bf4-251f-42fe-85ae-9ceebeb928a8')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('ad_spend', LinearEffect(), '^(?:ad)'),
+                                ('seasonality',
+                                 LinearFourierSeasonality(fourier_terms_list=[10,
+                                                                              3],
                                                           freq='D',
-                                                          prior_scale=1,
-                                                          sp_list=[30]),
-                                 '^$')],
-             inference_engine=MAPInferenceEngine(),
-             likelihood=BetaTargetLikelihood(noise_scale=0.2), scale=1,
-             trend='flat')</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('eacc3cc5-d620-4cf7-b95a-6fe05c014a1e')" type="checkbox"><label for="UUID('eacc3cc5-d620-4cf7-b95a-6fe05c014a1e')" class="sk-toggleable__label sk-toggleable__label-arrow">FlatTrend</label><div class="sk-toggleable__content"><pre>FlatTrend()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('d9ca2f97-afa2-4658-93a4-fa87eff076ff')" type="checkbox"><label for="UUID('d9ca2f97-afa2-4658-93a4-fa87eff076ff')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(fourier_terms_list=[30], freq='D', prior_scale=1,
-                         sp_list=[30])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a168b54b-dbed-4428-9e57-f428852f590f')" type="checkbox"><label for="UUID('a168b54b-dbed-4428-9e57-f428852f590f')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
+                                                          prior_scale=0.1,
+                                                          sp_list=[365.25, 7]),
+                                 '^$')])</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('29daa2d5-8e7a-42d9-b468-561c23c073df')" type="checkbox"><label for="UUID('29daa2d5-8e7a-42d9-b468-561c23c073df')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('adb07f9d-1d3e-42a0-a6f6-7ce57925fbee')" type="checkbox"><label for="UUID('adb07f9d-1d3e-42a0-a6f6-7ce57925fbee')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearEffect</label><div class="sk-toggleable__content"><pre>LinearEffect()</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b1bffe8d-b831-4d9d-8840-afe961013543')" type="checkbox"><label for="UUID('b1bffe8d-b831-4d9d-8840-afe961013543')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(fourier_terms_list=[10, 3], freq='D', prior_scale=0.1,
+                         sp_list=[365.25, 7])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3d79c25e-7b6e-4247-8df2-4a7aebc070b8')" type="checkbox"><label for="UUID('3d79c25e-7b6e-4247-8df2-4a7aebc070b8')" class="sk-toggleable__label sk-toggleable__label-arrow">MCMCInferenceEngine</label><div class="sk-toggleable__content"><pre>MCMCInferenceEngine()</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
-</section>
-<section id="forecast-the-next-180-days" class="level2">
-<h2 class="anchored" data-anchor-id="forecast-the-next-180-days">3. Forecast the next 180 days</h2>
-<div id="5941ac12" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>fh <span class="op">=</span> y_test.index</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>pred_share <span class="op">=</span> model.predict(fh<span class="op">=</span>fh)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>pred_share.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
+<p>By default, the model will run a MCMC inference to obtain the parameters. We can, however, easily switch to a MAP inference by setting <code>inference_engine=MAPInferenceEngine()</code> in the model constructor. The MAP inference is generally faster but provides point estimates of the parameters.</p>
+<p>To run in-sample and out-of-sample forecasts of total revenue, we can simply call predict. We need to pass a “forecasting horizon” (fh) object, that should preferably be an index of the type of our <code>y</code> and <code>X</code>’s index. Since we want to forecast for both train and test timepoints, we use <code>y.index</code> as fh, and pass the full <code>X</code> as exogenous variables.</p>
+<div id="91f77eeb" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fh <span class="op">=</span> y.index</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(fh<span class="op">=</span>fh, X<span class="op">=</span>X)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>y_pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<pre><code>2000-01-01    14443361.0
+2000-01-02    14313327.0
+2000-01-03    14390056.0
+2000-01-04    14201023.0
+2000-01-05    14345439.0
+                 ...    
+2004-12-28    32365100.0
+2004-12-29    32114084.0
+2004-12-30    32007728.0
+2004-12-31    32247330.0
+2005-01-01    32348978.0
+Freq: D, Length: 1828, dtype: float32</code></pre>
+</div>
+</div>
+<div id="cd32baf4" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> plot_forecasts(y_pred):</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">5</span>))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    ax.plot(y.index.to_timestamp(), y)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    ax.plot(y_pred.index, y_pred)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    ax.axvline(y_train.index.<span class="bu">max</span>().to_timestamp(), color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>, label<span class="op">=</span><span class="st">"Train/Test split"</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    fig.show()</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>plot_forecasts(y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="getting_familiar_files/figure-html/cell-9-output-1.png" width="794" height="425" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="getting-the-components" class="level4">
+<h4 class="anchored" data-anchor-id="getting-the-components">Getting the components</h4>
+<p>To obtain the contribution of each component, you can use the <code>predict_components</code> method:</p>
+<div id="b55267a9" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>components <span class="op">=</span> model.predict_components(fh<span class="op">=</span>fh, X<span class="op">=</span>X)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>components.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
 <div>
 
 
@@ -779,29 +987,53 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th"></th>
-<th data-quarto-table-cell-role="th">value</th>
+<th data-quarto-table-cell-role="th">ad_spend</th>
+<th data-quarto-table-cell-role="th">mean</th>
+<th data-quarto-table-cell-role="th">obs</th>
+<th data-quarto-table-cell-role="th">seasonality</th>
+<th data-quarto-table-cell-role="th">trend</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2026-08-24</td>
-<td>0.504200</td>
+<td data-quarto-table-cell-role="th">2000-01-01</td>
+<td>1923415.375</td>
+<td>14443361.0</td>
+<td>14460642.0</td>
+<td>-12597.905273</td>
+<td>12532545.0</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2026-08-25</td>
-<td>0.589529</td>
+<td data-quarto-table-cell-role="th">2000-01-02</td>
+<td>1889635.250</td>
+<td>14313327.0</td>
+<td>14229537.0</td>
+<td>-62331.843750</td>
+<td>12486025.0</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2026-08-26</td>
-<td>0.682680</td>
+<td data-quarto-table-cell-role="th">2000-01-03</td>
+<td>1990429.000</td>
+<td>14390056.0</td>
+<td>14424170.0</td>
+<td>-39879.089844</td>
+<td>12439505.0</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2026-08-27</td>
-<td>0.750381</td>
+<td data-quarto-table-cell-role="th">2000-01-04</td>
+<td>1847318.375</td>
+<td>14201023.0</td>
+<td>14147878.0</td>
+<td>-39278.902344</td>
+<td>12392987.0</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2026-08-28</td>
-<td>0.853133</td>
+<td data-quarto-table-cell-role="th">2000-01-05</td>
+<td>2054552.375</td>
+<td>14345439.0</td>
+<td>14313717.0</td>
+<td>-55579.269531</td>
+<td>12346465.0</td>
 </tr>
 </tbody>
 </table>
@@ -809,65 +1041,138 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-</section>
-<section id="plot" class="level2">
-<h2 class="anchored" data-anchor-id="plot">4. Plot</h2>
-<div id="ac13aa82" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">4</span>))</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>ax.plot(</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    y.index.to_timestamp(), y, label<span class="op">=</span><span class="st">"observed daily share"</span>, lw<span class="op">=</span><span class="dv">1</span>, alpha<span class="op">=</span><span class="fl">0.6</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>ax.plot(pred_share.index.to_timestamp(), pred_share, label<span class="op">=</span><span class="st">"forecast"</span>, color<span class="op">=</span><span class="st">"C1"</span>)</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Daily share of monthly total"</span>)</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>ax.legend()</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
+<p>If you want to obtain all the sample to compute, for example, probabilistic intervals and measure the risk, you can use the <code>predict_component_samples</code> method:</p>
+<div id="9058399f" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>samples <span class="op">=</span> model.predict_component_samples(fh<span class="op">=</span>fh, X<span class="op">=</span>X)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>samples</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
 <div>
-<figure class="figure">
-<p><img src="beta_percentage_forecast_files/figure-html/cell-6-output-1.png" width="738" height="337" class="figure-img"></p>
-</figure>
-</div>
-</div>
-</div>
-</section>
-<section id="probabilistic-forecast-quantiles" class="level2">
-<h2 class="anchored" data-anchor-id="probabilistic-forecast-quantiles">5. Probabilistic forecast (quantiles)</h2>
-<div id="07b02773" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> model.predict_quantiles(fh<span class="op">=</span>fh, alpha<span class="op">=</span>[<span class="fl">0.1</span>, <span class="fl">0.9</span>])</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">4</span>))</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>ax.fill_between(</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    q.index.to_timestamp(),</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    q.iloc[:, <span class="dv">0</span>],</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    q.iloc[:, <span class="op">-</span><span class="dv">1</span>],</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span><span class="st">"C1"</span>,</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    alpha<span class="op">=</span><span class="fl">0.3</span>,</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    label<span class="op">=</span><span class="st">"80% PI"</span>,</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>ax.plot(y.iloc[<span class="op">-</span>(<span class="bu">len</span>(fh) <span class="op">+</span> <span class="dv">100</span>):].index.to_timestamp(), y.iloc[<span class="op">-</span>(<span class="bu">len</span>(fh) <span class="op">+</span> <span class="dv">100</span>):], lw<span class="op">=</span><span class="dv">1</span>, alpha<span class="op">=</span><span class="fl">0.6</span>, color<span class="op">=</span><span class="st">"k"</span>)</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Daily share"</span>)</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>ax.legend()</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="beta_percentage_forecast_files/figure-html/cell-7-output-1.png" width="738" height="337" class="figure-img"></p>
-</figure>
-</div>
-</div>
-</div>
-</section>
-<section id="notes-tips" class="level2">
-<h2 class="anchored" data-anchor-id="notes-tips">Notes &amp; Tips</h2>
-<ul>
-<li>Ensure the target is strictly inside (0,1), excluding the boundaries.</li>
-<li><code>noise_scale</code> controls dispersion of the Beta (smaller =&gt; tighter intervals).</li>
-<li>The same pattern works for conversion rates, CTR, retention proportions, etc.</li>
-<li>Switch to full Bayesian inference by setting <code>inference_engine=MCMCInferenceEngine(...)</code> if you need richer uncertainty.</li>
-</ul>
 
 
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">ad_spend</th>
+<th data-quarto-table-cell-role="th">mean</th>
+<th data-quarto-table-cell-role="th">obs</th>
+<th data-quarto-table-cell-role="th">seasonality</th>
+<th data-quarto-table-cell-role="th">trend</th>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">sample</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td rowspan="5" data-quarto-table-cell-role="th" data-valign="top">0</td>
+<td data-quarto-table-cell-role="th">2000-01-01</td>
+<td>1310761.000</td>
+<td>13826540.0</td>
+<td>12454546.0</td>
+<td>-27482.208984</td>
+<td>12543262.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2000-01-02</td>
+<td>1286857.375</td>
+<td>13774537.0</td>
+<td>13336360.0</td>
+<td>-36641.351562</td>
+<td>12524322.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2000-01-03</td>
+<td>1374479.375</td>
+<td>13850060.0</td>
+<td>12626579.0</td>
+<td>-29800.537109</td>
+<td>12505381.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2000-01-04</td>
+<td>1255226.625</td>
+<td>13722347.0</td>
+<td>14680718.0</td>
+<td>-19320.796875</td>
+<td>12486441.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2000-01-05</td>
+<td>1441231.000</td>
+<td>13884066.0</td>
+<td>12943833.0</td>
+<td>-24664.720703</td>
+<td>12467500.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td rowspan="5" data-quarto-table-cell-role="th" data-valign="top">999</td>
+<td data-quarto-table-cell-role="th">2004-12-28</td>
+<td>5203957.000</td>
+<td>31752398.0</td>
+<td>30975378.0</td>
+<td>-21350.986328</td>
+<td>26569792.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2004-12-29</td>
+<td>4921914.500</td>
+<td>31459324.0</td>
+<td>32036960.0</td>
+<td>-52057.492188</td>
+<td>26589464.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2004-12-30</td>
+<td>4792451.000</td>
+<td>31325616.0</td>
+<td>31899014.0</td>
+<td>-76011.125000</td>
+<td>26609176.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2004-12-31</td>
+<td>4990637.500</td>
+<td>31583308.0</td>
+<td>31261488.0</td>
+<td>-36191.675781</td>
+<td>26628860.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2005-01-01</td>
+<td>5061657.000</td>
+<td>31679072.0</td>
+<td>33561344.0</td>
+<td>-31159.398438</td>
+<td>26648572.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>1828000 rows × 5 columns</p>
+</div>
+</div>
+</div>
+
+
+</section>
+</section>
 </section>
 
 </main> <!-- /main -->

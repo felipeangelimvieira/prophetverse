@@ -195,6 +195,10 @@ class GeometricAdstockEffect(BaseAdstockEffect):
         adstock = adstock[ix]
         return adstock
 
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        return [{"normalize": True}, {"normalize": False}]
+
 
 class WeibullAdstockEffect(BaseAdstockEffect):
     """Represents a Weibull Adstock effect in a time series model.
@@ -214,8 +218,6 @@ class WeibullAdstockEffect(BaseAdstockEffect):
     max_lag : int, optional
         Maximum lag to consider for the adstock effect. If None, automatically
         determined based on the Weibull distribution parameters.
-    raise_error_if_fh_changes : bool, optional
-        Whether to raise an error if the forecasting horizon changes during predict.
     """
 
     def __init__(
@@ -223,14 +225,15 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         scale_prior: dist.Distribution = None,
         concentration_prior: dist.Distribution = None,
         max_lag: int = None,
-        raise_error_if_fh_changes: bool = False,
+        initial_history: float = None,
     ):
         from prophetverse.distributions import GammaReparametrized
 
         self.scale_prior = scale_prior
         self.concentration_prior = concentration_prior
         self.max_lag = max_lag
-        super().__init__(raise_error_if_fh_changes=raise_error_if_fh_changes)
+        self.initial_history = initial_history
+        super().__init__(raise_error_if_fh_changes=False)
 
         self._scale_prior = self.scale_prior
         if self._scale_prior is None:
@@ -323,9 +326,12 @@ class WeibullAdstockEffect(BaseAdstockEffect):
             return new_history, adstock_value
 
         # Initialize history buffer with zeros
-        initial_history = jnp.ones(self.max_lag_, dtype=data_array.dtype) * (
-            data_array.flatten()[0]
-        )
+        initial_history = jnp.ones(self.max_lag_, dtype=data_array.dtype)
+
+        if self.initial_history is not None:
+            initial_history *= self.initial_history
+        else:
+            initial_history *= data_array.flatten()[0]
 
         # Apply scan over the data
         _, adstock = jax.lax.scan(
@@ -335,3 +341,7 @@ class WeibullAdstockEffect(BaseAdstockEffect):
         adstock = adstock.reshape(-1, 1)
         adstock = adstock[ix]
         return adstock
+
+    @classmethod
+    def get_test_params(cls, parameter_set="default"):
+        return [{"max_lag": 4, "initial_history": 0.0}, {}]

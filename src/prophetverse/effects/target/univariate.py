@@ -101,8 +101,10 @@ class TargetLikelihood(BaseTargetEffect):
 
     def _compute_mean(self, predicted_effects: Dict[str, jnp.ndarray]) -> jnp.ndarray:
         mean = 0
-        for _, effect in predicted_effects.items():
-            mean += effect
+        for effect_name, effect in predicted_effects.items():
+            # Skip latent effects (effects whose names start with "latent/")
+            if not effect_name.startswith("latent/"):
+                mean += effect
 
         mean = self.link_function(mean) if self.link_function else mean
         return mean

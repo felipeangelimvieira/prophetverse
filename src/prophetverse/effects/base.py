@@ -383,7 +383,11 @@ class BaseEffect(BaseObject):
             Any object containing the data needed for the effect. The object will be
             passed to `predict` method as `data` argument.
         """
-        Z = X if self.get_tag("applies_to") == "X" else y
+        # TODO: Remove in 0.11
+        if self._api_already_migrated():
+            Z = X if self.get_tag("applies_to") == "X" else y
+        else:
+            Z = X
         array = series_to_tensor_or_array(Z)
         return array
 
@@ -698,15 +702,19 @@ class BaseEffect(BaseObject):
             }
         )
 
+    # TODO: Remove in 0.11
     def _call_transform_handle_api_change(self, fh, X, y):
-
-        parameter_names = list(inspect.signature(self._transform).parameters)
-
-        if "y" in parameter_names:
+        """Handle deprecation when calling transform."""
+        if self._api_already_migrated():
             return self._transform(fh=fh, X=X, y=y)
 
         Z = X if self.get_tag("applies_to") == "X" else y
         return self._transform(fh=fh, X=Z)
+
+    # TODO: Remove in 0.11
+    def _api_already_migrated(self):
+        """Check if the current effect already implements the new signature."""
+        return "y" in list(inspect.signature(self._transform).parameters)
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):

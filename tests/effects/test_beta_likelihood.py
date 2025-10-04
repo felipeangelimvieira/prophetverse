@@ -22,7 +22,9 @@ def make_beta_data(n_samples=100, n_series=1):
         )
 
     # Generate data between 0 and 1
-    y = pd.Series(np.random.beta(a=2, b=5, size=n_samples * n_series), index=index)
+    y = pd.Series(
+        np.random.beta(a=2, b=5, size=n_samples * n_series), index=index
+    ).to_frame("target")
     return y
 
 

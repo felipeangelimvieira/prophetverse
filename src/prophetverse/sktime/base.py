@@ -992,14 +992,13 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             if columns is None or len(columns) == 0:
                 if effect.get_tag("requires_X"):
                     continue
-            if effect.get_tag("applies_to") == "X":
-                _X = X[columns]
-            elif effect.get_tag("applies_to") == "y":
-                _X = y
-                if _X is not None:
-                    _X = _X.copy()
 
-            data: Dict[str, jnp.ndarray] = effect.transform(_X, fh=fh)
+            if X is not None and effect.get_tag("applies_to") == "X":
+                _X = X[columns]
+            else:
+                _X = None
+
+            data: Dict[str, jnp.ndarray] = effect.transform(X=_X, y=y, fh=fh)
             out[effect_name] = data
 
         return out

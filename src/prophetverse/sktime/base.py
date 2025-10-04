@@ -835,6 +835,23 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         self._trend = self._get_trend_model()
 
     @property
+    def _all_effects(self) -> List[Tuple[str, BaseEffect, List[str]]]:
+        """
+        Return all effects.
+
+        Returns
+        -------
+        List[Tuple[str, BaseEffect, List[str]]]
+            List of all effects.
+        """
+        exogenous_effects = self.exogenous_effects or []
+        return [
+            ("trend", self._trend, None),
+            *exogenous_effects,
+            ("target_likelihood", self._likelihood, None),
+        ]
+
+    @property
     def _exogenous_effects(self):
         """Return exogenous effects.
 
@@ -875,7 +892,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         fitted_effects_list_: List[Tuple[str, BaseEffect, List[str]]] = []
         columns_with_effects: set[str] = set()
         exogenous_effects: Union[List[Tuple[str, BaseEffect, str]], List] = (
-            self.exogenous_effects or []
+            self._all_effects or []
         )
 
         for effect_name, effect, regex in exogenous_effects:
@@ -944,9 +961,14 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
                     )
                 )
 
-        self.exogenous_effects_ = fitted_effects_list_
+        self.all_effects_ = fitted_effects_list_
 
-    def _transform_effects(self, X: pd.DataFrame, fh: pd.Index, y=None) -> OrderedDict:
+    def _transform_effects(
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        fh: pd.Index,
+    ) -> OrderedDict:
         """
         Get exogenous data array.
 
@@ -965,7 +987,7 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             Dictionary of exogenous data arrays.
         """
         out = OrderedDict()
-        for effect_name, effect, columns in self.exogenous_effects_:
+        for effect_name, effect, columns in self.all_effects_:
             # If no columns are found, skip
             if columns is None or len(columns) == 0:
                 if effect.get_tag("requires_X"):
@@ -973,7 +995,9 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
             if effect.get_tag("applies_to") == "X":
                 _X = X[columns]
             elif effect.get_tag("applies_to") == "y":
-                _X = y.copy()
+                _X = y
+                if _X is not None:
+                    _X = _X.copy()
 
             data: Dict[str, jnp.ndarray] = effect.transform(_X, fh=fh)
             out[effect_name] = data
@@ -992,8 +1016,9 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
         """
         return {
             effect_name: effect
-            for effect_name, effect, columns in self.exogenous_effects_
-            if len(columns) > 0 or not effect.get_tag("requires_X")
+            for effect_name, effect, columns in self.all_effects_
+            if (len(columns) > 0 or not effect.get_tag("requires_X"))
+            or (effect.get_tag("applies_to") == "y")
         }
 
     def _get_trend_model(self):

@@ -228,14 +228,6 @@ class Prophetverse(BaseProphetForecaster):
         self.trend_model_ = self._trend.clone()
         self.likelihood_model_ = self._likelihood.clone()
 
-        if self._likelihood_is_discrete:
-            # Scale the data for discrete likelihoods to avoid non-integer values.
-            self.trend_model_.fit(X=X, y=y / self._scale, scale=1)
-            self.likelihood_model_.fit(X=X, y=y, scale=self._scale)
-        else:
-            self.trend_model_.fit(X=X, y=y, scale=self._scale)
-            self.likelihood_model_.fit(X=X, y=y, scale=self._scale)
-
         # Handle exogenous features.
         if X is None:
             X = pd.DataFrame(index=y.index)
@@ -246,30 +238,16 @@ class Prophetverse(BaseProphetForecaster):
         self._has_exogenous = not X.columns.empty
         X = X.loc[y.index]
 
-        trend_data = self.trend_model_.transform(X=X, fh=fh)
-        target_data = self.likelihood_model_.transform(X=y, fh=fh)
-
         self._fit_effects(X, y)
-        exogenous_data = self._transform_effects(X, fh=fh)
-
-        if y.index.nlevels > 1:
-            # Panel data
-            y_array = series_to_tensor(y)
-        else:
-            y_array = jnp.array(y.values.flatten()).reshape((-1, 1))
+        exogenous_data = self._transform_effects(X, y, fh=fh)
 
         # Data used in both fitting and prediction.
         self.fit_and_predict_data_ = {
-            "trend_model": self.trend_model_,
-            "target_model": self.likelihood_model_,
             "exogenous_effects": self.non_skipped_exogenous_effect,
         }
 
         inputs = {
-            "y": y_array,
             "data": exogenous_data,
-            "trend_data": trend_data,
-            "target_data": target_data,
             **self.fit_and_predict_data_,
         }
 
@@ -302,16 +280,10 @@ class Prophetverse(BaseProphetForecaster):
         if self.feature_transformer is not None:
             X = self.feature_transformer.transform(X)
 
-        trend_data = self.trend_model_.transform(X=X, fh=fh_as_index)
-        target_data = self.likelihood_model_.transform(X=None, fh=fh_as_index)
-
-        exogenous_data = self._transform_effects(X, fh_as_index)
+        exogenous_data = self._transform_effects(X, None, fh_as_index)
 
         return dict(
-            y=None,
             data=exogenous_data,
-            trend_data=trend_data,
-            target_data=target_data,
             **self.fit_and_predict_data_,
         )
 
@@ -412,7 +384,7 @@ class Prophetverse(BaseProphetForecaster):
         # where effect_columns is a set of indexes of the columns
         # in the `columns` list that are used by the effect.
         exogenous_effects_to_update = []
-        for effect_name, effect, effect_columns in model.exogenous_effects_:
+        for effect_name, effect, effect_columns in model.all_effects_:
             # If no columns are found, skip
             if effect_columns is None or len(effect_columns) == 0:
                 continue

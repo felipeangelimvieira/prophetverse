@@ -94,6 +94,8 @@ class BaseEffect(BaseObject):
         "applies_to": "X",
         # Does this effect implement hyperpriors across panel?
         "feature:panel_hyperpriors": False,
+        # Should the effect be wrapped with a numpyro.handlers.scope?
+        "use_numpyro_scope": True,
     }
 
     def __init__(self):

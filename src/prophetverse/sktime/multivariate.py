@@ -200,13 +200,7 @@ class HierarchicalProphet(BaseProphetForecaster):
         self.trend_model_ = self._trend.clone()
         self.trend_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
 
-        if self.likelihood is not None:
-            self.likelihood_model_ = self.likelihood.clone()
-        else:
-            self.likelihood_model_ = MultivariateNormal(
-                noise_scale=self.noise_scale,
-                correlation_matrix_concentration=self.correlation_matrix_concentration,
-            )
+        self.likelihood_model_ = self._likelihood.clone()
 
         self.likelihood_model_.fit(X=X_bottom, y=y_bottom, scale=self._scale)
 
@@ -214,19 +208,14 @@ class HierarchicalProphet(BaseProphetForecaster):
         target_data = self.likelihood_model_.transform(X=y_bottom, fh=fh)
 
         self._fit_effects(X_bottom, y_bottom)
-        exogenous_data = self._transform_effects(X_bottom, fh=fh)
+        exogenous_data = self._transform_effects(X_bottom, y_bottom, fh=fh)
 
         self.fit_and_predict_data_ = {
-            "trend_model": self.trend_model_,
-            "target_model": self.likelihood_model_,
             "exogenous_effects": self.non_skipped_exogenous_effect,
         }
 
         return dict(
-            y=y_bottom_arrays,
             data=exogenous_data,
-            trend_data=trend_data,
-            target_data=target_data,
             **self.fit_and_predict_data_,
         )
 
@@ -270,13 +259,10 @@ class HierarchicalProphet(BaseProphetForecaster):
         trend_data = self.trend_model_.transform(X=X_bottom, fh=fh_as_index)
         target_data = self.likelihood_model_.transform(X=None, fh=fh_as_index)
 
-        exogenous_data = self._transform_effects(X=X_bottom, fh=fh_as_index)
+        exogenous_data = self._transform_effects(X=X_bottom, y=None, fh=fh_as_index)
 
         return dict(
-            y=None,
             data=exogenous_data,
-            trend_data=trend_data,
-            target_data=target_data,
             **self.fit_and_predict_data_,
         )
 
@@ -357,6 +343,15 @@ class HierarchicalProphet(BaseProphetForecaster):
 
         """
         return self.aggregator_.transform(y)
+
+    @property
+    def _likelihood(self):
+        if self.likelihood is not None:
+            return self.likelihood.clone()
+        return MultivariateNormal(
+            noise_scale=self.noise_scale,
+            correlation_matrix_concentration=self.correlation_matrix_concentration,
+        )
 
     @classmethod
     def get_test_params(cls, parameter_set="default") -> List[dict[str, Any]]:

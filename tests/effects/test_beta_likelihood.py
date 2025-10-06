@@ -57,7 +57,7 @@ def test_prophet_beta_basic():
     )
 
     # Test fit and predict
-    forecaster.fit(y, X)
+    forecaster.fit(y.iloc[:-5], X.iloc[:-5])
     fh = list(range(1, 5))
     y_pred = forecaster.predict(X=X, fh=fh)
 
@@ -88,10 +88,14 @@ def test_prophet_beta_hierarchical():
         likelihood=BetaTargetLikelihood(),
     )
 
+    dates = y.index.get_level_values(-1).unique()
+    train_dates, test_dates = dates[:-5], dates[-5:]
+    train_idx = y.index.get_level_values(-1).isin(train_dates)
+    test_idx = y.index.get_level_values(-1).isin(test_dates)
     # Test fit and predict
-    forecaster.fit(y, X)
+    forecaster.fit(y.loc[train_idx], X.loc[train_idx])
     fh = list(range(1, 5))
-    y_pred = forecaster.predict(X=X, fh=fh)
+    y_pred = forecaster.predict(X=X.loc[test_idx], fh=fh)
 
     assert isinstance(y_pred, pd.DataFrame)
     assert y_pred.shape[0] == len(fh) * 3  # 3 series
@@ -120,7 +124,7 @@ def test_prophet_beta_predict_methods():
         likelihood=BetaTargetLikelihood(),
     )
 
-    forecaster.fit(y, X)
+    forecaster.fit(y.iloc[:-5], X.iloc[:-5])
     fh = list(range(1, 5))
 
     # Test different prediction methods

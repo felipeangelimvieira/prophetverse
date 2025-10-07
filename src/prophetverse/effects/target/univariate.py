@@ -156,15 +156,18 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
         mean = self._compute_mean(predicted_effects)
         mean = numpyro.deterministic("mean", mean)
         noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(self.noise_scale))
+        if y is not None:
+            y = y * self.scale_
 
         with numpyro.plate("data", len(mean), dim=-2):
-            numpyro.sample(
-                "obs",
+            obs = numpyro.sample(
+                "obs:ignore",
                 dist.NegativeBinomial2(
                     mean.reshape((-1, 1)) * self.scale_, noise_scale * self.scale_
                 ),
-                obs=y * self.scale_,
+                obs=y,
             )
+            numpyro.deterministic("obs", obs / self.scale_)
 
         return jnp.zeros_like(mean)
 
@@ -230,7 +233,7 @@ class BetaTargetLikelihood(TargetLikelihood):
     def _predict(self, data, predicted_effects, *args, **kwargs):
         y = data
 
-        mean = self._compute_mean(predicted_effects) * self.scale_
+        mean = self._compute_mean(predicted_effects)
         mean = numpyro.deterministic("mean", mean)
         noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(self.noise_scale))
 
@@ -238,10 +241,11 @@ class BetaTargetLikelihood(TargetLikelihood):
             y = y * self.scale_
 
         with numpyro.plate("data", len(mean), dim=-2):
-            numpyro.sample(
-                "obs",
-                BetaReparametrized(mean.reshape((-1, 1)), noise_scale),
+            obs = numpyro.sample(
+                "_obs:ignore",
+                BetaReparametrized(mean.reshape((-1, 1)) * self.scale_, noise_scale),
                 obs=y,
             )
+            numpyro.deterministic("obs", obs / self.scale_)
 
         return jnp.zeros_like(mean)

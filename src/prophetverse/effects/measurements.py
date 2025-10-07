@@ -261,7 +261,7 @@ class LiftMeasurement(BaseEffect):
             eps = jnp.finfo(ys[0].dtype).eps
             baseline = jnp.clip(ys[0], min=eps)
             counterfactual = jnp.clip(ys[1], min=eps)
-            lift = counterfactual / baseline
+            lift = counterfactual / baseline - 1
 
             site_name = (
                 f"{self.prefix}/lift_experiment" if self.prefix else "lift_experiment"

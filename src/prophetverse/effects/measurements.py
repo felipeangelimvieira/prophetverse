@@ -51,6 +51,8 @@ class LiftMeasurement(BaseEffect):
             * The third with the lift results
     prior_scale : float
         The scale of the prior distribution for the likelihood.
+    likelihood_scale : float
+        A multiplier applied to the likelihood to control its contribution.
     site_name : str
         The name to use for the likelihood site in the numpyro model.
     """
@@ -74,7 +76,7 @@ class LiftMeasurement(BaseEffect):
         # Does this effect implement hyperpriors across panel?
         "feature:panel_hyperpriors": False,
         # Should the effect be wrapped with a numpyro.handlers.scope?
-        "use_numpyro_scope": True,
+        "use_numpyro_scope": False,
     }
 
     def __init__(
@@ -82,13 +84,17 @@ class LiftMeasurement(BaseEffect):
         effects: Tuple[str, BaseEffect, str],
         measurements: Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame],
         prior_scale: float = 0.1,
+        likelihood_scale: float = 1.0,
         site_name: str = "obs",
+        prefix: str = None,
     ):
 
         self.effects = effects
         self.measurements = measurements
         self.prior_scale = prior_scale
+        self.likelihood_scale = likelihood_scale
         self.site_name = site_name
+        self.prefix = prefix
 
         super().__init__()
 
@@ -118,15 +124,35 @@ class LiftMeasurement(BaseEffect):
         None
         """
         self.all_columns_ = X.columns
+        self._training_y = y
         self._effects_and_column_indexes = {}
         self.fitted_effects_ = []
         for effect_name, effect, columns in self.effects:
             effect = effect.clone()
             columns = filter_columns(X, columns)
-            self._effects_and_column_indexes[effect_name] = jnp.array(
-                self.all_columns_.get_indexer(columns)
-            )
-            effect.fit(y=y, X=columns, scale=scale)
+            if columns is not None:
+                columns = list(columns)
+
+            if (
+                columns is not None
+                and len(columns) == 0
+                and effect.get_tag("requires_X", True)
+            ):
+                raise ValueError(
+                    f"Effect '{effect_name}' requires input features but none were matched."
+                )
+
+            if columns:
+                column_indexes = jnp.array(
+                    self.all_columns_.get_indexer(columns), dtype=jnp.int32
+                )
+                effect_X = X[columns]
+            else:
+                column_indexes = jnp.array([], dtype=jnp.int32)
+                effect_X = None
+
+            effect.fit(y=y, X=effect_X, scale=scale)
+            self._effects_and_column_indexes[effect_name] = column_indexes
             self.fitted_effects_.append((effect_name, effect, columns))
 
         return self
@@ -157,19 +183,26 @@ class LiftMeasurement(BaseEffect):
 
         true_data = {}
         for effect_name, effect, columns in self.fitted_effects_:
-            true_data[effect_name] = effect.transform(X[columns], fh=fh)
+            effect_input = X[columns] if columns else None
+            true_data[effect_name] = effect.transform(
+                effect_input,
+                fh=fh,
+                y=self._training_y,
+            )
 
         all_scenarios = []
         for scenario in scenarious:
-            scenario_data = {}
-
+            scenario_data = {"data": {}}
             for effect_name, effect, columns in self.fitted_effects_:
-                scenario_data["data"] = {
-                    effect_name: effect.transform(scenario[columns], fh=fh)
-                }
+                scenario_input = scenario[columns] if columns else None
+                scenario_data["data"][effect_name] = effect.transform(
+                    scenario_input,
+                    fh=fh,
+                    y=self._training_y,
+                )
             all_scenarios.append(scenario_data)
 
-        lift = self.measurements[2]
+        lift = self.measurements[2].reindex(fh)
 
         obs_mask = ~jnp.isnan(series_to_tensor_or_array(lift))
         observed_lift = series_to_tensor_or_array(lift.dropna())
@@ -200,50 +233,69 @@ class LiftMeasurement(BaseEffect):
             An array with shape (T,1) for univariate timeseries.
         """
 
-        output_effects = inner_model(
-            exogenous_effects={
-                name: effect for name, effect, _ in self.fitted_effects_
-            },
-            data=data["true_data"],
-            predicted_effects=predicted_effects,
-        )
+        with CacheMessenger(cache_types=["sample", "deterministic"]):
+            output_effects = inner_model(
+                exogenous_effects={
+                    name: effect for name, effect, _ in self.fitted_effects_
+                },
+                data=data["true_data"],
+                predicted_effects=predicted_effects,
+            )
 
-        for effect_name, output in output_effects.items():
-            predicted_effects[effect_name] = output
+            for effect_name, output in output_effects.items():
+                predicted_effects[effect_name] = output
 
-        ys = []
-        for scenario_data in data["scenario_data"]:
+            ys = []
+            for scenario_data in data["scenario_data"]:
 
-            with numpyro.handlers.trace() as tr:
-                inner_model(
+                scenario_outputs = inner_model(
                     exogenous_effects={
                         name: effect for name, effect, _ in self.fitted_effects_
                     },
                     data=scenario_data["data"],
                     predicted_effects=predicted_effects,
                 )
-            ys.append(tr[self.site_name]["value"])
 
-        lift = ys[1] / ys[0] - 1
+                ys.append(scenario_outputs[self.site_name])
 
-        with numpyro.handlers.scale(scale=self.likelihood_scale):
-            distribution = GammaReparametrized(lift, self.prior_scale)
+            eps = jnp.finfo(ys[0].dtype).eps
+            baseline = jnp.clip(ys[0], min=eps)
+            counterfactual = jnp.clip(ys[1], min=eps)
+            lift = counterfactual / baseline
 
-            # Add :ignore so that the model removes this
-            # sample when organizing the output dataframe
-            numpyro.sample(
-                "lift_experiment:ignore",
-                distribution,
-                obs=data["observed_lift"],
+            site_name = (
+                f"{self.prefix}/lift_experiment" if self.prefix else "lift_experiment"
             )
+            with numpyro.handlers.scale(scale=self.likelihood_scale):
+                distribution = GammaReparametrized(lift, self.prior_scale)
+
+                # Add :ignore so that the model removes this
+                # sample when organizing the output dataframe
+                numpyro.sample(
+                    f"{site_name}:ignore",
+                    distribution,
+                    obs=data["observed_lift"],
+                )
+
+            reference_effect = predicted_effects.get(self.site_name)
+            if reference_effect is None:
+                first_effect = next(iter(predicted_effects.values()))
+                reference_effect = jnp.zeros_like(first_effect)
+            else:
+                reference_effect = jnp.zeros_like(reference_effect)
+
+            return reference_effect
 
     def _update_data(self, data, arr):
 
         for effect_name, effect, _ in self.fitted_effects_:
 
+            indexes = self._effects_and_column_indexes[effect_name]
+            if indexes.size == 0:
+                continue
             data["true_data"][effect_name] = effect._update_data(
                 data["true_data"][effect_name],
-                arr[:, self._effects_and_column_indexes[effect_name]],
+                arr[:, indexes],
             )
         return data
 
@@ -257,7 +309,7 @@ class LiftMeasurement(BaseEffect):
         lift = pd.DataFrame({"lift": [0] * 3}, index=measurements.index)
         return [
             {
-                "effect": LinearEffect(),
+                "effects": LinearEffect(),
                 "measurements": [measurements, measurements, lift],
                 "prior_scale": 0.1,
             }

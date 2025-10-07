@@ -104,7 +104,7 @@ def filter_columns(df, pattern):
         return None
 
     if isinstance(pattern, list):
-        return df[columns[columns.isin(pattern)]]
+        return columns[columns.isin(pattern)].tolist()
 
     columns = columns.astype(str)
-    return df[columns[columns.str.match(pattern)]]
+    return columns[columns.str.match(pattern)].tolist()

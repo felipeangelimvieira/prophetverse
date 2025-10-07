@@ -74,8 +74,6 @@ class HierarchicalProphet(BaseProphetForecaster):
         "python_dependencies": "prophetverse",
         # estimator type
         "scitype:y": "univariate",
-        "capability:exogenous": False,
-        "capability:missing_values": False,
         "y_inner_mtype": [
             "pd.DataFrame",
             "pd-multiindex",

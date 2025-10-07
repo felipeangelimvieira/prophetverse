@@ -41,7 +41,9 @@ def test_ends_with_multiple_suffixes(suffixes, string, expected_match):
     """Test ends_with with multiple suffixes."""
     pattern = ends_with(suffixes)
     if expected_match:
-        assert re.search(pattern, string), f"Expected '{string}' to end with one of {suffixes}"
+        assert re.search(
+            pattern, string
+        ), f"Expected '{string}' to end with one of {suffixes}"
     else:
         assert not re.search(
             pattern, string

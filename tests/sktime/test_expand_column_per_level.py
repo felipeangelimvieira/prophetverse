@@ -35,13 +35,14 @@ def test_fit_identifies_matched_columns():
     assert "other" not in transformer.matched_columns_
 
     X = X.loc[("series1")]
-    
+
     transformer = ExpandColumnPerLevel(columns_regex=["value"])
     transformer.fit(X)
 
     assert "value1" in transformer.matched_columns_
     assert "value2" in transformer.matched_columns_
     assert "other" not in transformer.matched_columns_
+
 
 def test_transform_expands_columns():
     """
@@ -81,5 +82,5 @@ def test_transform_preserves_original_data():
     # Check for zero filling
     assert X_transformed["value1_dup_series1"].iloc[2] == 0
     assert X_transformed["value2_dup_series1"].iloc[2] == 0
-    
+
     assert (X_transformed.values == 0).sum() == 8

@@ -490,8 +490,8 @@ class BaseBayesianForecaster(BaseForecaster):
         This method assumes that the scaling factor has already been computed and stored
         in the `_scale` attribute of the class.
         """
-        if self._likelihood_is_discrete and not force:
-            return y
+        # if self._likelihood_is_discrete and not force:
+        #    return y
 
         if isinstance(self._scale, (int, float)):
             return y / self._scale
@@ -526,8 +526,8 @@ class BaseBayesianForecaster(BaseForecaster):
         This method assumes that the scaling factor has already been computed and stored
         in the `_scale` attribute of the class.
         """
-        if self._likelihood_is_discrete:
-            return y
+        # if self._likelihood_is_discrete:
+        #    return y
 
         if isinstance(self._scale, (float, int)):
             return y * self._scale
@@ -944,9 +944,9 @@ class BaseProphetForecaster(_HeterogenousMetaEstimator, BaseBayesianForecaster):
 
                 _y = y
                 _scale = self._scale
-                if self._likelihood_is_discrete:
-                    _y = self._scale_y(y, force=True)
-                    _scale = 1
+                # if self._likelihood_is_discrete:
+                #    _y = self._scale_y(y, force=True)
+                #    _scale = 1
 
                 default_effect.fit(
                     X=X[features_without_effects],

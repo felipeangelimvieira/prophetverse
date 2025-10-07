@@ -153,7 +153,7 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
     def _predict(self, data, predicted_effects, *args, **kwargs):
         y = data
 
-        mean = self._compute_mean(predicted_effects) * self.scale_
+        mean = self._compute_mean(predicted_effects)
         mean = numpyro.deterministic("mean", mean)
         noise_scale = numpyro.sample("noise_scale", dist.HalfNormal(self.noise_scale))
 
@@ -161,9 +161,9 @@ class NegativeBinomialTargetLikelihood(TargetLikelihood):
             numpyro.sample(
                 "obs",
                 dist.NegativeBinomial2(
-                    mean.reshape((-1, 1)), noise_scale * self.scale_
+                    mean.reshape((-1, 1)) * self.scale_, noise_scale * self.scale_
                 ),
-                obs=y,
+                obs=y * self.scale_,
             )
 
         return jnp.zeros_like(mean)

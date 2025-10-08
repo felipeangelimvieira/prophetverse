@@ -11,6 +11,7 @@ from prophetverse.utils import series_to_tensor_or_array
 from prophetverse.utils.numpyro import CacheMessenger
 from collections import OrderedDict, defaultdict
 import copy
+import inspect
 
 __all__ = ["BaseEffect", "BaseAdditiveOrMultiplicativeEffect"]
 
@@ -94,6 +95,8 @@ class BaseEffect(BaseObject):
         "applies_to": "X",
         # Does this effect implement hyperpriors across panel?
         "feature:panel_hyperpriors": False,
+        # Should the effect be wrapped with a numpyro.handlers.scope?
+        "use_numpyro_scope": True,
     }
 
     def __init__(self):
@@ -136,23 +139,23 @@ class BaseEffect(BaseObject):
         if X is not None:
             self.columns_ = X.columns.tolist()
 
-        data = X if self.get_tag("applies_to", "X") == "X" else y
+        Z = X if self.get_tag("applies_to", "X") == "X" else y
 
         if (
-            data is not None
-            and len(data.columns) > 1
+            Z is not None
+            and len(Z.columns) > 1
             and not self.get_tag("capability:multivariate_input", False)
         ):
-            self._set_broadcasting_attributes(data)
-            self._broadcast("fit", X=X, y=y, scale=scale)
+            self._set_broadcasting_attributes(Z)
+            self._broadcast("fit", Z=Z, X=X, y=y, scale=scale)
 
         elif (
-            data is not None
-            and data.index.nlevels > 1
+            Z is not None
+            and Z.index.nlevels > 1
             and not self.get_tag("capability:panel", False)
         ):
-            self._set_panel_broadcasting_attributes(data)
-            self._broadcast("fit", X=X, y=y, scale=scale)
+            self._set_panel_broadcasting_attributes(Z)
+            self._broadcast("fit", Z=Z, X=X, y=y, scale=scale)
         else:
             self._fit(y=y, X=X, scale=scale)
         self._is_fitted = True
@@ -178,9 +181,7 @@ class BaseEffect(BaseObject):
         pass
 
     def transform(
-        self,
-        X: pd.DataFrame,
-        fh: pd.Index,
+        self, X: pd.DataFrame, fh: pd.Index, y: Optional[pd.DataFrame] = None
     ) -> Any:
         """Prepare input data to be passed to numpyro model.
 
@@ -218,6 +219,7 @@ class BaseEffect(BaseObject):
         ValueError
             If the effect has not been fitted.
         """
+
         if not self._is_fitted and self.get_tag("requires_fit_before_transform", True):
             raise ValueError("You must call fit() before calling this method")
 
@@ -226,27 +228,29 @@ class BaseEffect(BaseObject):
             if X is not None:
                 X = X.loc[X.index.get_level_values(-1).isin(fh)]
 
+        Z = X if self.get_tag("applies_to") == "X" else y
+
         if not self._is_fitted and X is not None:
-            if len(X.columns) > 1 and not self.get_tag(
+            if len(Z.columns) > 1 and not self.get_tag(
                 "capability:multivariate_input", False
             ):
                 if not self._is_fitted:
                     # Since the broadcasting attributes are set during fit,
                     # we need to set them
-                    self._set_broadcasting_attributes(X)
+                    self._set_broadcasting_attributes(Z)
 
-            elif X.index.nlevels > 1 and not self.get_tag("capability:panel", False):
+            elif Z.index.nlevels > 1 and not self.get_tag("capability:panel", False):
 
                 # Since the broadcasting attributes are set during fit,
                 # we need to set them
-                self._set_panel_broadcasting_attributes(X)
+                self._set_panel_broadcasting_attributes(Z)
 
         if self._broadcasted is not None:
-            return self._broadcast("transform", X=X, fh=fh)
+            return self._broadcast("transform", Z=Z, X=X, y=y, fh=fh)
 
-        return self._transform(X, fh)
+        return self._call_transform_handle_api_change(X=X, y=y, fh=fh)
 
-    def _broadcast(self, methodname: str, X, **kwargs):
+    def _broadcast(self, methodname: str, Z, **kwargs):
         """
         Broadcasts a method to  handle multiple columns of the input DataFrame.
 
@@ -254,6 +258,8 @@ class BaseEffect(BaseObject):
         ----------
         methodname : str
             The name of the method to be called.
+        Z: pd.DataFrame
+            Reference dataframe (X or y)
         *args : tuple
             Positional arguments to be passed to the method.
         **kwargs : dict
@@ -264,15 +270,15 @@ class BaseEffect(BaseObject):
         jnp.ndarray
         """
         if self._broadcasted == "panel":
-            return self._broadcast_panel(X, methodname, **kwargs)
+            return self._broadcast_panel(methodname, **kwargs)
         if self._broadcasted == "columns":
-            return self._broadcast_columns(X, methodname, **kwargs)
+            return self._broadcast_columns(Z, methodname, **kwargs)
         raise ValueError(
             f"Broadcasting not set for {self.__class__.__name__}. "
             "Please call fit() before calling transform()."
         )
 
-    def _broadcast_columns(self, X: pd.DataFrame, methodname: str, **kwargs):
+    def _broadcast_columns(self, Z: pd.DataFrame, methodname: str, **kwargs):
         """
         Broadcasts a method to handle multiple columns of the input DataFrame.
 
@@ -282,7 +288,7 @@ class BaseEffect(BaseObject):
         Parameters
         ----------
         X : pd.DataFrame
-            The input DataFrame containing the exogenous variables.
+            The input reference dataframe for thsis effect (X or y)
         methodname : str
             The name of the method to be called on each column.
         **kwargs : dict
@@ -294,13 +300,21 @@ class BaseEffect(BaseObject):
         """
         outputs = []
         for column in self.effects_.keys():
-            X_ = X[[column]]
+
             effect_ = self.effects_[column]
-            xt = getattr(effect_, methodname)(X=X_, **kwargs)
+            new_kwargs = kwargs.copy()
+            if self.get_tag("applies_to") == "X":
+                new_kwargs["X"] = kwargs["X"][[column]]
+                new_kwargs["y"] = kwargs["y"]
+            else:
+                new_kwargs["y"] = kwargs["y"][[column]]
+                new_kwargs["X"] = kwargs["X"]
+
+            xt = getattr(effect_, methodname)(**new_kwargs)
             outputs.append(xt)
         return outputs
 
-    def _broadcast_panel(self, X: pd.DataFrame, methodname: str, **kwargs):
+    def _broadcast_panel(self, methodname: str, **kwargs):
         """
         Broadcasts a method to handle panel data of the input DataFrame.
 
@@ -324,21 +338,23 @@ class BaseEffect(BaseObject):
 
         for i, idx in enumerate(self.effects_.keys()):
 
-            X_ = None
-            if X is not None:
-                X_ = X.loc[idx]
-            new_kwargs = kwargs.copy()
-            if "y" in kwargs:
-                new_kwargs["y"] = kwargs["y"].loc[idx]
+            new_kwargs = {}
+            for arg, val in kwargs.items():
+                if isinstance(val, pd.DataFrame):
+                    new_kwargs[arg] = val.loc[idx]
+                else:
+                    new_kwargs[arg] = val
+
             effect_ = self.effects_[idx]
-            xt = getattr(effect_, methodname)(X=X_, **new_kwargs)
+            xt = getattr(effect_, methodname)(**new_kwargs)
             outputs.append(xt)
         return outputs
 
     def _transform(
         self,
-        X: pd.DataFrame,
+        X: Optional[pd.DataFrame],
         fh: pd.Index,
+        y: Optional[pd.DataFrame] = None,
     ) -> Any:
         """Prepare input data to be passed to numpyro model.
 
@@ -348,13 +364,18 @@ class BaseEffect(BaseObject):
 
         Parameters
         ----------
-        X : pd.DataFrame
+        fh : pd.Index
+            The forecasting horizon as a pandas Index.
+
+
+        X : pd.DataFrame, optional if the effect applies to `y`
             The input DataFrame containing the exogenous variables for the training
             time indexes, if passed during fit, or for the forecasting time indexes, if
             passed during predict.
 
-        fh : pd.Index
-            The forecasting horizon as a pandas Index.
+        y: pd.DataFrame, optional if the effect applies to `X``
+            The target timeseries datafrane,
+
 
         Returns
         -------
@@ -362,7 +383,12 @@ class BaseEffect(BaseObject):
             Any object containing the data needed for the effect. The object will be
             passed to `predict` method as `data` argument.
         """
-        array = series_to_tensor_or_array(X)
+        # TODO: Remove in 0.11
+        if self._api_already_migrated():
+            Z = X if self.get_tag("applies_to") == "X" else y
+        else:
+            Z = X
+        array = series_to_tensor_or_array(Z)
         return array
 
     def predict(
@@ -675,6 +701,20 @@ class BaseEffect(BaseObject):
                 for i in range(samples.shape[0])
             }
         )
+
+    # TODO: Remove in 0.11
+    def _call_transform_handle_api_change(self, fh, X, y):
+        """Handle deprecation when calling transform."""
+        if self._api_already_migrated():
+            return self._transform(fh=fh, X=X, y=y)
+
+        Z = X if self.get_tag("applies_to") == "X" else y
+        return self._transform(fh=fh, X=Z)
+
+    # TODO: Remove in 0.11
+    def _api_already_migrated(self):
+        """Check if the current effect already implements the new signature."""
+        return "y" in list(inspect.signature(self._transform).parameters)
 
 
 class BaseAdditiveOrMultiplicativeEffect(BaseEffect):

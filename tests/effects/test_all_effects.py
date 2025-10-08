@@ -59,6 +59,7 @@ class TestAllEffects(TestAllObjects):
         "fitted_named_object_parameters",
         "named_object_parameters",
         "feature:panel_hyperpriors",
+        "use_numpyro_scope",
     ]
 
     object_type_filter = BaseEffect

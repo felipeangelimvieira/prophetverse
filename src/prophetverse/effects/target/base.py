@@ -16,9 +16,11 @@ class BaseTargetEffect(BaseEffect):
         "filter_indexes_with_forecating_horizon_at_transform": True,
         # Should the effect be applied to the target variable?
         "applies_to": "y",
+        # Target effects should not use target effects
+        "use_numpyro_scope": False,
     }
 
-    def _transform(self, X, fh):
-        if X is not None:
-            return super()._transform(X, fh)
+    def _transform(self, X, fh, y):
+        if y is not None:
+            return super()._transform(X=X, y=y, fh=fh)
         return None

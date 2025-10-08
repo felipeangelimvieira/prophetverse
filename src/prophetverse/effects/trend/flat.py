@@ -56,8 +56,8 @@ class FlatTrend(TrendEffectMixin, BaseEffect):
         dict
             dictionary containing the input data for the trend model
         """
-        idx = X.index
-        return jnp.ones((len(idx), 1))
+
+        return jnp.ones((len(fh), 1))
 
     def _predict(  # type: ignore[override]
         self, data: jnp.ndarray, predicted_effects: dict, *args, **kwargs

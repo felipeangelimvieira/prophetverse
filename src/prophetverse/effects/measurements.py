@@ -247,21 +247,23 @@ class LiftMeasurement(BaseEffect):
 
             ys = []
             for scenario_data in data["scenario_data"]:
-
-                scenario_outputs = inner_model(
-                    exogenous_effects={
-                        name: effect for name, effect, _ in self.fitted_effects_
-                    },
-                    data=scenario_data["data"],
-                    predicted_effects=predicted_effects,
-                )
+                with numpyro.handlers.block(
+                    hide_fn=lambda msg: msg["type"] == "deterministic"
+                ):
+                    scenario_outputs = inner_model(
+                        exogenous_effects={
+                            name: effect for name, effect, _ in self.fitted_effects_
+                        },
+                        data=scenario_data["data"],
+                        predicted_effects=predicted_effects,
+                    )
 
                 ys.append(scenario_outputs[self.site_name])
 
             eps = jnp.finfo(ys[0].dtype).eps
             baseline = jnp.clip(ys[0], min=eps)
             counterfactual = jnp.clip(ys[1], min=eps)
-            lift = counterfactual / baseline - 1
+            lift = counterfactual / baseline
 
             site_name = (
                 f"{self.prefix}/lift_experiment" if self.prefix else "lift_experiment"
@@ -274,7 +276,7 @@ class LiftMeasurement(BaseEffect):
                 numpyro.sample(
                     f"{site_name}:ignore",
                     distribution,
-                    obs=data["observed_lift"],
+                    obs=data["observed_lift"] + 1,
                 )
 
             reference_effect = predicted_effects.get(self.site_name)
@@ -309,9 +311,10 @@ class LiftMeasurement(BaseEffect):
         lift = pd.DataFrame({"lift": [0] * 3}, index=measurements.index)
         return [
             {
-                "effects": LinearEffect(),
+                "effects": [("linear_effect1", LinearEffect(), ".*")],
                 "measurements": [measurements, measurements, lift],
                 "prior_scale": 0.1,
+                "site_name": "linear_effect1",
             }
         ]
 

@@ -156,16 +156,20 @@ class HurdleTargetLikelihood(BaseTargetEffect):
 
         truncated = TruncatedDiscrete(dist_nonzero, low=0)
 
+        if data is not None:
+            data = data * self.scale_
+
         with numpyro.plate("data", len(demand), dim=-2):
 
             samples = numpyro.sample(
-                "obs",
+                "_obs:ignore",
                 HurdleDistribution(gate_prob, truncated),
                 obs=data,
             )
+            samples = numpyro.deterministic("obs", samples / self.scale_)
 
         numpyro.deterministic("gate", gate_prob)
-        numpyro.deterministic("demand", demand)
+        numpyro.deterministic("demand", demand / self.scale_)
         numpyro.deterministic("mean", samples)
 
         return jnp.zeros_like(demand)

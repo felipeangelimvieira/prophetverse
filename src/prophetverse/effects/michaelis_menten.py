@@ -53,7 +53,9 @@ class MichaelisMentenEffect(BaseAdditiveOrMultiplicativeEffect):
             self.max_effect_prior if max_effect_prior is not None else dist.Gamma(1, 1)
         )
         self._half_saturation_prior = (
-            self.half_saturation_prior if half_saturation_prior is not None else dist.Gamma(1, 1)
+            self.half_saturation_prior
+            if half_saturation_prior is not None
+            else dist.Gamma(1, 1)
         )
 
         super().__init__(effect_mode=effect_mode, base_effect_name=base_effect_name)
@@ -85,8 +87,8 @@ class MichaelisMentenEffect(BaseAdditiveOrMultiplicativeEffect):
 
         # Clip data to avoid numerical issues with very small values
         data = jnp.clip(data, 1e-9, None)
-        
+
         # Apply Michaelis-Menten equation: effect = (max_effect * data) / (half_saturation + data)
         effect = (max_effect * data) / (half_saturation + data)
-        
+
         return effect

@@ -46,6 +46,6 @@ class TestAllTargetEffects(TargetEffectFixtureGenerator, TestAllObjects):
                 predictions = object_instance.predict(data, predicted_effects)
 
         assert "obs" in trace
-        assert trace["obs"]["is_observed"]
+
         assert all(trace["obs"]["value"].flatten() == y.values.flatten())
         assert "mean" in trace

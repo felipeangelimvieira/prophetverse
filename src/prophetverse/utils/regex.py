@@ -80,3 +80,30 @@ def contains(patterns):
     if isinstance(patterns, str):
         patterns = [patterns]
     return rf"(?:{'|'.join(patterns)})"
+
+
+def filter_columns(df, pattern):
+    """
+    Return a list of column names in the DataFrame that match the given regex pattern.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        The DataFrame whose columns are to be matched against the regex pattern.
+    pattern: str
+        The regular expression pattern to match column names.
+
+    Returns
+    -------
+    list
+        A list of column names that match the given regex pattern.
+    """
+    columns = df.columns
+
+    if pattern is None:
+        return None
+
+    if isinstance(pattern, list):
+        return columns[columns.isin(pattern)].tolist()
+
+    return columns[columns.astype(str).str.match(pattern)].tolist()

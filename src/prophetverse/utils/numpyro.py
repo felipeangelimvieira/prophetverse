@@ -1,5 +1,5 @@
 import numpyro
-from typing import Any
+from typing import Any, List, Union
 
 
 class CacheMessenger(numpyro.primitives.Messenger):
@@ -8,13 +8,18 @@ class CacheMessenger(numpyro.primitives.Messenger):
     and on subsequent visits just returns that cached value.
     """
 
-    def __init__(self):
+    def __init__(self, cache_types: Union[List[str], str] = "sample"):
         super().__init__(fn=None)
         self._cache: dict[str, Any] = {}
+        self.cache_types = cache_types
+
+        self._cache_types = (
+            [cache_types] if isinstance(cache_types, str) else cache_types
+        )
 
     def process_message(self, msg):
         # only intercept actual sample sites
-        if msg["type"] == "sample" and msg["name"] in self._cache:
+        if msg["type"] in self._cache_types and msg["name"] in self._cache:
             # short‐circuit: return the cached value
 
             for k, v in self._cache[msg["name"]].items():
@@ -24,6 +29,6 @@ class CacheMessenger(numpyro.primitives.Messenger):
 
     def postprocess_message(self, msg):
         # after a real sample has been taken, cache it
-        if msg["type"] == "sample":
+        if msg["type"] in self._cache_types:
             if msg["name"] not in self._cache:
                 self._cache[msg["name"]] = msg

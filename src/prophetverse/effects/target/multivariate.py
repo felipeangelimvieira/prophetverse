@@ -64,8 +64,10 @@ class MultivariateNormal(BaseTargetEffect):
         y = data
 
         mean = 0
-        for _, effect in predicted_effects.items():
-            mean += effect
+        for effect_name, effect in predicted_effects.items():
+            # Skip latent effects (effects whose names start with "latent/")
+            if not effect_name.startswith("latent/"):
+                mean += effect
 
         if y is not None:
             y = y.squeeze(-1).T

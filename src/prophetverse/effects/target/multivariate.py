@@ -25,6 +25,8 @@ class MultivariateNormal(BaseTargetEffect):
         # Should only the indexes related to the forecasting horizon be passed to
         # _transform?
         "filter_indexes_with_forecating_horizon_at_transform": True,
+        # applies to y or X
+        "applies_to": "y",
     }
 
     def __init__(self, noise_scale=0.05, correlation_matrix_concentration=1):

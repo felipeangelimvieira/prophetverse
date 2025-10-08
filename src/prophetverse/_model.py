@@ -15,11 +15,6 @@ def wrap_with_cache_messenger(model):
 
 
 def model(
-    y,
-    trend_model: BaseEffect,
-    trend_data: Dict[str, jnp.ndarray],
-    target_model: BaseEffect,
-    target_data: Dict[str, jnp.ndarray],
     data: Optional[Dict[str, jnp.ndarray]] = None,
     exogenous_effects: Optional[Dict[str, BaseEffect]] = None,
     **kwargs,
@@ -40,20 +35,27 @@ def model(
     with CacheMessenger():
         predicted_effects: Dict[str, jnp.ndarray] = {}
 
-        with numpyro.handlers.scope(prefix="trend"):
-            trend = trend_model(data=trend_data, predicted_effects=predicted_effects)
+        inner_model(
+            exogenous_effects=exogenous_effects,
+            data=data,
+            predicted_effects=predicted_effects,
+        )
 
-        predicted_effects["trend"] = numpyro.deterministic("trend", trend)
 
-        # Exogenous effects
-        if exogenous_effects is not None:
-            for exog_effect_name, exog_effect in exogenous_effects.items():
-                transformed_data = data[exog_effect_name]  # type: ignore[index]
+def inner_model(exogenous_effects, data, predicted_effects):
+    # Exogenous effects
+    predicted_effects = predicted_effects.copy()
 
+    if exogenous_effects is not None:
+        for exog_effect_name, exog_effect in exogenous_effects.items():
+            transformed_data = data[exog_effect_name]  # type: ignore[index]
+
+            if exog_effect.get_tag("use_numpyro_scope"):
                 with numpyro.handlers.scope(prefix=exog_effect_name):
                     effect = exog_effect(transformed_data, predicted_effects)
+            else:
+                effect = exog_effect(transformed_data, predicted_effects)
 
-                effect = numpyro.deterministic(exog_effect_name, effect)
-                predicted_effects[exog_effect_name] = effect
-
-        target_model.predict(target_data, predicted_effects)
+            effect = numpyro.deterministic(exog_effect_name, effect)
+            predicted_effects[exog_effect_name] = effect
+    return predicted_effects

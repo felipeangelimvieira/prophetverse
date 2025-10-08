@@ -137,6 +137,7 @@ class LinearFourierSeasonality(BaseEffect):
             Any object containing the data needed for the effect. The object will be
             passed to `predict` method as `data` argument.
         """
+
         X = self.fourier_features_.transform(X)
 
         if self.expand_column_per_level_ is not None:

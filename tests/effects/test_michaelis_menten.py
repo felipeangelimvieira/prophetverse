@@ -106,15 +106,13 @@ def test_michaelis_menten_saturation_behavior():
         half_saturation_prior=dist.Delta(1.0),
         effect_mode="additive",
     )
-    
+
     # Test with very large data values
     trend = jnp.array([1.0]).reshape((-1, 1))
     large_data = jnp.array([1000.0]).reshape((-1, 1))
 
     with seed(numpyro.handlers.seed, 0):
-        result = mm_effect.predict(
-            data=large_data, predicted_effects={"trend": trend}
-        )
+        result = mm_effect.predict(data=large_data, predicted_effects={"trend": trend})
 
     # For large data, (max_effect * data) / (half_saturation + data) ≈ max_effect
     # Since data >> half_saturation: effect ≈ 10.0 * 1000 / 1001 ≈ 9.99
@@ -129,7 +127,7 @@ def test_michaelis_menten_half_saturation_point():
         half_saturation_prior=dist.Delta(2.0),
         effect_mode="additive",
     )
-    
+
     trend = jnp.array([1.0]).reshape((-1, 1))
     half_sat_data = jnp.array([2.0]).reshape((-1, 1))  # Equal to half_saturation
 

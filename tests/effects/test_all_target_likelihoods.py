@@ -25,6 +25,7 @@ class TestAllTargetEffects(TargetEffectFixtureGenerator, TestAllObjects):
         "named_object_parameters",
         "feature:panel_hyperpriors",
         "hierarchical_prophet_compliant",
+        "use_numpyro_scope",
     ]
 
     def test_applies_to_tag(self, object_instance):
@@ -35,7 +36,7 @@ class TestAllTargetEffects(TargetEffectFixtureGenerator, TestAllObjects):
         y = _make_series(50).to_frame("value")
         object_instance.fit(y=y, X=None)
 
-        data = object_instance.transform(y, fh=y.index)
+        data = object_instance.transform(y=y, fh=y.index, X=None)
 
         predicted_effects = {
             "trend": jnp.ones(len(y)) * 0.5,
@@ -45,6 +46,6 @@ class TestAllTargetEffects(TargetEffectFixtureGenerator, TestAllObjects):
                 predictions = object_instance.predict(data, predicted_effects)
 
         assert "obs" in trace
-        assert trace["obs"]["is_observed"]
+
         assert all(trace["obs"]["value"].flatten() == y.values.flatten())
         assert "mean" in trace

@@ -1,0 +1,296 @@
+---
+title: "Branding and Proxy Variables"
+description: "Using proxy variables to model latent effects"
+---
+
+
+```{python}
+from prophetverse.datasets._mmm.dataset2_branding import get_dataset
+
+y, X, true_effect, model = get_dataset()
+```
+
+```{python}
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.plot(
+    true_effect.index.to_timestamp(), true_effect["awareness_to_sales"].values
+)
+
+ax.twinx().plot(
+    X.index.to_timestamp(),
+    X["ad_spend_awareness"].values,
+    color="orange",
+    label="Ad Spend Awareness (Observed)",
+)
+```
+
+```{python}
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.plot(
+    true_effect.index.to_timestamp(), true_effect["latent/awareness_campaign"].values
+)
+
+ax.twinx().plot(
+    X.index.to_timestamp(),
+    X["ad_spend_awareness"].values,
+    color="orange",
+    label="Ad Spend Awareness (Observed)",
+)
+```
+
+
+```{python}
+
+proxy_variable = true_effect[["latent/awareness"]] / true_effect["latent/awareness"].max()
+
+proxy_variable = proxy_variable.sample(n=200)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.scatter(
+    proxy_variable.index.to_timestamp(),
+    proxy_variable["latent/awareness"].values,
+    color="C1",
+    label="Proxy Variable",
+)
+```
+
+
+
+```{python}
+from prophetverse.effects import (
+    PiecewiseLinearTrend,
+    LinearFourierSeasonality,
+    ChainedEffects,
+    GeometricAdstockEffect,
+    WeibullAdstockEffect,
+    HillEffect,
+)
+from prophetverse.sktime import Prophetverse
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.optimizer import LBFGSSolver
+import numpyro.distributions as dist
+
+yearly = (
+    "yearly_seasonality",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[365.25],
+        fourier_terms_list=[5],
+        prior_scale=0.1,
+        effect_mode="multiplicative",
+    ),
+    None,
+)
+
+weekly = (
+    "weekly_seasonality",
+    LinearFourierSeasonality(
+        freq="D",
+        sp_list=[7],
+        fourier_terms_list=[3],
+        prior_scale=0.05,
+        effect_mode="multiplicative",
+    ),
+    None,
+)
+
+hill = HillEffect(
+    half_max_prior=dist.HalfNormal(1),
+    slope_prior=dist.InverseGamma(2, 1),
+    max_effect_prior=dist.HalfNormal(1),
+    effect_mode="additive",
+    input_scale=1e6,
+)
+
+```
+
+```{python}
+from prophetverse.effects import SumEffects, Forward
+
+spend_awareness = (
+    "latent/ad_spend_awareness",
+    hill,
+    "ad_spend_awareness",
+)
+
+awareness_campaign = (
+    "latent/awareness_campaign",
+    ChainedEffects([("adstock", GeometricAdstockEffect()), ("saturation", hill)]),
+    "awareness_campaign",
+)
+
+awareness = (
+    "latent/awareness",
+    SumEffects(
+        effects=[
+            ("ad_spend_awareness", Forward("latent/ad_spend_awareness")),
+            ("awareness_campaign", Forward("latent/awareness_campaign")),
+        ]
+    ),
+    None,
+)
+
+awareness_to_sales = (
+    "awareness_to_sales",
+    ChainedEffects(
+        steps=[
+            ("latent_awareness", Forward("latent/awareness")),
+            ("adstock", WeibullAdstockEffect(max_lag=90)),
+        ]
+    ),
+    None,
+)
+
+
+chained_social = (
+    "ad_spend_social_media",
+    ChainedEffects([("adstock", GeometricAdstockEffect()), ("saturation", hill)]),
+    "ad_spend_social_media",
+)
+
+```
+
+
+
+```{python}
+baseline_model = Prophetverse(
+    trend=PiecewiseLinearTrend(changepoint_interval=100),
+    exogenous_effects=[
+        yearly,
+        weekly,
+        spend_awareness,
+        awareness_campaign,
+        awareness,
+        awareness_to_sales,
+        chained_social,
+    ],
+    inference_engine=MAPInferenceEngine(
+        num_steps=2000,
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+baseline_model.fit(y=y, X=X)
+```
+
+```{python}
+y_pred = baseline_model.predict(X=X, fh=X.index)
+
+plt.figure(figsize=(8, 4))
+y.plot(label="Observed")
+y_pred.plot(label="Predicted")
+plt.title("In-Sample Forecast: Observed vs Predicted")
+plt.legend()
+plt.show()
+```
+
+### 1.1 Component-Level Diagnostics
+
+With `predict_components`, we can obtain the model's components.
+
+```{python}
+y_pred_components = baseline_model.predict_components(X=X, fh=X.index)
+y_pred_components.head()
+```
+
+In a real use-casee, you would not have access to the ground truth of the components.
+We use them here to show how the model behaves, and how incorporing extra information can improve it.
+
+```{python}
+fig, axs = plt.subplots(4, 1, figsize=(8, 12), sharex=True)
+for i, name in enumerate(
+    ["trend", "yearly_seasonality", "latent/ad_spend_awareness", "ad_spend_social_media"]
+):
+    true_effect[name].plot(ax=axs[i], label="True", color="black")
+    y_pred_components[name].plot(ax=axs[i], label="Estimated")
+    axs[i].set_title(name)
+    axs[i].legend()
+plt.tight_layout()
+plt.show()
+```
+
+
+
+```{python}
+
+from prophetverse.effects.proxy_likelihood import LinearProxyLikelihood
+
+
+proxy_effect = (
+    "awareness_proxy",
+    LinearProxyLikelihood(
+        effect_name="latent/awareness",
+        reference_df=proxy_variable,
+        coefficient_prior=dist.Normal(1, 10),
+        likelihood_scale=0.01,
+    ),
+    None,
+)
+
+model = Prophetverse(
+    trend=PiecewiseLinearTrend(changepoint_interval=100),
+    exogenous_effects=[
+        yearly,
+        weekly,
+        spend_awareness,
+        awareness_campaign,
+        awareness,
+        awareness_to_sales,
+        chained_social,
+        proxy_effect, # New!
+    ],
+    inference_engine=MAPInferenceEngine(
+        num_steps=5000,
+        optimizer=LBFGSSolver(memory_size=300, max_linesearch_steps=300),
+    ),
+)
+
+model.fit(y=y, X=X)
+```
+
+
+```{python}
+y_pred_model = model.predict(X=X, fh=X.index)
+
+plt.figure(figsize=(8, 4))
+y.plot(label="Observed")
+y_pred_model.plot(label="Predicted")
+plt.title("In-Sample Forecast: Observed vs Predicted")
+plt.legend()
+plt.show()
+```
+
+### 1.1 Component-Level Diagnostics
+
+With `predict_components`, we can obtain the model's components.
+
+```{python}
+y_pred_components = model.predict_components(X=X, fh=X.index)
+y_pred_components.head()
+```
+
+In a real use-casee, you would not have access to the ground truth of the components.
+We use them here to show how the model behaves, and how incorporing extra information can improve it.
+
+```{python}
+fig, axs = plt.subplots(4, 1, figsize=(8, 12), sharex=True)
+for i, name in enumerate(
+    [
+        "trend",
+        "yearly_seasonality",
+        "latent/ad_spend_awareness",
+        "ad_spend_social_media",
+    ]
+):
+    true_effect[name].plot(ax=axs[i], label="True", color="black")
+    y_pred_components[name].plot(ax=axs[i], label="Estimated")
+    axs[i].set_title(name)
+    axs[i].legend()
+plt.tight_layout()
+plt.show()
+```
+
+

@@ -42,6 +42,8 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
                     f"Invalid type {type(val)} for step {i}. Must be a tuple or BaseEffect."
                 )
 
+        self.set_tags(**{"requires_X": steps[0][1].get_tag("requires_X", False)})
+
     def _fit(self, y: Any, X: Any, scale: float = 1.0):
         """
         Fit all chained effects sequentially.

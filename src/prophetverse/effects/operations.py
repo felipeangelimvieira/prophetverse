@@ -1,4 +1,9 @@
-"""Definition of Chained Effects class."""
+"""Chained effects utilities.
+
+Contains a shared base class for chaining multiple effects and two concrete
+implementations: `Sum` (additive chaining) and `MultiplyEffects` (multiplicative
+chaining). This consolidates duplicated logic into a single file.
+"""
 
 from typing import Any, Dict, List, Tuple
 
@@ -7,17 +12,14 @@ from skbase.base import BaseMetaEstimatorMixin
 import numpyro
 from prophetverse.effects.base import BaseEffect
 
-__all__ = ["ChainedEffects"]
+__all__ = ["Sum", "MultiplyEffects"]
 
 
-class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
-    """
-    Chains multiple effects sequentially, applying them one after the other.
+class _BaseChainOperation(BaseMetaEstimatorMixin, BaseEffect):
+    """Base class with shared logic for chaining multiple effects.
 
-    Parameters
-    ----------
-    steps : List[BaseEffect]
-        A list of effects to be applied sequentially.
+    Subclasses must implement `_predict` to define how per-effect
+    predictions are aggregated (e.g., sum or product).
     """
 
     _tags = {
@@ -29,7 +31,7 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
         "capability:multivariate_input": True,
         # If no columns are found, should
         # _predict be skipped?
-        "requires_X": True,
+        "requires_X": False,
         # Should only the indexes related to the forecasting horizon be passed to
         "filter_indexes_with_forecating_horizon_at_transform": True,
         "named_object_parameters": "named_effects",
@@ -39,6 +41,7 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
         self.effects = effects
         super().__init__()
 
+        # Normalize to list of (name, effect)
         self.named_effects = []
         for i, val in enumerate(self.effects):
             if isinstance(val, tuple):
@@ -56,18 +59,7 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
         self.set_tags(requires_X=requires_X)
 
     def _fit(self, y: Any, X: Any, scale: float = 1.0):
-        """
-        Fit all chained effects sequentially.
-
-        Parameters
-        ----------
-        y : Any
-            Target data (e.g., time series values).
-        X : Any
-            Exogenous variables.
-        scale : float, optional
-            Scale of the timeseries.
-        """
+        """Fit all chained effects sequentially."""
         self.named_effects_ = []
         for name, effect in self.named_effects:
             effect = effect.clone()
@@ -75,56 +67,16 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
             self.named_effects_.append((name, effect))
 
     def _transform(self, X: Any, fh: Any) -> Any:
-        """
-        Transform input data sequentially through all chained effects.
-
-        Parameters
-        ----------
-        X : Any
-            Input data (e.g., exogenous variables).
-        fh : Any
-            Forecasting horizon.
-
-        Returns
-        -------
-        Any
-            Transformed data after applying all effects.
-        """
+        """Transform input data sequentially through all chained effects."""
         all_data = {
             name: effect.transform(X=X, fh=fh) for name, effect in self.named_effects_
         }
         return all_data
 
-    def _predict(
-        self,
-        data: jnp.ndarray,
-        predicted_effects: Dict[str, jnp.ndarray],
-        *args,
-        **kwargs,
-    ) -> jnp.ndarray:
-        """
-        Apply all chained effects sequentially.
-
-        Parameters
-        ----------
-        data : jnp.ndarray
-            Data obtained from the transformed method (shape: T, 1).
-        predicted_effects : Dict[str, jnp.ndarray]
-            A dictionary containing the predicted effects.
-        params : Dict[str, Dict[str, jnp.ndarray]]
-            A dictionary containing the sampled parameters for each effect.
-
-        Returns
-        -------
-        jnp.ndarray
-            The transformed data after applying all effects.
-        """
-        output = 1
+    def _update_data(self, data, arr):
         for name, effect in self.named_effects_:
-            with numpyro.handlers.scope(prefix=name):
-                output *= effect.predict(data[name], predicted_effects)
-
-        return output
+            data[name] = effect._update_data(data[name], arr)
+        return data
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
@@ -140,7 +92,43 @@ class MultiplyEffects(BaseMetaEstimatorMixin, BaseEffect):
             {"effects": [LinearEffect()]},
         ]
 
-    def _update_data(self, data, arr):
+    def _predict(
+        self, *args, **kwargs
+    ) -> jnp.ndarray:  # pragma: no cover - implemented by subclasses
+        raise NotImplementedError()
+
+
+class MultiplyEffects(_BaseChainOperation):
+    """Chains multiple effects multiplicatively."""
+
+    def _predict(
+        self,
+        data: jnp.ndarray,
+        predicted_effects: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs,
+    ) -> jnp.ndarray:
+        output = 1
         for name, effect in self.named_effects_:
-            data[name] = effect._update_data(data[name], arr)
-        return data
+            with numpyro.handlers.scope(prefix=name):
+                output *= effect.predict(data[name], predicted_effects)
+
+        return output
+
+
+class SumEffects(_BaseChainOperation):
+    """Chains multiple effects additively (sums their contributions)."""
+
+    def _predict(
+        self,
+        data: jnp.ndarray,
+        predicted_effects: Dict[str, jnp.ndarray],
+        *args,
+        **kwargs,
+    ) -> jnp.ndarray:
+        output = 0
+        for name, effect in self.named_effects_:
+            with numpyro.handlers.scope(prefix=name):
+                output = output + effect.predict(data[name], predicted_effects)
+
+        return output

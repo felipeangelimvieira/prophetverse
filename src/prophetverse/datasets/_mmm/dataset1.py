@@ -10,6 +10,7 @@ from prophetverse.effects import (
     LinearFourierSeasonality,
     ChainedEffects,
     GeometricAdstockEffect,
+    WeibullAdstockEffect,
 )
 from prophetverse.effects.trend import PiecewiseLinearTrend
 from prophetverse.engine.prior import PriorPredictiveInferenceEngine
@@ -34,7 +35,7 @@ def get_index():
     return index
 
 
-def get_X(index, rng):
+def get_X(index, rng, power=3.5):
     """
     Create a DataFrame of two simulated investments with daily data.
 
@@ -63,7 +64,7 @@ def get_X(index, rng):
     X["ad_spend_social_media"] = (
         X["ad_spend_search"] + 0.1 + rng.normal(0, 0.01, size=len(index))
     )
-    X["ad_spend_social_media"] = X["ad_spend_social_media"] ** 3.5
+    X["ad_spend_social_media"] = X["ad_spend_social_media"] ** power
     X *= 100_000
 
     return X

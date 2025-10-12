@@ -12,6 +12,10 @@ What you will learn:
 
 ## Latent variables
 
+::: {.callout-tip}
+From Prophetverse v0.10.0 onwards, we have included a latent variable feature. You only need to add "latent/" as a prefix to the effect name, and it will not be considered as a final component in the additive decomposition. Instead, it can be used as an input to other effects or linked to proxy variables.
+:::
+
 In Marketing Mix Modeling, we often encounter latent variables that are not directly observable but significantly influence sales. A common example is **brand awareness**. It can befined as :
 
 > The ability of a potential buyer to recognize or recall that a brand is a member of a certain product category.
@@ -22,13 +26,13 @@ which is clearly affected by marketing activities, and in turn affects sales. St
 
 Since we cannot observe these variables directly, it can be hard to model them. However, we propose in Prophetverse the usage of **proxy variables** that are correlated with the latent variable of interest to help us infer its true causal effect. For example, we might use survey data on brand recognition or social media engagement metrics as proxies for brand awareness and use it as a soft calibration signal.
 
-More formally, if $Z_t$ is a latent variable representing brand awareness at time $t$, and $P_t$ is a proxy variable correlated with $Z_t$, we can add a new likelihood term:
+The idea is simple, but powerful. More formally, if $Z(t)$ is a latent variable representing brand awareness at time $t$, and $P(t)$ is a proxy variable correlated with $Z(t)$, we can add a new likelihood term:
 
 $$
-P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
+P(t) \sim \mathcal{N}(\beta Z(t), \sigma^2)
 $$
 
-For a $\beta$ with user-defined prior, and $\sigma^2$ representing the uncertainty in the proxy relationship.
+For a $\beta$ with user-defined prior, and $\sigma^2$ representing the uncertainty in the proxy relationship. If there exists a $\beta$, then the proxy variable provides additional information about the latent variable, helping to better identify its effect on sales.
 
 ## 1. Dataset
 

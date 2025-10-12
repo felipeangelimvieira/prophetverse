@@ -18,6 +18,7 @@ from .target.univariate import (
     NegativeBinomialTargetLikelihood,
     BetaTargetLikelihood,
 )
+from .constant import Constant
 from .forward import Forward
 from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
 from .operations import MultiplyEffects, SumEffects
@@ -46,4 +47,5 @@ __all__ = [
     "Forward",
     "MultiplyEffects",
     "SumEffects",
+    "Constant",
 ]

@@ -415,6 +415,19 @@ window.Quarto = {
 </ul>
 <section id="latent-variables" class="level2">
 <h2 class="anchored" data-anchor-id="latent-variables">Latent variables</h2>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>From Prophetverse v0.10.0 onwards, we have included a latent variable feature. You only need to add “latent/” as a prefix to the effect name, and it will not be considered as a final component in the additive decomposition. Instead, it can be used as an input to other effects or linked to proxy variables.</p>
+</div>
+</div>
 <p>In Marketing Mix Modeling, we often encounter latent variables that are not directly observable but significantly influence sales. A common example is <strong>brand awareness</strong>. It can befined as :</p>
 <blockquote class="blockquote">
 <p>The ability of a potential buyer to recognize or recall that a brand is a member of a certain product category.</p>
@@ -422,11 +435,11 @@ window.Quarto = {
 </blockquote>
 <p>which is clearly affected by marketing activities, and in turn affects sales. Standard MMM approaches may struggle to accurately capture the impact of such latent variables, leading to biased estimates and suboptimal decision-making.</p>
 <p>Since we cannot observe these variables directly, it can be hard to model them. However, we propose in Prophetverse the usage of <strong>proxy variables</strong> that are correlated with the latent variable of interest to help us infer its true causal effect. For example, we might use survey data on brand recognition or social media engagement metrics as proxies for brand awareness and use it as a soft calibration signal.</p>
-<p>More formally, if <span class="math inline">\(Z_t\)</span> is a latent variable representing brand awareness at time <span class="math inline">\(t\)</span>, and <span class="math inline">\(P_t\)</span> is a proxy variable correlated with <span class="math inline">\(Z_t\)</span>, we can add a new likelihood term:</p>
+<p>The idea is simple, but powerful. More formally, if <span class="math inline">\(Z(t)\)</span> is a latent variable representing brand awareness at time <span class="math inline">\(t\)</span>, and <span class="math inline">\(P(t)\)</span> is a proxy variable correlated with <span class="math inline">\(Z(t)\)</span>, we can add a new likelihood term:</p>
 <p><span class="math display">\[
-P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
+P(t) \sim \mathcal{N}(\beta Z(t), \sigma^2)
 \]</span></p>
-<p>For a <span class="math inline">\(\beta\)</span> with user-defined prior, and <span class="math inline">\(\sigma^2\)</span> representing the uncertainty in the proxy relationship.</p>
+<p>For a <span class="math inline">\(\beta\)</span> with user-defined prior, and <span class="math inline">\(\sigma^2\)</span> representing the uncertainty in the proxy relationship. If there exists a <span class="math inline">\(\beta\)</span>, then the proxy variable provides additional information about the latent variable, helping to better identify its effect on sales.</p>
 </section>
 <section id="dataset" class="level2">
 <h2 class="anchored" data-anchor-id="dataset">1. Dataset</h2>
@@ -437,7 +450,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <li>Investments with impact on brand awareness (e.g., upper-funnel channels like TV, Display, Social Media)</li>
 <li>Investments with last-click impact (e.g., Search, Affiliates)</li>
 </ul>
-<div id="d74e18dc" class="cell" data-execution_count="2">
+<div id="1f0d4d3b" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.datasets._mmm.dataset2_branding <span class="im">import</span> get_dataset</span>
@@ -489,7 +502,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 </div>
 </div>
 </div>
-<div id="95bb97a1" class="cell" data-execution_count="3">
+<div id="8022e7e1" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">4</span>))</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>y.plot.line(ax<span class="op">=</span>ax)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fig.show() </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -502,7 +515,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 </div>
 </div>
 <p>And the investment variables:</p>
-<div id="a43536cc" class="cell" data-execution_count="4">
+<div id="3b416f5f" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>X[<span class="st">"ad_spend_awareness"</span>].plot.line(ax<span class="op">=</span>ax[<span class="dv">0</span>], title<span class="op">=</span><span class="st">"Ad Spend Awareness"</span>)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>X[<span class="st">"last_click_spend"</span>].plot.line(ax<span class="op">=</span>ax[<span class="dv">1</span>], title<span class="op">=</span><span class="st">"Last-Click Spend"</span>)</span>
@@ -517,7 +530,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 </div>
 </div>
 <p>Since this is a synthetic dataset, we have access to the ground truth of the effects of investments on sales. In a real-world scenario, these would be unknown. Let’s take a look at them:</p>
-<div id="eb4e726a" class="cell" data-execution_count="5">
+<div id="fade0d78" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_counterfactual(fitted_model, X, column):</span>
@@ -570,9 +583,14 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 </section>
 <section id="proxy-variable" class="level3">
 <h3 class="anchored" data-anchor-id="proxy-variable">1.2. Proxy variable</h3>
-<p>In real-world scenarios, proxy variables can be obtained from various sources, such as: - <strong>Branded Search Volume</strong>: The volume of searches for the brand name on search engines. - <strong>Survey Data</strong>: Periodic surveys measuring brand recognition and recall among the target audience. - <strong>Social Media Engagement</strong>: Metrics such as likes, shares, comments, and mentions related</p>
+<p>In real-world scenarios, proxy variables can be obtained from various sources, such as:</p>
+<ul>
+<li><strong>Branded Search Volume</strong>: The volume of searches for the brand name on search engines.</li>
+<li><strong>Survey Data</strong>: Periodic surveys measuring brand recognition and recall among the target audience.</li>
+<li><strong>Social Media Engagement</strong>: Metrics such as likes, shares, comments, and mentions related</li>
+</ul>
 <p>We simulate a proxy variable correlated with the true latent awareness effect, adding some noise to it.</p>
-<div id="71a40e71" class="cell" data-execution_count="6">
+<div id="35fce35b" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
@@ -687,7 +705,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <h3 class="anchored" data-anchor-id="model-without-proxy-variable">2.1. Model without Proxy Variable</h3>
 <p>We first fit a baseline model without the proxy variable to see how it performs. Since last-click is highly correlated with sales, we will see how it overfits to last-click, leading to poor estimation of other components.</p>
 <p>The cell below defines some effects (click to expand):</p>
-<div id="5d52d597" class="cell" data-execution_count="7">
+<div id="d9dc1afd" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects <span class="im">import</span> (</span>
@@ -793,7 +811,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="e8b5077b" class="cell" data-execution_count="8">
+<div id="1eb83f00" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>baseline_model <span class="op">=</span> Prophetverse(</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    trend<span class="op">=</span>trend,</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    exogenous_effects<span class="op">=</span>[</span>
@@ -811,7 +829,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>baseline_model.fit(y<span class="op">=</span>y, X<span class="op">=</span>X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
-<style>#sk-e75619c3-a14c-46d2-a9de-22f3fc756362 {
+<style>#sk-cc61b945-1319-4194-9fe7-9528a75b8708 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -836,15 +854,15 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     }
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 pre {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 pre {
     padding: 0;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 input.sk-hidden--visually {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -856,7 +874,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     width: 1px;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-dashed-wrapped {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -864,7 +882,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-container {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -874,7 +892,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     position: relative;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-text-repr-fallback {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -890,14 +908,14 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 
   /* Parallel-specific style estimator block */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-parallel-item::after {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-parallel {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -905,28 +923,28 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     position: relative;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-parallel-item {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-parallel-item:first-child::after {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-parallel-item:last-child::after {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-parallel-item:only-child::after {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-serial {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -944,14 +962,14 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-toggleable {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 label.sk-toggleable__label {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -961,7 +979,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     text-align: center;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 label.sk-toggleable__label-arrow:before {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -969,13 +987,13 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     color: var(--sklearn-color-icon);
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 label.sk-toggleable__label-arrow:hover:before {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-toggleable__content {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -983,27 +1001,27 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-toggleable__content pre {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1011,38 +1029,38 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-label label.sk-toggleable__label,
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-label label {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-label label.sk-toggleable__label,
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-label:hover label.sk-toggleable__label {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-label label {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-label-container {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-estimator {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1052,7 +1070,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
   }
 
   /* on hover */
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 div.sk-estimator:hover {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1109,7 +1127,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 a.estimator_doc_link {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1124,12 +1142,12 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
   }
 
   /* On hover */
-  #sk-e75619c3-a14c-46d2-a9de-22f3fc756362 a.estimator_doc_link:hover {
+  #sk-cc61b945-1319-4194-9fe7-9528a75b8708 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-e75619c3-a14c-46d2-a9de-22f3fc756362" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+</style><div id="sk-cc61b945-1319-4194-9fe7-9528a75b8708" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -1145,14 +1163,14 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
                                  None),
                                 ('latent/awareness',
                                  HillEf...
-                                                                      slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)),
+                                                                      slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)),
                                                           ('baseline',
                                                            Forward(effect_name='latent/baseline'))]),
                                  'last_click_spend')],
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('958383f5-b972-4265-8ede-5647cefa102f')" type="checkbox"><label for="UUID('958383f5-b972-4265-8ede-5647cefa102f')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0a72f5e3-e1ba-4b14-9446-d5c6df1f7658')" type="checkbox"><label for="UUID('0a72f5e3-e1ba-4b14-9446-d5c6df1f7658')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -1168,42 +1186,42 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
                                  None),
                                 ('latent/awareness',
                                  HillEf...
-                                                                      slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)),
+                                                                      slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)),
                                                           ('baseline',
                                                            Forward(effect_name='latent/baseline'))]),
                                  'last_click_spend')],
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ffe6e34f-56b9-41f3-a098-460167a88fb0')" type="checkbox"><label for="UUID('ffe6e34f-56b9-41f3-a098-460167a88fb0')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=300)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('94ed2887-a891-4f4c-bc04-30610d833750')" type="checkbox"><label for="UUID('94ed2887-a891-4f4c-bc04-30610d833750')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
-                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6f1d40b6-9bda-45dc-80f9-fc5b6ed87d8d')" type="checkbox"><label for="UUID('6f1d40b6-9bda-45dc-80f9-fc5b6ed87d8d')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
-                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('93f3ed79-da9b-4805-93cf-4493e6d91bc4')" type="checkbox"><label for="UUID('93f3ed79-da9b-4805-93cf-4493e6d91bc4')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374e91910 with batch shape () and event shape ()&gt;,
+             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('1b320c62-5b7f-4dc7-aa9b-d45ca5ef4389')" type="checkbox"><label for="UUID('1b320c62-5b7f-4dc7-aa9b-d45ca5ef4389')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=300)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4f81af1b-5905-4326-9411-66b52b6cca11')" type="checkbox"><label for="UUID('4f81af1b-5905-4326-9411-66b52b6cca11')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
+                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b3ad1448-c883-4151-bcc6-275206ee5bac')" type="checkbox"><label for="UUID('b3ad1448-c883-4151-bcc6-275206ee5bac')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
+                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c5aeb8c5-a8fe-4872-b280-9e3023959d27')" type="checkbox"><label for="UUID('c5aeb8c5-a8fe-4872-b280-9e3023959d27')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c4874b1d0 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374fa5cd0 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('e1a74a81-3808-4f11-a678-7f5402f99e58')" type="checkbox"><label for="UUID('e1a74a81-3808-4f11-a678-7f5402f99e58')" class="sk-toggleable__label sk-toggleable__label-arrow">awareness_to_sales</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('saturation', Forward(effect_name='latent/awareness')),
-                      ('adstock', WeibullAdstockEffect(max_lag=90))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ae507d74-0d13-4abd-81fd-67fd189dd348')" type="checkbox"><label for="UUID('ae507d74-0d13-4abd-81fd-67fd189dd348')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/awareness')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3d04551d-be3f-454f-aac9-a734f1168ca9')" type="checkbox"><label for="UUID('3d04551d-be3f-454f-aac9-a734f1168ca9')" class="sk-toggleable__label sk-toggleable__label-arrow">WeibullAdstockEffect</label><div class="sk-toggleable__content"><pre>WeibullAdstockEffect(max_lag=90)</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a15e1167-04b2-4d1c-9895-1ebcb36077d2')" type="checkbox"><label for="UUID('a15e1167-04b2-4d1c-9895-1ebcb36077d2')" class="sk-toggleable__label sk-toggleable__label-arrow">latent/baseline</label><div class="sk-toggleable__content"><pre>SumEffects(effects=[('trend', Forward(effect_name='trend')),
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c20b4c850 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6daeffad-3810-44a1-968e-5c0affbfcf91')" type="checkbox"><label for="UUID('6daeffad-3810-44a1-968e-5c0affbfcf91')" class="sk-toggleable__label sk-toggleable__label-arrow">awareness_to_sales</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('saturation', Forward(effect_name='latent/awareness')),
+                      ('adstock', WeibullAdstockEffect(max_lag=90))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ebea45cd-a0c2-4586-adb8-5e90b6e97d2f')" type="checkbox"><label for="UUID('ebea45cd-a0c2-4586-adb8-5e90b6e97d2f')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/awareness')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('91f82bd6-59c4-4b76-adab-160b0063e9b9')" type="checkbox"><label for="UUID('91f82bd6-59c4-4b76-adab-160b0063e9b9')" class="sk-toggleable__label sk-toggleable__label-arrow">WeibullAdstockEffect</label><div class="sk-toggleable__content"><pre>WeibullAdstockEffect(max_lag=90)</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('61de40b2-2743-4752-bc4c-2813654862e9')" type="checkbox"><label for="UUID('61de40b2-2743-4752-bc4c-2813654862e9')" class="sk-toggleable__label sk-toggleable__label-arrow">latent/baseline</label><div class="sk-toggleable__content"><pre>SumEffects(effects=[('trend', Forward(effect_name='trend')),
                     ('yearly_seasonality',
                      Forward(effect_name='yearly_seasonality')),
                     ('weekly_seasonality',
                      Forward(effect_name='weekly_seasonality')),
-                    ('awareness', Forward(effect_name='awareness_to_sales'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('04c346b0-1ea7-4a7f-b838-74f61a737a3c')" type="checkbox"><label for="UUID('04c346b0-1ea7-4a7f-b838-74f61a737a3c')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='trend')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('952e31ba-f2c3-452e-88e8-35c55c145c80')" type="checkbox"><label for="UUID('952e31ba-f2c3-452e-88e8-35c55c145c80')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='yearly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('900a4657-8901-40c8-bab7-78501db594cd')" type="checkbox"><label for="UUID('900a4657-8901-40c8-bab7-78501db594cd')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='weekly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b2b5b3a8-e3f1-49d1-93fd-71b411ce46fd')" type="checkbox"><label for="UUID('b2b5b3a8-e3f1-49d1-93fd-71b411ce46fd')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='awareness_to_sales')</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4d38ac3f-6616-4030-878d-75e23aee18cd')" type="checkbox"><label for="UUID('4d38ac3f-6616-4030-878d-75e23aee18cd')" class="sk-toggleable__label sk-toggleable__label-arrow">last_click_spend</label><div class="sk-toggleable__content"><pre>MultiplyEffects(effects=[('hill',
+                    ('awareness', Forward(effect_name='awareness_to_sales'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c4cbef4a-1ddf-42d8-98b5-2eb4fed29668')" type="checkbox"><label for="UUID('c4cbef4a-1ddf-42d8-98b5-2eb4fed29668')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='trend')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('18404c65-9a81-4376-8093-5a71182f6200')" type="checkbox"><label for="UUID('18404c65-9a81-4376-8093-5a71182f6200')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='yearly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f056ee1e-742e-4dcd-b363-c37a3a737dc9')" type="checkbox"><label for="UUID('f056ee1e-742e-4dcd-b363-c37a3a737dc9')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='weekly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('59c994e7-8928-4078-adfd-6c0583e76640')" type="checkbox"><label for="UUID('59c994e7-8928-4078-adfd-6c0583e76640')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='awareness_to_sales')</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4ea90023-07cc-4a15-805a-1a7a7c92681c')" type="checkbox"><label for="UUID('4ea90023-07cc-4a15-805a-1a7a7c92681c')" class="sk-toggleable__label sk-toggleable__label-arrow">last_click_spend</label><div class="sk-toggleable__content"><pre>MultiplyEffects(effects=[('hill',
                           HillEffect(effect_mode='additive',
-                                     half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374e91910 with batch shape () and event shape ()&gt;,
+                                     half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c4874b1d0 with batch shape () and event shape ()&gt;,
                                      input_scale=1000000.0,
-                                     max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374fa5cd0 with batch shape () and event shape ()&gt;,
-                                     slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)),
-                         ('baseline', Forward(effect_name='latent/baseline'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('78be8085-d075-4059-ae74-a0c54de05d02')" type="checkbox"><label for="UUID('78be8085-d075-4059-ae74-a0c54de05d02')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374e91910 with batch shape () and event shape ()&gt;,
+                                     max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c20b4c850 with batch shape () and event shape ()&gt;,
+                                     slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)),
+                         ('baseline', Forward(effect_name='latent/baseline'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('e1a3315f-d6e8-47a3-b744-cb9e42fa5131')" type="checkbox"><label for="UUID('e1a3315f-d6e8-47a3-b744-cb9e42fa5131')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c4874b1d0 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374fa5cd0 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('8f1b36b3-af1b-4dc7-9216-fde3f9b5498b')" type="checkbox"><label for="UUID('8f1b36b3-af1b-4dc7-9216-fde3f9b5498b')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/baseline')</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0cdae8a1-4986-4d24-89bc-07859ccc0549')" type="checkbox"><label for="UUID('0cdae8a1-4986-4d24-89bc-07859ccc0549')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c20b4c850 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a61d6047-267a-4389-a450-60abcb323752')" type="checkbox"><label for="UUID('a61d6047-267a-4389-a450-60abcb323752')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/baseline')</pre></div></div></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('d0862401-c73b-4efb-a8d4-cbf2eb41df54')" type="checkbox"><label for="UUID('d0862401-c73b-4efb-a8d4-cbf2eb41df54')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
                    optimizer=LBFGSSolver(max_linesearch_steps=300,
                                          memory_size=300))</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
 <p>Let’s visualize the predictions of this baseline model:</p>
-<div id="84ab1528" class="cell" data-execution_count="9">
+<div id="e43e7536" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> baseline_model.predict(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">4</span>))</span>
@@ -1223,11 +1241,11 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <p>Forecast quality alone does not tell the full story of how well the model is capturing the underlying dynamics.</p>
 <p><em>Component-Level Diagnostics</em></p>
 <p>With <code>predict_components</code>, we can obtain the model’s components.</p>
-<div id="e53c97f6" class="cell" data-execution_count="10">
+<div id="df9d93b3" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>y_pred_components_baseline <span class="op">=</span> baseline_model.predict_components(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Since we have access to the ground truth of the components in this synthetic example, we can compare them to see how well the model is capturing the true effects.</p>
-<div id="635dd9c4" class="cell" data-execution_count="11">
+<div id="e8283f4f" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">5</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">12</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, name <span class="kw">in</span> <span class="bu">enumerate</span>(</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    [</span>
@@ -1258,7 +1276,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <h3 class="anchored" data-anchor-id="model-with-proxy-variable">2.2. Model with Proxy Variable</h3>
 <p>We use <code>LinearProxyLikelihood</code> to add the proxy variable to the model. This effect links the latent awareness variable to the observed proxy variable, helping to better identify the latent effect.</p>
 <p>Since we know that the correlation is positive, we use a HalfNormal prior for the coefficient.</p>
-<div id="ec391d2b" class="cell" data-execution_count="12">
+<div id="a950d938" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.proxy_likelihood <span class="im">import</span> LinearProxyLikelihood</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1292,7 +1310,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y, X<span class="op">=</span>X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
-<style>#sk-175fc31e-b091-4141-b0ce-828d641f20af {
+<style>#sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -1317,15 +1335,15 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     }
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 {
     color: var(--sklearn-color-text);
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af pre {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 pre {
     padding: 0;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af input.sk-hidden--visually {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -1337,7 +1355,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     width: 1px;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-dashed-wrapped {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -1345,7 +1363,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-container {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -1355,7 +1373,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     position: relative;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-text-repr-fallback {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -1371,14 +1389,14 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 
   /* Parallel-specific style estimator block */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-parallel-item::after {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-parallel {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -1386,28 +1404,28 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     position: relative;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-parallel-item {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-parallel-item:first-child::after {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-parallel-item:last-child::after {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-parallel-item:only-child::after {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-serial {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1425,14 +1443,14 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-toggleable {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af label.sk-toggleable__label {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -1442,7 +1460,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     text-align: center;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af label.sk-toggleable__label-arrow:before {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -1450,13 +1468,13 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     color: var(--sklearn-color-icon);
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af label.sk-toggleable__label-arrow:hover:before {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-toggleable__content {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -1464,27 +1482,27 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-toggleable__content pre {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -1492,38 +1510,38 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-label label.sk-toggleable__label,
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-label label {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-label label.sk-toggleable__label,
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-label:hover label.sk-toggleable__label {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-label label {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-label-container {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-estimator {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -1533,7 +1551,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
   }
 
   /* on hover */
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af div.sk-estimator:hover {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -1590,7 +1608,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af a.estimator_doc_link {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -1605,12 +1623,12 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
   }
 
   /* On hover */
-  #sk-175fc31e-b091-4141-b0ce-828d641f20af a.estimator_doc_link:hover {
+  #sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35 a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-175fc31e-b091-4141-b0ce-828d641f20af" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+</style><div id="sk-2ec1a1ca-d5e4-4211-88b7-c3fe5f6a2e35" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -1642,7 +1660,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('ae08c1fd-0aea-44a7-8a30-e4d063c9a89a')" type="checkbox"><label for="UUID('ae08c1fd-0aea-44a7-8a30-e4d063c9a89a')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
+             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b5fe0aed-55a2-4198-8062-728224367c47')" type="checkbox"><label for="UUID('b5fe0aed-55a2-4198-8062-728224367c47')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('yearly_seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -1674,29 +1692,29 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
              inference_engine=MAPInferenceEngine(num_steps=5000,
                                                  optimizer=LBFGSSolver(max_linesearch_steps=300,
                                                                        memory_size=300)),
-             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6dadaf9e-72d8-472a-9174-9b86ea1398a5')" type="checkbox"><label for="UUID('6dadaf9e-72d8-472a-9174-9b86ea1398a5')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=300)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0f0959b6-8e4d-434e-8891-72cd9aa4612c')" type="checkbox"><label for="UUID('0f0959b6-8e4d-434e-8891-72cd9aa4612c')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
-                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('1345dd75-f7d9-4c84-9e9e-197ccba68dd5')" type="checkbox"><label for="UUID('1345dd75-f7d9-4c84-9e9e-197ccba68dd5')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
-                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2442ebad-737f-407a-9274-9a646381c4c0')" type="checkbox"><label for="UUID('2442ebad-737f-407a-9274-9a646381c4c0')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374e91910 with batch shape () and event shape ()&gt;,
+             trend=PiecewiseLinearTrend(changepoint_interval=300))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('88296b8d-3599-437f-ba58-ce55e29cc75f')" type="checkbox"><label for="UUID('88296b8d-3599-437f-ba58-ce55e29cc75f')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=300)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('42176639-9be8-400f-ba53-12acf93213e1')" type="checkbox"><label for="UUID('42176639-9be8-400f-ba53-12acf93213e1')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
+                         freq='D', prior_scale=0.1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f7bc2b48-026e-46d1-a996-cdc137fc2fd9')" type="checkbox"><label for="UUID('f7bc2b48-026e-46d1-a996-cdc137fc2fd9')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[3],
+                         freq='D', prior_scale=0.05, sp_list=[7])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f5c809d8-e4eb-4c24-98ce-1fc77a824b08')" type="checkbox"><label for="UUID('f5c809d8-e4eb-4c24-98ce-1fc77a824b08')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c4874b1d0 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374fa5cd0 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('8b5aa63e-1b65-44d7-80b1-4ca1525ec68d')" type="checkbox"><label for="UUID('8b5aa63e-1b65-44d7-80b1-4ca1525ec68d')" class="sk-toggleable__label sk-toggleable__label-arrow">awareness_to_sales</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('saturation', Forward(effect_name='latent/awareness')),
-                      ('adstock', WeibullAdstockEffect(max_lag=90))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c74259c8-af27-4667-b36e-801168de94f3')" type="checkbox"><label for="UUID('c74259c8-af27-4667-b36e-801168de94f3')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/awareness')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b0866f81-6bac-475f-9325-b08a0c9a8c4c')" type="checkbox"><label for="UUID('b0866f81-6bac-475f-9325-b08a0c9a8c4c')" class="sk-toggleable__label sk-toggleable__label-arrow">WeibullAdstockEffect</label><div class="sk-toggleable__content"><pre>WeibullAdstockEffect(max_lag=90)</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('08665876-92d6-4a45-ac2b-38c01f97ff14')" type="checkbox"><label for="UUID('08665876-92d6-4a45-ac2b-38c01f97ff14')" class="sk-toggleable__label sk-toggleable__label-arrow">latent/baseline</label><div class="sk-toggleable__content"><pre>SumEffects(effects=[('trend', Forward(effect_name='trend')),
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c20b4c850 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('faadd278-4bc9-4d27-85ac-f0ba62597440')" type="checkbox"><label for="UUID('faadd278-4bc9-4d27-85ac-f0ba62597440')" class="sk-toggleable__label sk-toggleable__label-arrow">awareness_to_sales</label><div class="sk-toggleable__content"><pre>ChainedEffects(steps=[('saturation', Forward(effect_name='latent/awareness')),
+                      ('adstock', WeibullAdstockEffect(max_lag=90))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('2bdcf1d9-2c0c-40cc-a459-8bf9d6c7c5b7')" type="checkbox"><label for="UUID('2bdcf1d9-2c0c-40cc-a459-8bf9d6c7c5b7')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/awareness')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('07cdee8d-7c4b-4716-acdc-1397d2af1bb3')" type="checkbox"><label for="UUID('07cdee8d-7c4b-4716-acdc-1397d2af1bb3')" class="sk-toggleable__label sk-toggleable__label-arrow">WeibullAdstockEffect</label><div class="sk-toggleable__content"><pre>WeibullAdstockEffect(max_lag=90)</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b6cebcad-a809-4e29-b3e2-b8f2281b3dea')" type="checkbox"><label for="UUID('b6cebcad-a809-4e29-b3e2-b8f2281b3dea')" class="sk-toggleable__label sk-toggleable__label-arrow">latent/baseline</label><div class="sk-toggleable__content"><pre>SumEffects(effects=[('trend', Forward(effect_name='trend')),
                     ('yearly_seasonality',
                      Forward(effect_name='yearly_seasonality')),
                     ('weekly_seasonality',
                      Forward(effect_name='weekly_seasonality')),
-                    ('awareness', Forward(effect_name='awareness_to_sales'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c6c2973a-3169-4621-b4d4-250463223d92')" type="checkbox"><label for="UUID('c6c2973a-3169-4621-b4d4-250463223d92')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='trend')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('fe679699-8427-417f-9177-b36de347eb3f')" type="checkbox"><label for="UUID('fe679699-8427-417f-9177-b36de347eb3f')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='yearly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('978a6698-aedb-4aa7-b71d-d151b51d82fc')" type="checkbox"><label for="UUID('978a6698-aedb-4aa7-b71d-d151b51d82fc')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='weekly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('c79ed42d-19ea-47a6-9803-3a62d07c3b1c')" type="checkbox"><label for="UUID('c79ed42d-19ea-47a6-9803-3a62d07c3b1c')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='awareness_to_sales')</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a2279205-eaff-422d-92a8-c95a5daee1f1')" type="checkbox"><label for="UUID('a2279205-eaff-422d-92a8-c95a5daee1f1')" class="sk-toggleable__label sk-toggleable__label-arrow">last_click_spend</label><div class="sk-toggleable__content"><pre>MultiplyEffects(effects=[('hill',
+                    ('awareness', Forward(effect_name='awareness_to_sales'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('16488af6-0be7-4be0-a99d-838cf504d5c3')" type="checkbox"><label for="UUID('16488af6-0be7-4be0-a99d-838cf504d5c3')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='trend')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('6d7e2c47-8deb-4aaa-b68a-c111615ba09a')" type="checkbox"><label for="UUID('6d7e2c47-8deb-4aaa-b68a-c111615ba09a')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='yearly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b4005772-51f5-4de7-8fd5-49c7f82c6d16')" type="checkbox"><label for="UUID('b4005772-51f5-4de7-8fd5-49c7f82c6d16')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='weekly_seasonality')</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3e174896-cfe2-43ba-ae01-42bcdb9bb472')" type="checkbox"><label for="UUID('3e174896-cfe2-43ba-ae01-42bcdb9bb472')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='awareness_to_sales')</pre></div></div></div></div></div><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b223fbab-01a2-4bc1-8216-20e220d83ff7')" type="checkbox"><label for="UUID('b223fbab-01a2-4bc1-8216-20e220d83ff7')" class="sk-toggleable__label sk-toggleable__label-arrow">last_click_spend</label><div class="sk-toggleable__content"><pre>MultiplyEffects(effects=[('hill',
                           HillEffect(effect_mode='additive',
-                                     half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374e91910 with batch shape () and event shape ()&gt;,
+                                     half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c4874b1d0 with batch shape () and event shape ()&gt;,
                                      input_scale=1000000.0,
-                                     max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374fa5cd0 with batch shape () and event shape ()&gt;,
-                                     slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)),
-                         ('baseline', Forward(effect_name='latent/baseline'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('1d915082-8277-490b-baf2-bc13766f1ff1')" type="checkbox"><label for="UUID('1d915082-8277-490b-baf2-bc13766f1ff1')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
-           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374e91910 with batch shape () and event shape ()&gt;,
+                                     max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c20b4c850 with batch shape () and event shape ()&gt;,
+                                     slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)),
+                         ('baseline', Forward(effect_name='latent/baseline'))])</pre></div></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('d6e6e967-1657-474c-ab29-c27f7682ab44')" type="checkbox"><label for="UUID('d6e6e967-1657-474c-ab29-c27f7682ab44')" class="sk-toggleable__label sk-toggleable__label-arrow">HillEffect</label><div class="sk-toggleable__content"><pre>HillEffect(effect_mode='additive',
+           half_max_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c4874b1d0 with batch shape () and event shape ()&gt;,
            input_scale=1000000.0,
-           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f9374fa5cd0 with batch shape () and event shape ()&gt;,
-           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f93ac1caf50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0db9647e-95f7-4051-8dd7-7a2dc0d19cd1')" type="checkbox"><label for="UUID('0db9647e-95f7-4051-8dd7-7a2dc0d19cd1')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/baseline')</pre></div></div></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3841c3f5-e4d2-48b5-9262-2e7d95dafaae')" type="checkbox"><label for="UUID('3841c3f5-e4d2-48b5-9262-2e7d95dafaae')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearProxyLikelihood</label><div class="sk-toggleable__content"><pre>LinearProxyLikelihood(coefficient_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f936095eb10 with batch shape () and event shape ()&gt;,
+           max_effect_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c20b4c850 with batch shape () and event shape ()&gt;,
+           slope_prior=&lt;numpyro.distributions.continuous.InverseGamma object at 0x7f6c2097ba50 with batch shape () and event shape ()&gt;)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b50988c8-2166-4ca3-befc-d38cea4c4c13')" type="checkbox"><label for="UUID('b50988c8-2166-4ca3-befc-d38cea4c4c13')" class="sk-toggleable__label sk-toggleable__label-arrow">Forward</label><div class="sk-toggleable__content"><pre>Forward(effect_name='latent/baseline')</pre></div></div></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('9d2134b9-c077-4535-a445-1032d31d79e0')" type="checkbox"><label for="UUID('9d2134b9-c077-4535-a445-1032d31d79e0')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearProxyLikelihood</label><div class="sk-toggleable__content"><pre>LinearProxyLikelihood(coefficient_prior=&lt;numpyro.distributions.continuous.HalfNormal object at 0x7f6c07e2e1d0 with batch shape () and event shape ()&gt;,
                       effect_name='latent/awareness',
                       reference_df=            latent/awareness
 2001-07-26          0.925163
@@ -1711,13 +1729,13 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 2003-06-26          0.040826
 2001-03-17          0.791952
 
-[180 rows x 1 columns])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('3a6fcdf4-cd6b-413d-9c9d-a6986c9817a5')" type="checkbox"><label for="UUID('3a6fcdf4-cd6b-413d-9c9d-a6986c9817a5')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
+[180 rows x 1 columns])</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('624d8238-b56f-4d30-b22c-b1cc77bbffd2')" type="checkbox"><label for="UUID('624d8238-b56f-4d30-b22c-b1cc77bbffd2')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(num_steps=5000,
                    optimizer=LBFGSSolver(max_linesearch_steps=300,
                                          memory_size=300))</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
 <p>Let’s visualize the predictions of this proxy variable model:</p>
-<div id="fd76252f" class="cell" data-execution_count="13">
+<div id="0127e028" class="cell" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>y_pred_model <span class="op">=</span> model.predict(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">4</span>))</span>
@@ -1736,11 +1754,11 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 </div>
 <p><em>Component-Level Diagnostics</em></p>
 <p>With <code>predict_components</code>, we can obtain the model’s components.</p>
-<div id="b30121a7" class="cell" data-execution_count="14">
+<div id="cc8d978b" class="cell" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>y_pred_components <span class="op">=</span> model.predict_components(X<span class="op">=</span>X, fh<span class="op">=</span>X.index)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>In a real use-casee, you would not have access to the ground truth of the components. We use them here to show how the model behaves, and how incorporing extra information can improve it.</p>
-<div id="efa19f6e" class="cell" data-execution_count="15">
+<div id="b4b97a96" class="cell" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">5</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">12</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, name <span class="kw">in</span> <span class="bu">enumerate</span>(</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    [</span>
@@ -1771,7 +1789,7 @@ P_t \sim \mathcal{N}(\beta Z_t, \sigma^2)
 <section id="comparing-models" class="level2">
 <h2 class="anchored" data-anchor-id="comparing-models">3. Comparing models</h2>
 <p>Here, we do our final comparison of the models, looking at the counterfactual impact of zeroing out the awareness ad spend. This shows how important it is to include the proxy variable to correctly attribute the impact of awareness spend.</p>
-<div id="61060fdf" class="cell" data-execution_count="16">
+<div id="dfccb85a" class="cell" data-execution_count="16">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> plot_compare_models(column):</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    delta_true <span class="op">=</span> get_counterfactual(true_model, X, column)</span>

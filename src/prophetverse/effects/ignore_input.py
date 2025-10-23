@@ -93,4 +93,6 @@ class IgnoreInput(BaseEffect):
         jnp.ndarray
             Zero.
         """
-        return jnp.zeros_like(data)
+        if data is None:
+            return 0
+        return jnp.zeros(data.shape[0])

@@ -130,3 +130,31 @@ def test_ignore_input_effect_panel_data_with_validation_rejects_non_empty_x():
         match="BypassEffect with raise_error=True requires X to be empty",
     ):
         effect.fit(y=y, X=X, scale=1.0)
+
+
+def test_ignore_input_effect_with_multiple_columns(ignore_input_effect, sample_data):
+    """Test IgnoreInput with multiple input columns returns correct shape.
+
+    This test specifically validates the fix for the bug where IgnoreInput
+    was using jnp.zeros_like(data) which preserved the input shape (N, 2)
+    instead of returning (N,) for the effect values.
+    """
+    y, X, _ = sample_data
+
+    # Fit with data containing multiple columns (x1, x2)
+    ignore_input_effect.fit(y=y, X=X, scale=1.0)
+
+    # Transform and predict
+    data = ignore_input_effect.transform(X, fh=X.index[-3:])
+    predicted_effects = {}
+
+    with seed(rng_seed=0):
+        result = ignore_input_effect.predict(
+            data=data, predicted_effects=predicted_effects
+        )
+
+    # Should return zero (scalar), not an array with shape matching input columns
+    expected = jnp.array(0.0)
+    assert jnp.allclose(result, expected)
+    # Verify result is scalar or 1D, not 2D
+    assert result.ndim <= 1 or (result.ndim == 1 and result.shape == (3,))

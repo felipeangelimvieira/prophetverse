@@ -197,4 +197,3 @@ class MCMCInferenceEngine(BaseInferenceEngine):
         
         self.samples_predictive_ = predictive(predict_key, **kwargs)
         return self.samples_predictive_
-        return self.samples_predictive_

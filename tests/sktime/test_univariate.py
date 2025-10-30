@@ -234,3 +234,40 @@ def test_broadcast_does_not_raise_error():
 
     # assert all values are finite
     assert preds.isna().sum().sum() == 0
+
+
+@pytest.mark.smoke
+def test_target_likelihood_as_exogenous_effect():
+    """Test that target likelihoods can be used as exogenous effects.
+
+    This test verifies the fix for the bug where _transform_effects was not
+    receiving the y parameter in _get_fit_data, which prevented target
+    likelihoods from being used as exogenous effects.
+    """
+    from prophetverse.effects.target.univariate import NormalTargetLikelihood
+
+    y = make_y((1,))
+
+    # Create a model with a target likelihood as an exogenous effect
+    model = Prophetverse(
+        trend="linear",
+        exogenous_effects=[
+            (
+                "target_likelihood",
+                NormalTargetLikelihood(noise_scale=0.1),
+                None,  # No regex pattern, applies to y
+            )
+        ],
+        inference_engine=MAPInferenceEngine(
+            optimizer=AdamOptimizer(), num_steps=1, num_samples=1
+        ),
+    )
+
+    # This should not raise an error - the bug would cause AttributeError
+    # when trying to call y.copy() on None
+    model.fit(y=y)
+    preds = model.predict(fh=[1, 2, 3])
+
+    # Verify predictions are valid
+    assert preds is not None
+    assert not preds.isna().any().any()

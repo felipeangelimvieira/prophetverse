@@ -250,7 +250,7 @@ class Prophetverse(BaseProphetForecaster):
         target_data = self.likelihood_model_.transform(X=y, fh=fh)
 
         self._fit_effects(X, y)
-        exogenous_data = self._transform_effects(X, fh=fh)
+        exogenous_data = self._transform_effects(X, fh=fh, y=y)
 
         if y.index.nlevels > 1:
             # Panel data

@@ -95,4 +95,4 @@ class IgnoreInput(BaseEffect):
         """
         if data is None:
             return 0
-        return jnp.zeros(data.shape[0])
+        return jnp.zeros((data.shape[0], 1))

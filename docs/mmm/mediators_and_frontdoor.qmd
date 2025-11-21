@@ -1,0 +1,84 @@
+---
+title: "Mediator variables, sales funnel and frontdoor adjustment"
+description: "**Front-door adjustment on-the-fly**"
+---
+
+```{python}
+import numpy as np
+import pandas as pd
+
+# Simulate data
+rng = np.random.default_rng(42)
+n_periods = 1000
+date_range = pd.period_range(start="2020-01-01", periods=n_periods, freq="D")
+data = pd.DataFrame(index=date_range)
+data["upper_funnel"] = rng.normal(loc=10, scale=100, size=n_periods).cumsum()
+data["mid_funnel"] = data["upper_funnel"] * rng.uniform(
+    0.1, 0.3, size=n_periods
+) + rng.normal(loc=0, scale=50, size=n_periods)
+data["lower_funnel"] = data["mid_funnel"] * rng.uniform(
+    0.2, 0.5, size=n_periods
+) + rng.normal(loc=0, scale=30, size=n_periods)
+data["sales"] = data["lower_funnel"] * rng.uniform(
+    0.3, 0.7, size=n_periods
+) + rng.normal(loc=0, scale=20, size=n_periods)
+data["sales"] *= 130  # Scale sales
+data = data.clip(lower=0)  # Ensure no negative values
+
+X, y = data.drop(columns=["sales"]), data["sales"]
+
+y.plot.line()
+
+X.plot.line(figsize=(10, 6))
+```
+
+
+```{python}
+
+from prophetverse import (
+    Prophetverse,
+    PiecewiseLinearTrend,
+    Identity,
+    GeometricAdstockEffect,
+    ChainedEffects,
+    PriorPredictiveInferenceEngine,
+)
+from prophetverse.utils.regex import exact
+
+model = Prophetverse(
+    trend = PiecewiseLinearTrend(changepoint_interval=300, global_rate_prior_loc=0.001),
+    # Apply a geometric adstock between funnel stages to model carryover.
+    # We chain an adstock effect first (handles transforming X -> array)
+    # and then an Identity effect so downstream code treats the output as a
+    # regular effect. This mirrors common usage where adstock is applied
+    # before a linear / mapping effect.
+    exogenous_effects=[
+        (
+            "latent/upper_funnel",
+            ChainedEffects([
+                ("adstock", GeometricAdstockEffect()),
+                ("identity", Identity()),
+            ]),
+            exact("upper_funnel"),
+        ),
+        (
+            "latent/mid_funnel",
+            ChainedEffects([
+                ("adstock", GeometricAdstockEffect()),
+                ("identity", Identity()),
+            ]),
+            exact("mid_funnel"),
+        ),
+        (
+            "latent/lower_funnel",
+            ChainedEffects([
+                ("adstock", GeometricAdstockEffect()),
+                ("identity", Identity()),
+            ]),
+            exact("lower_funnel"),
+        ),
+    ],
+    inference_engine=PriorPredictiveInferenceEngine()
+)
+
+```

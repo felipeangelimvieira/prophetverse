@@ -22,6 +22,7 @@ from .constant import Constant
 from .forward import Forward
 from .trend import PiecewiseLinearTrend, PiecewiseLogisticTrend, FlatTrend
 from .operations import MultiplyEffects, SumEffects
+from .identity import Identity
 
 __all__ = [
     "BaseEffect",
@@ -48,4 +49,5 @@ __all__ = [
     "MultiplyEffects",
     "SumEffects",
     "Constant",
+    "Identity",
 ]

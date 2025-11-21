@@ -62,7 +62,7 @@ class IgnoreInput(BaseEffect):
         """
         if self.raise_error and X is not None and len(X.columns) > 0:
             raise ValueError(
-                f"BypassEffect with raise_error=True requires X to be empty "
+                f"IgnoreInput with raise_error=True requires X to be empty "
                 f"(no columns), but X has {len(X.columns)} columns: {list(X.columns)}"
             )
 
@@ -93,4 +93,6 @@ class IgnoreInput(BaseEffect):
         jnp.ndarray
             Zero.
         """
-        return jnp.zeros_like(data)
+        if data is None:
+            raise ValueError("Data cannot be None in _predict method.")
+        return jnp.zeros((data.shape[0], 1))

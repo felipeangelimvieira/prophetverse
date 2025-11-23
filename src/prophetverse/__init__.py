@@ -24,6 +24,8 @@ from .effects import (
     Forward,
     IgnoreInput,
     Identity,
+    Constant,
+    CoupledExactLikelihood,
 )
 from .engine import (
     MAPInferenceEngine,
@@ -78,6 +80,8 @@ __all__ = [
     "BetaTargetLikelihood",
     "IgnoreInput",
     "Identity",
+    "Constant",
+    "CoupledExactLikelihood",
     # Engine
     "MAPInferenceEngine",
     "MCMCInferenceEngine",

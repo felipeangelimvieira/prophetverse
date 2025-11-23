@@ -4,81 +4,357 @@ description: "**Front-door adjustment on-the-fly**"
 ---
 
 ```{python}
+# | code-fold: true
+
+from prophetverse import (
+    Prophetverse,
+    Constant,
+    LinearFourierSeasonality,
+    GeometricAdstockEffect,
+    MultiplyEffects,
+    Forward,
+    IgnoreInput,
+    MichaelisMentenEffect,
+    PriorPredictiveInferenceEngine,
+    ChainedEffects,
+)
+from prophetverse.utils.regex import exact
+import numpyro.distributions as dist
 import numpy as np
 import pandas as pd
 
-# Simulate data
+# Synthetic data
+
+
 rng = np.random.default_rng(42)
-n_periods = 1000
-date_range = pd.period_range(start="2020-01-01", periods=n_periods, freq="D")
-data = pd.DataFrame(index=date_range)
-data["upper_funnel"] = rng.normal(loc=10, scale=100, size=n_periods).cumsum()
-data["mid_funnel"] = data["upper_funnel"] * rng.uniform(
-    0.1, 0.3, size=n_periods
-) + rng.normal(loc=0, scale=50, size=n_periods)
-data["lower_funnel"] = data["mid_funnel"] * rng.uniform(
-    0.2, 0.5, size=n_periods
-) + rng.normal(loc=0, scale=30, size=n_periods)
-data["sales"] = data["lower_funnel"] * rng.uniform(
-    0.3, 0.7, size=n_periods
-) + rng.normal(loc=0, scale=20, size=n_periods)
-data["sales"] *= 130  # Scale sales
-data = data.clip(lower=0)  # Ensure no negative values
+n = 356
+idx = pd.period_range(start="2020-01-01", periods=n, freq="D")
+X = pd.DataFrame(index=idx)
+X["investment"] = rng.normal(loc=500, scale=100, size=n).clip(min=0)
+# Smooth a little
+X["investment"] = X["investment"].rolling(window=7, min_periods=1).mean()
 
-X, y = data.drop(columns=["sales"]), data["sales"]
 
-y.plot.line()
+true_model = Prophetverse(
+    trend=Constant(prior=dist.Delta(1000.0)),
+    inference_engine=PriorPredictiveInferenceEngine(),
+    exogenous_effects=[
+        (
+            "latent/seasonality",
+            LinearFourierSeasonality(
+                sp_list=[30.25], fourier_terms_list=[1], freq="D", prior_scale=0.5
+            ),
+            None,
+        ),
+        (
+            "seasonality",
+            MultiplyEffects(
+                effects=[
+                    ("trend", Forward("trend")),
+                    ("seasonality", Forward("latent/seasonality")),
+                ]
+            ),
+            None,
+        ),
+        (
+            "latent/visits",
+            MultiplyEffects(
+                effects=[
+                    ("trend", Forward("trend")),
+                    (
+                        "investment",
+                        ChainedEffects(
+                            steps=[
+                                (
+                                    "adstock",
+                                    GeometricAdstockEffect(
+                                        decay_prior=dist.Delta(0.5),
+                                        normalize=True,
+                                    ),
+                                ),
+                                (
+                                    "saturation",
+                                    MichaelisMentenEffect(
+                                        "additive",
+                                        max_effect_prior=dist.Delta(2.1),
+                                        half_saturation_prior=dist.Delta(400.0),
+                                    ),
+                                ),
+                            ]
+                        ),
+                    ),
+                ],
+            ),
+            exact("investment"),
+        ),
+        (
+            "visit_sales",
+            MultiplyEffects(
+                effects=[
+                    ("awareness", Forward("latent/visits")),
+                    (
+                        "conversion",
+                        Constant(prior=dist.Delta(0.5)),
+                    ),
+                ]
+            ),
+            None,
+        ),
+    ],
+)
 
-X.plot.line(figsize=(10, 6))
+# The y will be ignored - we just want to sample from the prior predictive
+true_model.fit(y=pd.Series(index=idx, data=0), X=X)
+components = true_model.predict_components(X=X, fh=X.index)
+
+y = components["obs"].to_frame("sales") * rng.normal(
+    loc=1.0, scale=0.01, size=n
+).reshape((-1, 1))
+X["visits"] = components["latent/visits"]
 ```
 
 
 ```{python}
+import matplotlib.pyplot as plt
+fig, axs = plt.subplots(figsize=(10, 6), nrows=3, sharex=True)
+y.plot(ax=axs[0], title="Sales", color="C0")
+axs[0].set_ylabel("Sales")
 
+X["visits"].plot(ax=axs[1], title="Visits", color="C1")
+axs[1].set_ylabel("Visits")
+X["investment"].plot(ax=axs[2], title="Ad Investment", color="C2")
+axs[2].set_ylabel("Investment")
+plt.tight_layout()
+plt.show()
+```
+
+
+```{python}
 from prophetverse import (
     Prophetverse,
-    PiecewiseLinearTrend,
-    Identity,
+    Constant,
+    LinearFourierSeasonality,
     GeometricAdstockEffect,
+    MultiplyEffects,
+    Forward,
+    IgnoreInput,
+    MichaelisMentenEffect,
+    MAPInferenceEngine,
     ChainedEffects,
-    PriorPredictiveInferenceEngine,
+    FlatTrend,
+    CoupledExactLikelihood,
+    Identity,
 )
 from prophetverse.utils.regex import exact
+import numpyro.distributions as dist
+import numpy as np
+import pandas as pd
+import numpyro
 
-model = Prophetverse(
-    trend = PiecewiseLinearTrend(changepoint_interval=300, global_rate_prior_loc=0.001),
-    # Apply a geometric adstock between funnel stages to model carryover.
-    # We chain an adstock effect first (handles transforming X -> array)
-    # and then an Identity effect so downstream code treats the output as a
-    # regular effect. This mirrors common usage where adstock is applied
-    # before a linear / mapping effect.
-    exogenous_effects=[
+numpyro.enable_x64()
+```
+
+
+```{python}
+def get_treatment_effect(model, X):
+    # True model (unobserved)
+    y_true_cf_0 = model.predict(X=X.assign(investment=0.0), fh=X.index)
+    y_true_cf_1 = model.predict(X=X, fh=X.index)
+    return y_true_cf_1 - y_true_cf_0
+
+delta_true = get_treatment_effect(true_model, X)
+```
+
+## Naive model - using mediator as input
+
+```{python}
+from prophetverse import (
+    Prophetverse,
+    Constant,
+    LinearFourierSeasonality,
+    GeometricAdstockEffect,
+    MultiplyEffects,
+    Forward,
+    IgnoreInput,
+    MichaelisMentenEffect,
+    MAPInferenceEngine,
+    ChainedEffects,
+    FlatTrend,
+    CoupledExactLikelihood,
+    Identity,
+    LinearEffect,
+)
+from prophetverse.utils.regex import exact
+import numpyro.distributions as dist
+import numpy as np
+import pandas as pd
+import numpyro
+
+numpyro.enable_x64()
+```
+
+```{python}
+
+seasonality = (
+    "seasonality",
+    MultiplyEffects(
+        effects=[
+            ("trend", Forward("trend")),
+            (
+                "seasonality",
+                LinearFourierSeasonality(
+                    sp_list=[30.25],
+                    fourier_terms_list=[1],
+                    freq="D",
+                    prior_scale=0.1,
+                ),
+            ),
+        ]
+    ),
+    None,
+)
+
+
+investment_saturation_adstock = MultiplyEffects(
+    effects=[
+        ("trend", Forward("trend")),
         (
-            "latent/upper_funnel",
-            ChainedEffects([
-                ("adstock", GeometricAdstockEffect()),
-                ("identity", Identity()),
-            ]),
-            exact("upper_funnel"),
-        ),
-        (
-            "latent/mid_funnel",
-            ChainedEffects([
-                ("adstock", GeometricAdstockEffect()),
-                ("identity", Identity()),
-            ]),
-            exact("mid_funnel"),
-        ),
-        (
-            "latent/lower_funnel",
-            ChainedEffects([
-                ("adstock", GeometricAdstockEffect()),
-                ("identity", Identity()),
-            ]),
-            exact("lower_funnel"),
+            "investment",
+            ChainedEffects(
+                steps=[
+                    (
+                        "adstock",
+                        GeometricAdstockEffect(
+                            decay_prior=dist.InverseGamma(4, 2),
+                            normalize=True,
+                        ),
+                    ),
+                    (
+                        "saturation",
+                        MichaelisMentenEffect(
+                            "additive",
+                            max_effect_prior=dist.HalfNormal(1),
+                            half_saturation_prior=dist.HalfNormal(400),
+                        ),
+                    ),
+                ]
+            ),
         ),
     ],
-    inference_engine=PriorPredictiveInferenceEngine()
 )
+```
+
+```{python}
+
+naive_model = Prophetverse(
+    trend=FlatTrend(changepoint_prior_scale=1000),
+    inference_engine=MAPInferenceEngine(progress_bar=True),
+    exogenous_effects=[
+        # Multiplicative seasonality
+        #seasonality,
+        # Investment
+        (
+            "investment",
+            investment_saturation_adstock,
+            exact("investment"),
+        ),
+        # Visits
+        (
+            "visit_sales",
+            LinearEffect("additive", prior=dist.Beta(2, 2)),
+            exact("visits"),
+        ),
+    ],
+    scale=1,
+)
+
+naive_model.fit(y=y, X=X)
+```
+
+
+```{python}
+delta_naive = get_treatment_effect(naive_model, X)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+delta_true.plot(ax=ax, label="True Counterfactual Effect", color="C0")
+delta_naive["sales"].plot(ax=ax, label="Naive Estimated Counterfactual Effect", color="C1", linestyle="--")
+ax.set_title("Sales Prediction without Front-door Adjustment")
+ax.set_ylabel("Sales")
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+```
+
+
+## Front-door adjustment model
+
+```{python}
+
+
+model = Prophetverse(
+    trend=FlatTrend(changepoint_prior_scale=1000),
+    inference_engine=MAPInferenceEngine(progress_bar=True),
+    exogenous_effects=[
+        # Multiplicative seasonality
+        #seasonality,
+        # Now, the investment creates a latent component of "visits"
+        (
+            "latent/visits",
+            investment_saturation_adstock,
+            exact("investment"),
+        ),
+        # We use identity to put the mediator as a latent component
+        (
+            "latent/visit_input",
+            Identity(),
+            exact("visits"),
+        ),
+        # Both latent components should be coupled
+        (
+            "latent/coupled_likelihood",
+            CoupledExactLikelihood(
+                source_effect_name="latent/visits",
+                target_effect_name="latent/visit_input",
+                prior_scale=0.1,
+            ),
+            None,
+        ),
+        # We then convert the latent component to sales
+        (
+            "visit_sales",
+            MultiplyEffects(
+                effects=[
+                    ("awareness", Forward("latent/visits")),
+                    (
+                        "conversion",
+                        Constant(prior=dist.Beta(2, 2)),
+                    ),
+                ]
+            ),
+            None,
+        ),
+    ],
+    scale=1,
+)
+
+
+model.fit(y=y, X=X)
+```
+
+
+
+```{python}
+delta_frontdoor = get_treatment_effect(model, X)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+delta_true.plot(ax=ax, label="True Counterfactual Effect", color="C0")
+delta_naive["sales"].plot(ax=ax, label="Naive Estimated Counterfactual Effect", color="C1", linestyle="--")
+delta_frontdoor["sales"].plot(ax=ax, label="Front-door Estimated Counterfactual Effect", color="C2", linestyle="--")
+ax.set_title("Sales Prediction with Front-door Adjustment")
+ax.set_ylabel("Sales")
+ax.legend()
+plt.tight_layout()
+plt.show()
 
 ```

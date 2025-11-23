@@ -95,4 +95,4 @@ class IgnoreInput(BaseEffect):
         """
         if data is None:
             raise ValueError("Data cannot be None in _predict method.")
-        return jnp.zeros((data.shape[0], 1))
+        return jnp.zeros((data.shape[0], 1)).astype(jnp.float32)

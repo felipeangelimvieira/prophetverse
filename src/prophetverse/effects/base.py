@@ -550,9 +550,12 @@ class BaseEffect(BaseObject):
                 # Get init args of param_value
                 init_args = param_value.__init__.__code__.co_varnames[1:]
                 for argname in init_args:
-                    distribution_params[param_name + "__" + argname] = getattr(
-                        param_value, argname
-                    )
+                    try:
+                        distribution_params[param_name + "__" + argname] = getattr(
+                            param_value, argname
+                        )
+                    except AttributeError:
+                        pass
         return distribution_params
 
     def get_params(self, deep=True):

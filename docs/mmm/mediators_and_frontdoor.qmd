@@ -286,7 +286,7 @@ naive_model = Prophetverse(
     inference_engine=MAPInferenceEngine(progress_bar=True),
     exogenous_effects=[
         # Multiplicative seasonality
-        # seasonality,
+        seasonality,
         # Investment
         (
             "investment",
@@ -326,16 +326,6 @@ plt.show()
 
 ```
 
-The plot above shows that the Front-door adjustment model (Green) recovers the True Counterfactual Effect (Blue) much better than the Naive model (Orange).
-
-By explicitly modeling the mechanism `Investment -> Visits -> Sales`, we can:
-
-1.  Use the `visits` data to constrain the model and reduce uncertainty.
-2.  Correctly attribute the sales lift to the original investment.
-3.  Estimate the conversion rate from visits to sales separately from the effect of investment on visits.
-
-This approach is powerful for MMM when you have rich funnel data and want to understand the full impact of your marketing activities.
-
 As we can see, the naive model significantly underestimates the effect of investment. It attributes the sales to visits, ignoring that investment *caused* those visits.
 
 ## Front-door adjustment model
@@ -367,7 +357,7 @@ model = Prophetverse(
     inference_engine=MAPInferenceEngine(progress_bar=True),
     exogenous_effects=[
         # Multiplicative seasonality
-        #seasonality,
+        seasonality,
         # Now, the investment creates a latent component of "visits"
         (
             "latent/visits",

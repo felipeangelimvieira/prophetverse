@@ -4,13 +4,13 @@ The VIInferenceEngine class performs Variational Inference using SVI with
 configurable autoguides specified as string parameters.
 """
 
-from typing import Optional, Union, Callable
+from ast import Call
+from typing import Callable, Optional, Union
 
 import jax.numpy as jnp
 import numpyro
 from numpyro.infer import SVI, Trace_ELBO
 from numpyro.infer.autoguide import (
-    AutoGuide,
     AutoDiagonalNormal,
     AutoLowRankMultivariateNormal,
     AutoMultivariateNormal,
@@ -21,8 +21,8 @@ from numpyro.infer.svi import SVIRunResult
 
 from prophetverse.engine.base import BaseInferenceEngine
 from prophetverse.engine.optimizer.optimizer import (
-    CosineScheduleAdamOptimizer,
     BaseOptimizer,
+    CosineScheduleAdamOptimizer,
 )
 
 _DEFAULT_PREDICT_NUM_SAMPLES = 1000
@@ -41,8 +41,9 @@ class VIInferenceEngine(BaseInferenceEngine):
     """
     Variational Inference Engine.
 
-    This class performs Variational Inference using Stochastic Variational Inference (SVI)
-    with configurable autoguides. It provides methods for inference and prediction.
+    This class performs Variational Inference using Stochastic Variational Inference
+    (SVI) with configurable autoguides. It provides methods for inference and
+    prediction.
 
     Parameters
     ----------
@@ -62,7 +63,8 @@ class VIInferenceEngine(BaseInferenceEngine):
     rng_key : optional
         The random number generator key.
     progress_bar : bool, optional
-        Whether to display a progress bar during inference. Default is DEFAULT_PROGRESS_BAR.
+        Whether to display a progress bar during inference. Default is
+        DEFAULT_PROGRESS_BAR.
     stable_update : bool, optional
         Whether to use stable update during inference. Default is False.
     forward_mode_differentiation : bool, optional
@@ -70,7 +72,8 @@ class VIInferenceEngine(BaseInferenceEngine):
     init_scale : float, optional
         The scale for initializing the parameters. Default is 0.1.
     init_loc_fn : optional
-        The function to initialize the location parameter. If not provided, the default is init_to_mean.
+        The function to initialize the location parameter. If not provided, the default
+        is init_to_mean.
 
     """
 
@@ -80,7 +83,9 @@ class VIInferenceEngine(BaseInferenceEngine):
 
     def __init__(
         self,
-        guide: Optional[Union[str, Callable]] = "AutoDiagonalNormal",
+        guide: Optional[
+            Union[str, Callable[[Callable], Callable]]
+        ] = "AutoDiagonalNormal",
         optimizer: Optional[BaseOptimizer] = None,
         num_steps=10_000,
         num_samples=_DEFAULT_PREDICT_NUM_SAMPLES,
@@ -103,7 +108,7 @@ class VIInferenceEngine(BaseInferenceEngine):
         super().__init__(rng_key)
 
         # Validate guide parameter
-        if guide not in GUIDE_MAP:
+        if isinstance(guide, str) and guide not in GUIDE_MAP:
             available_guides = list(GUIDE_MAP.keys())
             raise ValueError(
                 f"Unknown guide '{guide}'. Available guides: {available_guides}"
@@ -113,12 +118,6 @@ class VIInferenceEngine(BaseInferenceEngine):
             optimizer = CosineScheduleAdamOptimizer()
 
         self._optimizer = optimizer
-        self._guide_class = GUIDE_MAP[guide] if isinstance(guide, str) else None
-
-        self._init_loc_fn = init_loc_fn
-        if init_loc_fn is None:
-            self._init_loc_fn = init_to_mean()
-
         self._num_steps = num_steps
 
         if self._optimizer.get_tag("is_solver", False):  # type: ignore[union-attr]
@@ -129,6 +128,27 @@ class VIInferenceEngine(BaseInferenceEngine):
                 self._num_steps
             )
             self._num_steps = 1
+
+    def _build_guide(self, model: Callable) -> Callable:
+        """
+        Build the guide function based on the specified guide type.
+
+        Returns
+        -------
+        Callable[[...], None]
+            The constructed guide function.
+        """
+        if isinstance(self.guide, str):
+            guide_class = GUIDE_MAP[self.guide]
+            return guide_class(
+                model,
+                init_loc_fn=self.init_loc_fn or init_to_mean(),
+                init_scale=self.init_scale,
+            )
+        elif callable(self.guide):
+            return self.guide(model)
+        else:
+            raise ValueError("Invalid guide type. Must be a string or callable.")
 
     def _infer(self, **kwargs):
         """
@@ -144,9 +164,7 @@ class VIInferenceEngine(BaseInferenceEngine):
         self
             The updated VIInferenceEngine object.
         """
-        self.guide_ = self._guide_class(
-            self.model_, init_loc_fn=self._init_loc_fn, init_scale=self.init_scale
-        )
+        self.guide_ = self._build_guide(self.model_)
 
         def get_result(
             rng_key,

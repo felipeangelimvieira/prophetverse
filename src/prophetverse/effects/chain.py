@@ -25,6 +25,7 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
         "requires_X": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
         "named_object_parameters": "named_steps",
+        "capability:budget_optimization": True,
     }
 
     def __init__(self, steps: List[Tuple[str, BaseEffect]]):

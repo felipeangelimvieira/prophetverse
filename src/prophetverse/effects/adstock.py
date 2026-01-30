@@ -29,6 +29,8 @@ class BaseAdstockEffect(BaseEffect):
         "requires_X": True,
         "requires_fit_before_transform": True,
         "filter_indexes_with_forecating_horizon_at_transform": True,
+        # Supports gradients and budget optimization?
+        "capability:budget_optimization": True,
     }
 
     def __init__(self, raise_error_if_fh_changes: bool = False):

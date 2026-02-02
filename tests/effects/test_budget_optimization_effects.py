@@ -2,6 +2,23 @@
 
 This module tests that specific effect combinations work correctly
 with the BudgetOptimizer.
+
+KNOWN ISSUES
+------------
+ChainedEffects with adstock as the second (or later) effect have gradient
+flow issues during budget optimization. This is because:
+
+1. ChainedEffects._transform only calls the FIRST effect's transform
+2. Adstock effects return a tuple (data_with_history, indices) from transform
+3. When adstock is NOT first, the transform returns only horizon data without
+   full history, which breaks adstock's carryover computation
+
+Workaround: Always place adstock effects FIRST in ChainedEffects for budget
+optimization to work correctly:
+  - ✅ ChainedEffects(steps=[("adstock", GeometricAdstockEffect()), ("saturation", HillEffect())])
+  - ❌ ChainedEffects(steps=[("saturation", HillEffect()), ("adstock", GeometricAdstockEffect())])
+
+See: src/prophetverse/effects/chain.py - _transform method
 """
 
 import jax.numpy as jnp
@@ -160,11 +177,11 @@ EFFECT_TEST_CASES = [
     ),
 ]
 
-# Effects that have known issues with budget optimization but pass gradient flow tests
-# These are separated so we can mark only the budget optimization tests as xfail
-EFFECT_TEST_CASES_WITH_KNOWN_ISSUES = [
+# Effects with adstock in non-first position
+# These work in budget optimization (thanks to ChainedEffects._predict handling)
+# but fail in isolated gradient flow tests (which don't use _predict)
+EFFECT_TEST_CASES_ADSTOCK_SECOND = [
     # Chained effects: Saturation + Adstock (reversed order)
-    # Note: These combinations currently have issues with budget optimization
     pytest.param(
         ChainedEffects(
             steps=[
@@ -181,12 +198,8 @@ EFFECT_TEST_CASES_WITH_KNOWN_ISSUES = [
             ]
         ),
         id="ChainedHill-Adstock",
-        marks=pytest.mark.xfail(
-            reason="Saturation->Adstock order has gradient flow issues in budget optimization"
-        ),
     ),
     # Chained effects: Linear + Adstock
-    # Note: Linear->Adstock order has gradient flow issues in budget optimization
     pytest.param(
         ChainedEffects(
             steps=[
@@ -198,14 +211,11 @@ EFFECT_TEST_CASES_WITH_KNOWN_ISSUES = [
             ]
         ),
         id="ChainedLinear-Adstock",
-        marks=pytest.mark.xfail(
-            reason="Linear->Adstock order has gradient flow issues in budget optimization"
-        ),
     ),
 ]
 
-# All effects for all tests (budget optimization tests will xfail for known issues)
-ALL_EFFECT_TEST_CASES = EFFECT_TEST_CASES + EFFECT_TEST_CASES_WITH_KNOWN_ISSUES
+# All effects for budget optimization tests (all should pass)
+ALL_EFFECT_TEST_CASES = EFFECT_TEST_CASES + EFFECT_TEST_CASES_ADSTOCK_SECOND
 
 
 class TestBudgetOptimizationEffects:

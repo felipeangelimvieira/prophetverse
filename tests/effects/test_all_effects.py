@@ -53,6 +53,7 @@ class TestAllEffects(TestAllObjects):
         "hierarchical_prophet_compliant",
         "capability:panel",
         "capability:multivariate_input",
+        "capability:budget_optimization",
         "requires_X",
         "applies_to",
         "filter_indexes_with_forecating_horizon_at_transform",

@@ -194,10 +194,27 @@ class LiftExperimentLikelihood(BaseEffect):
         return x
 
     def _update_data(self, data, arr):
-        data["inner_effect_data"] = self.effect_._update_data(
+        if isinstance(data, list):
+            if self._broadcasted == "columns":
+                return [
+                    self.effects_[self.columns_[i]]._update_data(
+                        d, arr[:, i].reshape((-1, 1))
+                    )
+                    for i, d in enumerate(data)
+                ]
+            if self._broadcasted == "panel":
+                return [
+                    self.effects_[self.idxs_[i]]._update_data(d, arr[i])
+                    for i, d in enumerate(data)
+                ]
+        if not isinstance(data, dict):
+            return super()._update_data(data, arr)
+
+        updated = data.copy()
+        updated["inner_effect_data"] = self.effect_._update_data(
             data["inner_effect_data"], arr
         )
-        return data
+        return updated
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

@@ -8,6 +8,11 @@ from .exact_likelihood import ExactLikelihood
 from .fourier import LinearFourierSeasonality
 from .hill import HillEffect
 from .geo_hill import GeoHillEffect
+from .panel import (
+    GeoMichaelisMentenEffect,
+    GeoGeometricAdstockEffect,
+    GeoWeibullAdstockEffect,
+)
 from .lift_likelihood import LiftExperimentLikelihood
 from .linear import LinearEffect
 from .roi_likelihood import ROILikelihood
@@ -33,6 +38,9 @@ __all__ = [
     "IgnoreInput",
     "HillEffect",
     "GeoHillEffect",
+    "GeoMichaelisMentenEffect",
+    "GeoGeometricAdstockEffect",
+    "GeoWeibullAdstockEffect",
     "LinearEffect",
     "LogEffect",
     "MichaelisMentenEffect",

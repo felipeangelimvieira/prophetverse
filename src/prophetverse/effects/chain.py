@@ -42,7 +42,23 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
                     f"Invalid type {type(val)} for step {i}. Must be a tuple or BaseEffect."
                 )
 
-        self.set_tags(**{"requires_X": steps[0][1].get_tag("requires_X", False)})
+        # Propagate tags from inner effects
+        all_panel = all(
+            effect.get_tag("capability:panel", False)
+            for _, effect in self.named_steps
+        )
+        any_hyperpriors = any(
+            effect.get_tag("feature:panel_hyperpriors", False)
+            for _, effect in self.named_steps
+        )
+
+        self.set_tags(
+            **{
+                "requires_X": steps[0][1].get_tag("requires_X", False),
+                "capability:panel": all_panel,
+                "feature:panel_hyperpriors": any_hyperpriors,
+            }
+        )
 
     def _fit(self, y: Any, X: Any, scale: float = 1.0):
         """
@@ -117,6 +133,10 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
     def get_test_params(cls, parameter_set="default"):
         from prophetverse.effects.linear import LinearEffect
         from prophetverse.effects.adstock import GeometricAdstockEffect
+        from prophetverse.effects.panel.geo_hill import GeoHillEffect
+        from prophetverse.effects.panel.geo_geometric_adstock import (
+            GeoGeometricAdstockEffect,
+        )
 
         return [
             {
@@ -129,6 +149,12 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
                 "steps": [
                     ("linear", LinearEffect()),
                     ("adstock", GeometricAdstockEffect()),
+                ]
+            },
+            {
+                "steps": [
+                    ("adstock", GeoGeometricAdstockEffect()),
+                    ("hill", GeoHillEffect()),
                 ]
             },
         ]

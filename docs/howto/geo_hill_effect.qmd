@@ -1,0 +1,319 @@
+---
+title: "GeoHillEffect: Panel Hill Saturation"
+description: "*Learn how to use the GeoHillEffect for modelling saturation curves across multiple series with shared or per-series parameters.*"
+---
+
+The `GeoHillEffect` applies a [Hill saturation function](https://en.wikipedia.org/wiki/Hill_equation_(biochemistry)) to panel (multi-series) data. Each parameter — `half_max`, `slope`, and `max_effect` — can be independently configured to be **shared** across all series or estimated **per-series** with hierarchical (partial-pooling) priors.
+
+$$
+f(x) = \frac{\text{max\_effect}}{1 + \left(\frac{x}{\text{half\_max}}\right)^{-\text{slope}}}
+$$
+
+This is especially useful in **Marketing Mix Modeling** when you have spend data across multiple regions or channels and want to model diminishing returns while controlling how much information is pooled.
+
+```{python}
+# | echo: false
+import warnings
+warnings.filterwarnings("ignore")
+```
+
+## Synthetic panel dataset
+
+We start by creating a synthetic panel dataset with three series ("A", "B", "C"). Each series has a linear trend, yearly seasonality, and a saturating response to an exogenous `spend` variable — with **different** saturation parameters per series.
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+N_SERIES = 3
+T = 200
+SERIES_NAMES = ["Region_A", "Region_B", "Region_C"]
+
+# True Hill parameters per series
+TRUE_HALF_MAX = [0.4, 0.6, 0.5]
+TRUE_SLOPE = [2.0, 3.0, 1.5]
+TRUE_MAX_EFFECT = [5.0, 8.0, 3.0]
+
+dates = pd.date_range("2020-01-01", periods=T, freq="W")
+
+rows_y = []
+rows_x = []
+
+for i, name in enumerate(SERIES_NAMES):
+    t = np.arange(T)
+    trend = 10 + 0.02 * t
+    seasonality = 2 * np.sin(2 * np.pi * t / 52)
+
+    # Random spend ~ Uniform(0, 1), clipped
+    spend = np.random.uniform(0.05, 1.0, size=T)
+
+    # Hill response
+    hill = TRUE_MAX_EFFECT[i] / (
+        1 + (spend / TRUE_HALF_MAX[i]) ** (-TRUE_SLOPE[i])
+    )
+
+    noise = np.random.normal(0, 0.3, size=T)
+    y_vals = trend + seasonality + hill + noise
+
+    idx = pd.MultiIndex.from_arrays(
+        [[name] * T, dates], names=["series", "date"]
+    )
+    rows_y.append(pd.DataFrame({"y": y_vals}, index=idx))
+    rows_x.append(pd.DataFrame({"spend": spend}, index=idx))
+
+y = pd.concat(rows_y)
+X = pd.concat(rows_x)
+
+display(y.head(6))
+display(X.head(6))
+```
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(ax=ax, legend=False)
+    ax.set_title(name)
+axes[0].set_ylabel("y")
+fig.suptitle("Synthetic panel series", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## Train / test split
+
+```{python}
+from sktime.split import temporal_train_test_split
+
+y_train, y_test, X_train, X_test = temporal_train_test_split(
+    y, X, test_size=26  # last 26 weeks
+)
+print("Train:", y_train.shape, "| Test:", y_test.shape)
+```
+
+## Model with shared parameters
+
+In the simplest configuration every Hill parameter is **shared** across series. This is a strong assumption — it says that all regions saturate identically — but uses the most data per parameter.
+
+```{python}
+import numpyro
+import numpyro.distributions as dist
+
+from prophetverse.effects import LinearFourierSeasonality
+from prophetverse.effects.geo_hill import GeoHillEffect
+from prophetverse.effects.trend import PiecewiseLinearTrend
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.optimizer import LBFGSSolver
+from prophetverse.sktime import Prophetverse
+from prophetverse.utils.regex import exact, no_input_columns
+
+numpyro.enable_x64()
+
+shared_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            GeoHillEffect(
+                half_max_prior=dist.HalfNormal(1),
+                slope_prior=dist.HalfNormal(5),
+                max_effect_prior=dist.HalfNormal(10),
+                shared_half_max=True,
+                shared_slope=True,
+                shared_max_effect=True,
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+shared_model.fit(y=y_train, X=X_train)
+shared_model
+```
+
+### Predictions (shared)
+
+```{python}
+y_pred_shared = shared_model.predict(fh=y_test.index.get_level_values(-1).unique(), X=X_test)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y_train.loc[name].iloc[-52:].plot(ax=ax, label="train", color="black", alpha=0.5)
+    y_test.loc[name].plot(ax=ax, label="test", color="black")
+    y_pred_shared.loc[name].plot(ax=ax, label="prediction", color="tab:blue")
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Shared GeoHillEffect — predictions", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## Model with per-series parameters
+
+Now we let every Hill parameter vary **per series** through hierarchical priors. Each series draws its own `half_max`, `slope` and `max_effect` from a shared hyperprior — partial pooling lets the model borrow strength across regions while capturing series-specific saturation behaviour.
+
+```{python}
+per_series_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            GeoHillEffect(
+                half_max_prior=dist.HalfNormal(1),
+                slope_prior=dist.HalfNormal(5),
+                max_effect_prior=dist.HalfNormal(10),
+                shared_half_max=False,
+                shared_slope=False,
+                shared_max_effect=False,
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+per_series_model.fit(y=y_train, X=X_train)
+per_series_model
+```
+
+### Predictions (per-series)
+
+```{python}
+y_pred_per = per_series_model.predict(fh=y_test.index.get_level_values(-1).unique(), X=X_test)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y_train.loc[name].iloc[-52:].plot(ax=ax, label="train", color="black", alpha=0.5)
+    y_test.loc[name].plot(ax=ax, label="test", color="black")
+    y_pred_per.loc[name].plot(ax=ax, label="prediction", color="tab:orange")
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Per-series GeoHillEffect — predictions", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## Comparing the estimated components
+
+`predict_components` lets us inspect the spend effect component in isolation.
+
+```{python}
+components_shared = shared_model.predict_components(
+    fh=y_train.index.get_level_values(-1).unique(), X=X_train
+)
+components_per = per_series_model.predict_components(
+    fh=y_train.index.get_level_values(-1).unique(), X=X_train
+)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    if "spend" in components_shared.columns:
+        components_shared.loc[name]["spend"].plot(
+            ax=ax, label="shared", color="tab:blue"
+        )
+    if "spend" in components_per.columns:
+        components_per.loc[name]["spend"].plot(
+            ax=ax, label="per-series", color="tab:orange"
+        )
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Spend effect component — shared vs per-series", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+
+## Mixed configuration
+
+You can also mix shared and per-series parameters. For example, share the `slope` (curve steepness) while letting `half_max` and `max_effect` vary:
+
+```{python}
+mixed_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            GeoHillEffect(
+                half_max_prior=dist.HalfNormal(1),
+                slope_prior=dist.HalfNormal(5),
+                max_effect_prior=dist.HalfNormal(10),
+                shared_half_max=False,   # per-series
+                shared_slope=True,       # shared
+                shared_max_effect=False,  # per-series
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+mixed_model.fit(y=y_train, X=X_train)
+mixed_model
+```
+
+## Summary
+
+| Configuration | `shared_half_max` | `shared_slope` | `shared_max_effect` | Use case |
+|---|---|---|---|---|
+| **Fully shared** | `True` | `True` | `True` | Few series, strong pooling |
+| **Fully per-series** | `False` | `False` | `False` | Many series, expect different curves |
+| **Mixed** | `False` | `True` | `False` | Share curve steepness, allow different scales |
+
+The `GeoHillEffect` gives you fine-grained control over which saturation parameters are pooled across your panel, making it easy to encode domain knowledge about which aspects of the response curve are likely shared versus series-specific.

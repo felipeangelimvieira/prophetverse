@@ -7,6 +7,7 @@ from .chain import ChainedEffects
 from .exact_likelihood import ExactLikelihood
 from .fourier import LinearFourierSeasonality
 from .hill import HillEffect
+from .geo_hill import GeoHillEffect
 from .lift_likelihood import LiftExperimentLikelihood
 from .linear import LinearEffect
 from .roi_likelihood import ROILikelihood
@@ -31,6 +32,7 @@ __all__ = [
     "BaseEffect",
     "IgnoreInput",
     "HillEffect",
+    "GeoHillEffect",
     "LinearEffect",
     "LogEffect",
     "MichaelisMentenEffect",

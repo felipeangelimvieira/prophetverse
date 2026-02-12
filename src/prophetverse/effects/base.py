@@ -94,6 +94,8 @@ class BaseEffect(BaseObject):
         "applies_to": "X",
         # Does this effect implement hyperpriors across panel?
         "feature:panel_hyperpriors": False,
+        # Does this effect need full historical data for carryover computation?
+        "requires_full_history": False,
     }
 
     def __init__(self):

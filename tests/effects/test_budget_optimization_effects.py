@@ -153,7 +153,7 @@ EFFECT_TEST_CASES = [
         ChainedEffects(
             steps=[
                 ("adstock", GeometricAdstockEffect(normalize=True)),
-                ("saturation", MichaelisMentenEffect(effect_mode="additive")),
+                ("saturation", MichaelisMentenEffect(effect_mode="multiplicative")),
             ]
         ),
         id="ChainedAdstock-MichaelisMenten",

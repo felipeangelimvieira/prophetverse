@@ -7,6 +7,7 @@ import pandas as pd
 from skbase.base import BaseMetaEstimatorMixin
 import numpyro
 from prophetverse.effects.base import BaseEffect
+from prophetverse.effects.adstock import BaseAdstockEffect
 
 __all__ = ["ChainedEffects"]
 
@@ -197,7 +198,6 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
         jnp.ndarray
             The transformed data after applying all effects.
         """
-        from prophetverse.effects.adstock import BaseAdstockEffect
 
         # Handle dict format with full historical transform
         if isinstance(data, dict) and "first_transform" in data:
@@ -237,12 +237,12 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
             {
                 "steps": [
                     ("adstock", GeometricAdstockEffect()),
-                    ("linear", LinearEffect()),
+                    ("linear", LinearEffect(effect_mode="multiplicative")),
                 ]
             },
             {
                 "steps": [
-                    ("linear", LinearEffect()),
+                    ("linear", LinearEffect(effect_mode="additive")),
                     ("adstock", GeometricAdstockEffect()),
                 ]
             },

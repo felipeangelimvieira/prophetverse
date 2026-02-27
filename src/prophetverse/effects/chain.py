@@ -133,6 +133,10 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
     def get_test_params(cls, parameter_set="default"):
         from prophetverse.effects.linear import LinearEffect
         from prophetverse.effects.adstock import GeometricAdstockEffect
+        from prophetverse.effects.panel.geo_hill import GeoHillEffect
+        from prophetverse.effects.panel.geo_geometric_adstock import (
+            GeoGeometricAdstockEffect,
+        )
 
         return [
             {
@@ -145,6 +149,12 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
                 "steps": [
                     ("linear", LinearEffect()),
                     ("adstock", GeometricAdstockEffect()),
+                ]
+            },
+            {
+                "steps": [
+                    ("adstock", GeoGeometricAdstockEffect()),
+                    ("hill", GeoHillEffect()),
                 ]
             },
         ]

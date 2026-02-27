@@ -1,0 +1,478 @@
+---
+title: "Panel Effects: Saturation & Adstock with Hierarchical Priors"
+description: "*Use `GeoHillEffect`, `GeoMichaelisMentenEffect`, and `GeoGeometricAdstockEffect` to model saturation and carry-over across multiple series with shared or per-series parameters.*"
+---
+
+Prophetverse provides a family of **panel-aware** (geo-level) effects that
+extend standard saturation and adstock transformations to multi-series data.
+Each parameter can be independently configured to be **shared** across all
+series or estimated **per-series** with hierarchical (partial-pooling) priors.
+
+| Effect | What it models | Key parameters |
+|--------|---------------|----------------|
+| `GeoHillEffect` | S-shaped saturation (Hill function) | `half_max`, `slope`, `max_effect` |
+| `GeoMichaelisMentenEffect` | Concave saturation (Michaelis-Menten) | `max_effect`, `half_saturation` |
+| `GeoGeometricAdstockEffect` | Carry-over / decay | `decay` |
+| `GeoWeibullAdstockEffect` | Flexible carry-over (Weibull kernel) | `scale`, `concentration` |
+
+All live in `prophetverse.effects.panel` (also re-exported from
+`prophetverse.effects`).  They can be **chained** together — e.g.
+adstock → saturation — using `ChainedEffects` to build realistic MMM
+pipelines.
+
+```{python}
+# | echo: false
+import warnings
+warnings.filterwarnings("ignore")
+```
+
+## Synthetic panel dataset
+
+We create a synthetic panel with three regions. Each region has:
+
+* a linear trend with yearly seasonality,
+* a marketing **spend** variable that exhibits both **carry-over** (geometric
+  adstock) and **diminishing returns** (Hill saturation), and
+* region-specific true parameters so we can later see whether the model
+  recovers them.
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+N_SERIES = 3
+T = 200
+SERIES_NAMES = ["Region_A", "Region_B", "Region_C"]
+
+# True Hill parameters per series
+TRUE_HALF_MAX = [0.4, 0.6, 0.5]
+TRUE_SLOPE = [2.0, 3.0, 1.5]
+TRUE_MAX_EFFECT = [5.0, 8.0, 3.0]
+
+# True adstock decay per series
+TRUE_DECAY = [0.3, 0.5, 0.7]
+
+dates = pd.date_range("2020-01-01", periods=T, freq="W")
+
+rows_y = []
+rows_x = []
+
+for i, name in enumerate(SERIES_NAMES):
+    t = np.arange(T)
+    trend = 10 + 0.02 * t
+    seasonality = 2 * np.sin(2 * np.pi * t / 52)
+
+    # Random spend ~ Uniform(0, 1)
+    spend = np.random.uniform(0.05, 1.0, size=T)
+
+    # ---- Geometric adstock (carry-over) ----
+    adstocked = np.zeros(T)
+    for tt in range(T):
+        adstocked[tt] = spend[tt] + (
+            TRUE_DECAY[i] * adstocked[tt - 1] if tt > 0 else 0.0
+        )
+
+    # ---- Hill saturation on the adstocked signal ----
+    hill = TRUE_MAX_EFFECT[i] / (
+        1 + (adstocked / TRUE_HALF_MAX[i]) ** (-TRUE_SLOPE[i])
+    )
+
+    noise = np.random.normal(0, 0.3, size=T)
+    y_vals = trend + seasonality + hill + noise
+
+    idx = pd.MultiIndex.from_arrays(
+        [[name] * T, dates], names=["series", "date"]
+    )
+    rows_y.append(pd.DataFrame({"y": y_vals}, index=idx))
+    rows_x.append(pd.DataFrame({"spend": spend}, index=idx))
+
+y = pd.concat(rows_y)
+X = pd.concat(rows_x)
+
+display(y.head(6))
+display(X.head(6))
+```
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(ax=ax, legend=False)
+    ax.set_title(name)
+axes[0].set_ylabel("y")
+fig.suptitle("Synthetic panel series (with adstock + saturation)", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## 1. Hill saturation only (shared parameters)
+
+The simplest model applies a `GeoHillEffect` with every parameter **shared**
+across regions — one `half_max`, one `slope`, one `max_effect` for all three
+series.
+
+```{python}
+import numpyro
+import numpyro.distributions as dist
+
+from prophetverse.effects import LinearFourierSeasonality
+from prophetverse.effects.geo_hill import GeoHillEffect
+from prophetverse.effects.panel import (
+    GeoGeometricAdstockEffect,
+    GeoMichaelisMentenEffect,
+)
+from prophetverse.effects.chain import ChainedEffects
+from prophetverse.effects.trend import PiecewiseLinearTrend
+from prophetverse.engine import MAPInferenceEngine
+from prophetverse.engine.optimizer import LBFGSSolver
+from prophetverse.sktime import Prophetverse
+from prophetverse.utils.regex import exact, no_input_columns
+
+numpyro.enable_x64()
+
+shared_hill_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            GeoHillEffect(
+                half_max_prior=dist.HalfNormal(1),
+                slope_prior=dist.HalfNormal(5),
+                max_effect_prior=dist.HalfNormal(10),
+                shared_half_max=True,
+                shared_slope=True,
+                shared_max_effect=True,
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+shared_hill_model.fit(y=y, X=X)
+shared_hill_model
+```
+
+### Fitted vs observed — Hill only (shared)
+
+```{python}
+fh = y.index.get_level_values(-1).unique()
+y_pred_shared = shared_hill_model.predict(fh=fh, X=X)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(ax=ax, label="Observed", color="black", alpha=0.6)
+    y_pred_shared.loc[name].plot(ax=ax, label="Fitted — Shared Hill", color="tab:blue")
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Shared GeoHillEffect — fitted vs observed", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## 2. Hill saturation with per-series parameters
+
+Now each region draws its own `half_max`, `slope` and `max_effect` from
+hierarchical hyperpriors — partial pooling lets the model borrow strength
+while capturing series-specific saturation.
+
+```{python}
+per_series_hill_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            GeoHillEffect(
+                half_max_prior=dist.HalfNormal(1),
+                slope_prior=dist.HalfNormal(5),
+                max_effect_prior=dist.HalfNormal(10),
+                shared_half_max=False,
+                shared_slope=False,
+                shared_max_effect=False,
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+per_series_hill_model.fit(y=y, X=X)
+per_series_hill_model
+```
+
+### Fitted vs observed — Hill only (per-series)
+
+```{python}
+y_pred_per = per_series_hill_model.predict(fh=fh, X=X)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(ax=ax, label="Observed", color="black", alpha=0.6)
+    y_pred_per.loc[name].plot(ax=ax, label="Fitted — Per-series Hill", color="tab:orange")
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Per-series GeoHillEffect — fitted vs observed", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## 3. Adstock then Hill chaining (the realistic MMM pipeline)
+
+In a real Marketing Mix Model the spend signal first undergoes **carry-over**
+(adstock) and *then* **saturation**. We chain `GeoGeometricAdstockEffect`
+followed by `GeoHillEffect` using `ChainedEffects`. Both components can
+independently have shared or per-series parameters.
+
+```{python}
+adstock_hill_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            ChainedEffects(
+                steps=[
+                    (
+                        "adstock",
+                        GeoGeometricAdstockEffect(
+                            decay_prior=dist.Beta(2, 2),
+                            shared_decay=False,    # per-series carry-over
+                            normalize=True,
+                        ),
+                    ),
+                    (
+                        "saturation",
+                        GeoHillEffect(
+                            half_max_prior=dist.HalfNormal(1),
+                            slope_prior=dist.HalfNormal(5),
+                            max_effect_prior=dist.HalfNormal(10),
+                            shared_half_max=False,
+                            shared_slope=True,      # shared curve shape
+                            shared_max_effect=False,
+                        ),
+                    ),
+                ]
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+adstock_hill_model.fit(y=y, X=X)
+adstock_hill_model
+```
+
+### Fitted vs observed — Adstock → Hill (per-series)
+
+```{python}
+y_pred_chain = adstock_hill_model.predict(fh=fh, X=X)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(ax=ax, label="Observed", color="black", alpha=0.6)
+    y_pred_chain.loc[name].plot(ax=ax, label="Fitted — Adstock → Hill", color="tab:green")
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Adstock → Hill (chained) — fitted vs observed", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## Comparing the spend components
+
+`predict_components` lets us compare the spend effect across model
+configurations.
+
+```{python}
+components_shared = shared_hill_model.predict_components(fh=fh, X=X)
+components_per = per_series_hill_model.predict_components(fh=fh, X=X)
+components_chain = adstock_hill_model.predict_components(fh=fh, X=X)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    if "spend" in components_shared.columns:
+        components_shared.loc[name]["spend"].plot(
+            ax=ax, label="Shared Hill", color="tab:blue", alpha=0.7
+        )
+    if "spend" in components_per.columns:
+        components_per.loc[name]["spend"].plot(
+            ax=ax, label="Per-series Hill", color="tab:orange", alpha=0.7
+        )
+    if "spend" in components_chain.columns:
+        components_chain.loc[name]["spend"].plot(
+            ax=ax, label="Adstock → Hill", color="tab:green", alpha=0.7
+        )
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Spend effect component — Shared Hill vs Per-series Hill vs Adstock → Hill", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## Using `GeoMichaelisMentenEffect` as an alternative saturation
+
+If you prefer a simpler concave saturation curve (no inflection point), swap
+`GeoHillEffect` for `GeoMichaelisMentenEffect`:
+
+$$
+f(x) = \frac{V_{\max} \cdot x}{K_m + x}
+$$
+
+```{python}
+mm_model = Prophetverse(
+    broadcast_mode="effect",
+    trend=PiecewiseLinearTrend(
+        changepoint_interval=30,
+        changepoint_prior_scale=0.001,
+        changepoint_range=-30,
+    ),
+    exogenous_effects=[
+        (
+            "seasonality",
+            LinearFourierSeasonality(
+                sp_list=[52],
+                fourier_terms_list=[3],
+                freq="W",
+                prior_scale=1.0,
+                effect_mode="multiplicative",
+            ),
+            no_input_columns,
+        ),
+        (
+            "spend",
+            ChainedEffects(
+                steps=[
+                    (
+                        "adstock",
+                        GeoGeometricAdstockEffect(
+                            decay_prior=dist.Beta(2, 2),
+                            shared_decay=False,
+                            normalize=True,
+                        ),
+                    ),
+                    (
+                        "saturation",
+                        GeoMichaelisMentenEffect(
+                            max_effect_prior=dist.HalfNormal(10),
+                            half_saturation_prior=dist.HalfNormal(1),
+                            shared_max_effect=False,
+                            shared_half_saturation=True,
+                        ),
+                    ),
+                ]
+            ),
+            exact("spend"),
+        ),
+    ],
+    inference_engine=MAPInferenceEngine(
+        optimizer=LBFGSSolver(memory_size=100, max_linesearch_steps=100),
+    ),
+)
+
+mm_model.fit(y=y, X=X)
+mm_model
+```
+
+```{python}
+y_pred_mm = mm_model.predict(fh=fh, X=X)
+
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(ax=ax, label="Observed", color="black", alpha=0.6)
+    y_pred_mm.loc[name].plot(ax=ax, label="Fitted — Adstock → Michaelis-Menten", color="tab:red")
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+fig.suptitle("Adstock → Michaelis-Menten — fitted vs observed", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+
+## Summary
+
+### Available panel effects
+
+| Effect | Formula | Parameters |
+|--------|---------|------------|
+| `GeoHillEffect` | $f(x) = \frac{m}{1 + (x/k)^{-s}}$ | `half_max`, `slope`, `max_effect` |
+| `GeoMichaelisMentenEffect` | $f(x) = \frac{V x}{K + x}$ | `max_effect`, `half_saturation` |
+| `GeoGeometricAdstockEffect` | $a_t = x_t + \alpha \cdot a_{t-1}$ | `decay` |
+| `GeoWeibullAdstockEffect` | Weibull PDF kernel convolution | `scale`, `concentration` |
+
+### Shared vs per-series
+
+Every parameter in every panel effect accepts a `shared_*` flag:
+
+* **`True`** (default) — one value for all series (strong pooling).
+* **`False`** — hierarchical prior with a location and scale hyperprior;
+  each series draws its own value (partial pooling).
+
+### Typical MMM pipeline
+
+Chain adstock then saturation with `ChainedEffects`:
+
+```python
+ChainedEffects(steps=[
+    ("adstock",    GeoGeometricAdstockEffect(shared_decay=False)),
+    ("saturation", GeoHillEffect(shared_slope=True, shared_half_max=False, shared_max_effect=False)),
+])
+```
+
+This gives you fine-grained control over which aspects of the media response
+curve are pooled across your panel and which are allowed to vary per series.

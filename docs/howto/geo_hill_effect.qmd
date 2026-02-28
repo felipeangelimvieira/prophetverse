@@ -59,6 +59,7 @@ dates = pd.date_range("2020-01-01", periods=T, freq="W")
 
 rows_y = []
 rows_x = []
+rows_true_effect = []  # store the true spend effect per series
 
 for i, name in enumerate(SERIES_NAMES):
     t = np.arange(T)
@@ -88,9 +89,11 @@ for i, name in enumerate(SERIES_NAMES):
     )
     rows_y.append(pd.DataFrame({"y": y_vals}, index=idx))
     rows_x.append(pd.DataFrame({"spend": spend}, index=idx))
+    rows_true_effect.append(pd.DataFrame({"spend": hill}, index=idx))
 
 y = pd.concat(rows_y)
 X = pd.concat(rows_x)
+true_spend_effect = pd.concat(rows_true_effect)  # ground-truth spend component
 
 display(y.head(6))
 display(X.head(6))
@@ -103,6 +106,23 @@ for ax, name in zip(axes, SERIES_NAMES):
     ax.set_title(name)
 axes[0].set_ylabel("y")
 fig.suptitle("Synthetic panel series (with adstock + saturation)", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+The plot below shows the **true spend effect** (adstock → Hill saturation) that
+we embedded in the data. This is the ground-truth signal each model must recover.
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+for ax, name in zip(axes, SERIES_NAMES):
+    true_spend_effect.loc[name]["spend"].plot(
+        ax=ax, color="black", linewidth=1.5, label="True spend effect"
+    )
+    ax.set_title(name)
+    ax.legend(fontsize=8)
+axes[0].set_ylabel("Effect")
+fig.suptitle("Ground-truth spend effect per region (adstock → Hill)", fontsize=13)
 plt.tight_layout()
 plt.show()
 ```
@@ -337,15 +357,30 @@ plt.show()
 ## Comparing the spend components
 
 `predict_components` lets us compare the spend effect across model
-configurations.
+configurations — and, critically, against the **true** spend effect we used
+to generate the data.
 
 ```{python}
 components_shared = shared_hill_model.predict_components(fh=fh, X=X)
 components_per = per_series_hill_model.predict_components(fh=fh, X=X)
 components_chain = adstock_hill_model.predict_components(fh=fh, X=X)
+```
 
-fig, axes = plt.subplots(1, 3, figsize=(14, 3.5), sharey=True)
+### Estimated spend components vs ground truth
+
+Each panel below overlays the estimated spend component from each model
+against the **true spend effect** (black dashed line). The closer a coloured
+line tracks the dashed line, the better that model recovers the true media
+response.
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharey=True)
 for ax, name in zip(axes, SERIES_NAMES):
+    # Ground truth
+    true_spend_effect.loc[name]["spend"].plot(
+        ax=ax, label="True effect", color="black",
+        linestyle="--", linewidth=1.8, alpha=0.8,
+    )
     if "spend" in components_shared.columns:
         components_shared.loc[name]["spend"].plot(
             ax=ax, label="Shared Hill", color="tab:blue", alpha=0.7
@@ -359,8 +394,11 @@ for ax, name in zip(axes, SERIES_NAMES):
             ax=ax, label="Adstock → Hill", color="tab:green", alpha=0.7
         )
     ax.set_title(name)
-    ax.legend(fontsize=8)
-fig.suptitle("Spend effect component — Shared Hill vs Per-series Hill vs Adstock → Hill", fontsize=13)
+    ax.legend(fontsize=7, loc="upper left")
+axes[0].set_ylabel("Spend effect")
+fig.suptitle(
+    "Estimated spend component vs ground truth (black dashed)", fontsize=13
+)
 plt.tight_layout()
 plt.show()
 ```
@@ -439,6 +477,275 @@ for ax, name in zip(axes, SERIES_NAMES):
     ax.set_title(name)
     ax.legend(fontsize=8)
 fig.suptitle("Adstock → Michaelis-Menten — fitted vs observed", fontsize=13)
+plt.tight_layout()
+plt.show()
+```
+
+## All models — side-by-side comparison
+
+Now that all four models have been fitted, we can overlay their predictions
+on the same axes to compare how well each one tracks the observed data.
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 4.5), sharey=True)
+
+models_info = [
+    ("Shared Hill",            y_pred_shared, "tab:blue"),
+    ("Per-series Hill",        y_pred_per,    "tab:orange"),
+    ("Adstock → Hill",         y_pred_chain,  "tab:green"),
+    ("Adstock → Michaelis-M.", y_pred_mm,     "tab:red"),
+]
+
+for ax, name in zip(axes, SERIES_NAMES):
+    y.loc[name].plot(
+        ax=ax, label="Observed", color="black", alpha=0.5, linewidth=1.0
+    )
+    for label, preds, color in models_info:
+        preds.loc[name].plot(ax=ax, label=label, color=color, alpha=0.75)
+    ax.set_title(name)
+    ax.legend(fontsize=7, loc="upper left")
+axes[0].set_ylabel("y")
+fig.suptitle("All models — fitted vs observed", fontsize=14)
+plt.tight_layout()
+plt.show()
+```
+
+## Quantitative comparison: MAE and RMSE
+
+We compute Mean Absolute Error and Root Mean Squared Error for each model and
+region — and also the spend-component error against the true spend effect.
+
+```{python}
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+components_mm = mm_model.predict_components(fh=fh, X=X)
+
+results = []
+for name in SERIES_NAMES:
+    y_obs = y.loc[name].values.ravel()
+    true_eff = true_spend_effect.loc[name].values.ravel()
+
+    for label, preds, comps in [
+        ("Shared Hill",            y_pred_shared, components_shared),
+        ("Per-series Hill",        y_pred_per,    components_per),
+        ("Adstock → Hill",         y_pred_chain,  components_chain),
+        ("Adstock → Michaelis-M.", y_pred_mm,     components_mm),
+    ]:
+        y_hat = preds.loc[name].values.ravel()
+        mae = mean_absolute_error(y_obs, y_hat)
+        rmse = mean_squared_error(y_obs, y_hat, squared=False)
+
+        # Spend component error against ground truth
+        if "spend" in comps.columns:
+            spend_hat = comps.loc[name]["spend"].values.ravel()
+            spend_mae = mean_absolute_error(true_eff, spend_hat)
+        else:
+            spend_mae = np.nan
+
+        results.append({
+            "Model": label,
+            "Region": name,
+            "MAE (y)": round(mae, 3),
+            "RMSE (y)": round(rmse, 3),
+            "MAE (spend effect)": round(spend_mae, 3),
+        })
+
+metrics_df = pd.DataFrame(results)
+display(metrics_df)
+```
+
+### Average metrics across regions
+
+```{python}
+avg_metrics = (
+    metrics_df
+    .groupby("Model")[["MAE (y)", "RMSE (y)", "MAE (spend effect)"]]
+    .mean()
+    .round(3)
+    .sort_values("MAE (y)")
+)
+display(avg_metrics)
+```
+
+### Visual metric comparison
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+metric_cols = ["MAE (y)", "RMSE (y)", "MAE (spend effect)"]
+titles = [
+    "MAE on observed series (y)",
+    "RMSE on observed series (y)",
+    "MAE on spend effect vs ground truth",
+]
+
+for ax, col, title in zip(axes, metric_cols, titles):
+    pivot = metrics_df.pivot(index="Region", columns="Model", values=col)
+    pivot.plot.bar(ax=ax, rot=0)
+    ax.set_title(title, fontsize=10)
+    ax.set_ylabel(col)
+    ax.legend(fontsize=6, loc="upper right")
+
+fig.suptitle("Quantitative model comparison", fontsize=14)
+plt.tight_layout()
+plt.show()
+```
+
+## Spend effect vs ground truth — per model
+
+Another useful view is to compare the spend component from each model
+individually against the true spend effect, so we can clearly see where each
+model under- or over-estimates the media response.
+
+```{python}
+fig, axes = plt.subplots(4, 3, figsize=(14, 14), sharex=True)
+
+for col_idx, name in enumerate(SERIES_NAMES):
+    true_vals = true_spend_effect.loc[name]["spend"]
+
+    for row_idx, (label, comps, color) in enumerate([
+        ("Shared Hill",            components_shared, "tab:blue"),
+        ("Per-series Hill",        components_per,    "tab:orange"),
+        ("Adstock → Hill",         components_chain,  "tab:green"),
+        ("Adstock → Michaelis-M.", components_mm,     "tab:red"),
+    ]):
+        ax = axes[row_idx, col_idx]
+        true_vals.plot(ax=ax, color="black", linestyle="--",
+                       linewidth=1.5, label="True", alpha=0.8)
+        if "spend" in comps.columns:
+            comps.loc[name]["spend"].plot(
+                ax=ax, color=color, label=label, alpha=0.8
+            )
+        if col_idx == 0:
+            ax.set_ylabel(label, fontsize=9)
+        if row_idx == 0:
+            ax.set_title(name, fontsize=11)
+        ax.legend(fontsize=7, loc="upper left")
+
+fig.suptitle(
+    "Spend effect per model vs ground truth (black dashed)",
+    fontsize=14, y=1.01,
+)
+plt.tight_layout()
+plt.show()
+```
+
+## Response curves: estimated vs true
+
+For a Marketing Mix Model the **response curve** — how effect varies with
+spend level — is often more important than temporal fit. Below we plot the
+estimated spend component against the raw spend value, and compare it with
+the true Hill saturation curve.
+
+Because the true data-generating process includes adstock *before* saturation,
+only the chained models (Adstock → Hill and Adstock → Michaelis-Menten) should
+closely match the true response when plotted against raw spend.
+
+```{python}
+fig, axes = plt.subplots(2, 3, figsize=(14, 8))
+
+for col_idx, (name, i) in enumerate(zip(SERIES_NAMES, range(N_SERIES))):
+    spend_vals = X.loc[name]["spend"].values
+    true_eff = true_spend_effect.loc[name]["spend"].values
+    sort_idx = np.argsort(spend_vals)
+
+    # --- Top row: spend component vs raw spend (scatter) ---
+    ax = axes[0, col_idx]
+    ax.scatter(
+        spend_vals, true_eff, s=8, alpha=0.3, color="black",
+        label="True effect", zorder=5,
+    )
+    for label, comps, color, marker in [
+        ("Shared Hill",            components_shared, "tab:blue",   "o"),
+        ("Per-series Hill",        components_per,    "tab:orange", "s"),
+        ("Adstock → Hill",         components_chain,  "tab:green",  "^"),
+        ("Adstock → Michaelis-M.", components_mm,     "tab:red",    "D"),
+    ]:
+        if "spend" in comps.columns:
+            ax.scatter(
+                spend_vals, comps.loc[name]["spend"].values,
+                s=6, alpha=0.25, color=color, label=label,
+            )
+    ax.set_ylabel("Spend effect")
+    ax.set_title(name, fontsize=11)
+    ax.legend(fontsize=6, loc="upper left", markerscale=2)
+    if col_idx == 0:
+        ax.set_ylabel("Spend effect (vs raw spend)")
+
+    # --- Bottom row: true saturation curve overlay ---
+    ax2 = axes[1, col_idx]
+    x_grid = np.linspace(0, 3.0, 300)
+    true_curve = TRUE_MAX_EFFECT[i] / (
+        1 + (x_grid / TRUE_HALF_MAX[i]) ** (-TRUE_SLOPE[i])
+    )
+    ax2.plot(
+        x_grid, true_curve, color="black", linewidth=2,
+        label="True Hill curve", zorder=5,
+    )
+    ax2.axvline(
+        TRUE_HALF_MAX[i], color="gray", linestyle=":",
+        alpha=0.5, label=f"half_max = {TRUE_HALF_MAX[i]}",
+    )
+    ax2.set_xlabel("Adstocked spend")
+    ax2.set_ylabel("Effect")
+    ax2.set_title(
+        f"{name} — True Hill\n"
+        f"(k={TRUE_HALF_MAX[i]}, s={TRUE_SLOPE[i]}, "
+        f"m={TRUE_MAX_EFFECT[i]}, decay={TRUE_DECAY[i]})",
+        fontsize=9,
+    )
+    ax2.legend(fontsize=7)
+
+fig.suptitle(
+    "Response curves: estimated effect vs spend (top) "
+    "and true Hill saturation curve (bottom)",
+    fontsize=13,
+)
+plt.tight_layout()
+plt.show()
+```
+
+## Residual analysis
+
+Finally, inspecting the residuals (observed − fitted) gives a direct view of
+each model's systematic biases.
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharey=True)
+
+for ax, name in zip(axes, SERIES_NAMES):
+    y_obs = y.loc[name].values.ravel()
+    for label, preds, color in models_info:
+        residuals = y_obs - preds.loc[name].values.ravel()
+        ax.plot(
+            dates, residuals, color=color, alpha=0.5,
+            linewidth=0.8, label=label,
+        )
+    ax.axhline(0, color="black", linewidth=0.5, linestyle="--")
+    ax.set_title(name)
+    ax.legend(fontsize=6)
+axes[0].set_ylabel("Residual (obs − fitted)")
+fig.suptitle("Residuals by model", fontsize=14)
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(14, 4), sharey=True)
+
+for ax, name in zip(axes, SERIES_NAMES):
+    y_obs = y.loc[name].values.ravel()
+    for label, preds, color in models_info:
+        residuals = y_obs - preds.loc[name].values.ravel()
+        ax.hist(
+            residuals, bins=25, color=color, alpha=0.4,
+            label=label, density=True,
+        )
+    ax.axvline(0, color="black", linewidth=0.8, linestyle="--")
+    ax.set_title(name)
+    ax.legend(fontsize=6)
+axes[0].set_ylabel("Density")
+fig.suptitle("Residual distributions by model", fontsize=14)
 plt.tight_layout()
 plt.show()
 ```

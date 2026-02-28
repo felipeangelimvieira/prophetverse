@@ -23,7 +23,7 @@ def make_beta_data(n_samples=100, n_series=1):
 
     # Generate data between 0 and 1
     y = pd.Series(np.random.beta(a=2, b=5, size=n_samples * n_series), index=index)
-    return y
+    return y.to_frame("y")
 
 
 def make_beta_features(y):
@@ -55,7 +55,7 @@ def test_prophet_beta_basic():
     )
 
     # Test fit and predict
-    forecaster.fit(y, X)
+    forecaster.fit(y.iloc[:-4], X)
     fh = list(range(1, 5))
     y_pred = forecaster.predict(X=X, fh=fh)
 
@@ -87,8 +87,9 @@ def test_prophet_beta_hierarchical():
     )
 
     # Test fit and predict
-    forecaster.fit(y, X)
-    fh = list(range(1, 5))
+    dates = y.index.get_level_values(-1).unique().sort_values()
+    forecaster.fit(y[y.index.get_level_values(-1).isin(dates[:-4])], X)
+    fh = list(range(1, 4))
     y_pred = forecaster.predict(X=X, fh=fh)
 
     assert isinstance(y_pred, pd.DataFrame)
@@ -117,7 +118,7 @@ def test_prophet_beta_predict_methods():
         ),
         likelihood=BetaTargetLikelihood(),
     )
-
+    y = y.iloc[:-4]
     forecaster.fit(y, X)
     fh = list(range(1, 5))
 

@@ -22,6 +22,10 @@ from .effects import (
     WeibullAdstockEffect,
     ChainedEffects,
     Forward,
+    IgnoreInput,
+    Identity,
+    Constant,
+    CoupledExactLikelihood,
 )
 from .engine import (
     MAPInferenceEngine,
@@ -74,6 +78,10 @@ __all__ = [
     "WeibullAdstockEffect",
     "ChainedEffects",
     "BetaTargetLikelihood",
+    "IgnoreInput",
+    "Identity",
+    "Constant",
+    "CoupledExactLikelihood",
     # Engine
     "MAPInferenceEngine",
     "MCMCInferenceEngine",

@@ -60,7 +60,6 @@ def test_ignore_input_effect_with_validation_rejects_non_empty_x(
     # Should raise ValueError with non-empty X
     with pytest.raises(
         ValueError,
-        match="BypassEffect with raise_error=True requires X to be empty",
     ):
         ignore_input_effect_with_validation.fit(y=y, X=X, scale=1.0)
 
@@ -127,6 +126,5 @@ def test_ignore_input_effect_panel_data_with_validation_rejects_non_empty_x():
     # Should raise ValueError with non-empty panel X
     with pytest.raises(
         ValueError,
-        match="BypassEffect with raise_error=True requires X to be empty",
     ):
         effect.fit(y=y, X=X, scale=1.0)

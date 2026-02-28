@@ -1,9 +1,10 @@
 """Tests for VIInferenceEngine."""
 
-import pytest
 import jax.numpy as jnp
 import numpy as np
 import numpyro
+import pytest
+from numpyro.infer.autoguide import AutoDelta
 
 from prophetverse.engine.vi import VIInferenceEngine, VIInferenceEngineError
 
@@ -90,3 +91,17 @@ class TestVIInferenceEngine:
                 "AutoMultivariateNormal",
                 "AutoDiagonalNormal",
             ]
+
+    def test_custom_guide(self):
+        """Test inference with a custom guide function."""
+
+        obs = jnp.array(np.random.normal(0, 1, 100))
+        guides_to_test = [AutoDelta]
+
+        for guide in guides_to_test:
+            engine = VIInferenceEngine(guide=guide, num_steps=100)
+            engine.infer(_model, obs=obs)
+
+            assert isinstance(engine.posterior_samples_, dict)
+            assert "mean" in engine.posterior_samples_
+            assert jnp.isfinite(engine.posterior_samples_["mean"].mean().item())

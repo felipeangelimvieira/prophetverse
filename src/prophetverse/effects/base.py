@@ -332,6 +332,14 @@ class BaseEffect(BaseObject):
             new_kwargs = kwargs.copy()
             if "y" in kwargs:
                 new_kwargs["y"] = kwargs["y"].loc[idx]
+            if "scale" in kwargs:
+                scale_value = kwargs["scale"]
+                is_pd_obj = isinstance(scale_value, (pd.Series, pd.DataFrame))
+                if is_pd_obj:
+                    scale_value = scale_value.loc[idx]
+                if isinstance(scale_value, (pd.Series, pd.DataFrame)) and scale_value.size == 1:
+                    scale_value = scale_value.values.item()
+                new_kwargs["scale"] = scale_value
             effect_ = self.effects_[idx]
             xt = getattr(effect_, methodname)(X=X_, **new_kwargs)
             outputs.append(xt)
@@ -552,9 +560,12 @@ class BaseEffect(BaseObject):
                 # Get init args of param_value
                 init_args = param_value.__init__.__code__.co_varnames[1:]
                 for argname in init_args:
-                    distribution_params[param_name + "__" + argname] = getattr(
-                        param_value, argname
-                    )
+                    try:
+                        distribution_params[param_name + "__" + argname] = getattr(
+                            param_value, argname
+                        )
+                    except AttributeError:
+                        pass
         return distribution_params
 
     def get_params(self, deep=True):

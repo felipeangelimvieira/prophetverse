@@ -44,8 +44,7 @@ class ChainedEffects(BaseMetaEstimatorMixin, BaseEffect):
 
         # Propagate tags from inner effects
         all_panel = all(
-            effect.get_tag("capability:panel", False)
-            for _, effect in self.named_steps
+            effect.get_tag("capability:panel", False) for _, effect in self.named_steps
         )
         any_hyperpriors = any(
             effect.get_tag("feature:panel_hyperpriors", False)

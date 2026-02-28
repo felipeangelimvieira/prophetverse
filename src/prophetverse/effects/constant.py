@@ -22,6 +22,8 @@ class Constant(BaseEffect):
 
     _tags = {
         "requires_X": False,
+        # Supports gradients and budget optimization?
+        "capability:budget_optimization": True,
     }
 
     def __init__(self, prior: Distribution = None) -> None:

@@ -8,6 +8,7 @@ import pytest
 import jax.numpy as jnp
 import numpyro
 from prophetverse.utils.frame_to_array import series_to_tensor_or_array
+import jax
 
 RAND_SEED = 42
 
@@ -52,6 +53,7 @@ class TestAllEffects(TestAllObjects):
         "hierarchical_prophet_compliant",
         "capability:panel",
         "capability:multivariate_input",
+        "capability:budget_optimization",
         "requires_X",
         "applies_to",
         "filter_indexes_with_forecating_horizon_at_transform",
@@ -203,3 +205,62 @@ class TestAllEffects(TestAllObjects):
         if isinstance(obj, list):
             is_valid = all(self._validate_transform_output(o) for o in obj)
         return is_valid
+
+    def test_update_data(self, object_instance, scenario):
+        """
+        Test update data does not zero out gradients
+        """
+        # This is a placeholder for your actual test logic.
+        # For example:
+        # result = object_instance.predict(scenario.data)
+        # assert result == scenario.expected_output
+
+        y = scenario.y
+        X = scenario.X
+        if X is None or len(X.columns) < 1:
+            pytest.skip("This effect requires X with columns.")
+        requires_x = object_instance.get_tag("requires_X")
+        applies_to = object_instance.get_tag("applies_to")
+        if (requires_x and X is None) or applies_to == "y":
+            pytest.skip("This effect requires X, but X is None.")
+
+        if X is None:
+            X = pd.DataFrame(index=y.index)
+
+        object_instance.fit(y=y, X=X, scale=2)
+
+        data = object_instance.transform(X, fh=scenario.fh)
+
+        # Create raw_data input (simulating new X values)
+        # We use random values or ones to ensure we don't hit zero-multiplication issues
+        raw_data = jnp.array(X.values, dtype=jnp.float32)
+
+        # Define a scalar function to differentiate
+        # jax.grad requires a function that returns a scalar
+        def scalar_output_fn(x_input):
+            # _update_data takes (data_structure, new_values)
+            updated_data = object_instance._update_data(data, x_input)
+
+            # Flatten the output structure (dict, tuple, etc) and sum everything
+            leaves = jax.tree_util.tree_leaves(updated_data)
+
+            # Sum all numeric leaves
+            total = 0.0
+            for leaf in leaves:
+                # Check if leaf is a JAX array or similar
+                if hasattr(leaf, "shape") and hasattr(leaf, "dtype"):
+                    total = total + jnp.sum(leaf)
+            return total
+
+        # Calculate gradient with respect to raw_data
+        grads = jax.grad(scalar_output_fn)(raw_data)
+
+        # Assertions
+        assert grads.shape == raw_data.shape
+        # Check that at least some gradients are non-zero (indicating the input affects the output)
+        # Note: Some effects might have zero gradients if parameters are zero initialized,
+        # but generally we expect connectivity.
+        assert jnp.any(
+            grads != 0
+        ), "Gradients are all zero. _update_data might be detaching gradients."
+        assert jnp.all(jnp.isfinite(grads)), "Gradients contain NaNs or Infs."

@@ -3,6 +3,7 @@
 from typing import Dict, List, Union, Optional
 
 import jax.numpy as jnp
+import numpy as np
 import numpyro.distributions as dist
 import pandas as pd
 from sktime.transformations.series.fourier import FourierFeatures
@@ -14,10 +15,43 @@ from prophetverse.sktime._expand_column_per_level import ExpandColumnPerLevel
 __all__ = ["LinearFourierSeasonality"]
 
 
+def _coerce_period(value, index: pd.Index):
+    """Coerce *value* to a type that is comparable with *index*.
+
+    Works for both :class: pandas.DatetimeIndex and
+    :class: pandas.PeriodIndex.
+
+    Parameters
+    ----------
+    value : str, pd.Timestamp, pd.Period, or None
+        The boundary value supplied by the user.
+    index : pd.Index
+        The time index whose dtype drives the coercion.
+
+    Returns
+    -------
+    pd.Timestamp or pd.Period
+    """
+    if value is None:
+        return None
+    if isinstance(index, pd.PeriodIndex):
+        if isinstance(value, pd.Period):
+            return value
+        return pd.Period(value, freq=index.freq)
+    # DatetimeIndex (or anything else – fall back to Timestamp)
+    if isinstance(value, pd.Timestamp):
+        return value
+    return pd.Timestamp(value)
+
+
 class LinearFourierSeasonality(BaseEffect):
     """Linear Fourier Seasonality effect.
 
     Compute the linear seasonality using Fourier features.
+
+    Optionally, "start_period" and "end_period" can be used to restrict
+    the seasonality to a sub-range of the time axis.  Time-steps outside
+    "[start_period, end_period]" are forced to zero.
 
     Parameters
     ----------
@@ -31,6 +65,19 @@ class LinearFourierSeasonality(BaseEffect):
         Scale of the prior distribution for the effect, by default 1.0.
     effect_mode : str, optional
         Either "multiplicative" or "additive" by default "additive".
+    linear_effect : LinearEffect, optional
+        Custom LinearEffect instance used internally.  When *None* a
+        default LinearEffect(prior=Normal(0, prior_scale)) is created.
+    start_period : str, pd.Timestamp, or pd.Period, optional
+        Start of the active window for this seasonality component.  Time
+        steps before this date/period are multiplied by zero.  When
+        None (default) the component is active from the very first
+        observation.
+    end_period : str, pd.Timestamp, or pd.Period, optional
+        End of the active window for this seasonality component.  Time
+        steps after this date/period are multiplied by zero.  When
+        None (default) the component is active until the very last
+        observation.
     """
 
     _tags = {
@@ -51,6 +98,8 @@ class LinearFourierSeasonality(BaseEffect):
         prior_scale: float = 1.0,
         effect_mode: EFFECT_APPLICATION_TYPE = "additive",
         linear_effect: Optional[LinearEffect] = None,
+        start_period=None,
+        end_period=None,
     ):
         self.sp_list = sp_list
         self.fourier_terms_list = fourier_terms_list
@@ -58,6 +107,8 @@ class LinearFourierSeasonality(BaseEffect):
         self.prior_scale = prior_scale
         self.effect_mode = effect_mode
         self.linear_effect = linear_effect
+        self.start_period = start_period
+        self.end_period = end_period
 
         super().__init__()
 
@@ -115,11 +166,44 @@ class LinearFourierSeasonality(BaseEffect):
 
         self.linear_effect_.fit(X=X, y=y, scale=scale)
 
+    def _build_mask(self, X: pd.DataFrame) -> Optional[jnp.ndarray]:
+        """Build a binary time-range mask from "start_period" to "end_period".
+
+        Returns a float array of shape (T,) where T is the number of
+        unique time-steps in X, or None when neither boundary is set.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            DataFrame whose index contains the time dimension (possibly a
+            MultiIndex whose last level is time).
+
+        Returns
+        -------
+        jnp.ndarray of shape (T,) or None
+        """
+        if self.start_period is None and self.end_period is None:
+            return None
+
+        time_index = X.index.get_level_values(-1).unique()
+
+        start = _coerce_period(self.start_period, time_index)
+        end = _coerce_period(self.end_period, time_index)
+
+        mask = np.ones(len(time_index), dtype=np.float32)
+        if start is not None:
+            mask *= (time_index >= start).astype(np.float32)
+        if end is not None:
+            mask *= (time_index <= end).astype(np.float32)
+
+        return jnp.array(mask)
+
     def _transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
         """Prepare input data to be passed to numpyro model.
 
         This method return a jnp.ndarray of sines and cosines of the given
-        frequencies.
+        frequencies, together with an optional binary mask that forces the
+        effect to zero outside start_period, end_period.
 
         Parameters
         ----------
@@ -133,10 +217,13 @@ class LinearFourierSeasonality(BaseEffect):
 
         Returns
         -------
-        jnp.ndarray
-            Any object containing the data needed for the effect. The object will be
-            passed to `predict` method as `data` argument.
+        dict
+            Dictionary with key "data" (the Fourier feature array) and,
+            when a time-range restriction is active, key "mask" (shape(T,) float array).
         """
+
+        mask = self._build_mask(X)
+
         X = self.fourier_features_.transform(X)
 
         if self.expand_column_per_level_ is not None:
@@ -144,7 +231,10 @@ class LinearFourierSeasonality(BaseEffect):
 
         array = self.linear_effect_.transform(X, fh)
 
-        return {"data": array}
+        out = {"data": array}
+        if mask is not None:
+            out["mask"] = mask
+        return out
 
     def _predict(
         self, data: Dict, predicted_effects: Dict[str, jnp.ndarray], *args, **kwargs
@@ -166,10 +256,22 @@ class LinearFourierSeasonality(BaseEffect):
             multivariate timeseries, where T is the number of timepoints and N is the
             number of series.
         """
-        return self.linear_effect_.predict(
+        result = self.linear_effect_.predict(
             data=data["data"],
             predicted_effects=predicted_effects,
         )
+
+        mask = data.get("mask", None)
+        if mask is not None:
+            # result: (T, 1)  →  mask reshape: (T, 1)
+            # result: (N, T, 1) →  mask reshape: (1, T, 1)
+            if result.ndim == 2:
+                mask = mask.reshape(-1, 1)
+            else:
+                mask = mask.reshape(1, -1, 1)
+            result = result * mask
+
+        return result
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
@@ -180,5 +282,14 @@ class LinearFourierSeasonality(BaseEffect):
                 "freq": "D",
                 "prior_scale": 1.0,
                 "effect_mode": "additive",
-            }
+            },
+            {
+                "sp_list": [7],
+                "fourier_terms_list": [1],
+                "freq": "D",
+                "prior_scale": 1.0,
+                "effect_mode": "additive",
+                "start_period": "2021-01-04",
+                "end_period": "2021-01-08",
+            },
         ]

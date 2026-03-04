@@ -35,8 +35,16 @@ def _coerce_period(value, index: pd.Index):
     if value is None:
         return None
     if isinstance(index, pd.PeriodIndex):
+        # Ensure any Period input is coerced to the index frequency so that
+        # comparisons like `index >= value` do not raise IncompatibleFrequency.
         if isinstance(value, pd.Period):
-            return value
+            if value.freq == index.freq:
+                return value
+            try:
+                return value.asfreq(index.freq)
+            except (ValueError, TypeError):
+                # Fallback: construct a new Period from the timestamp representation.
+                return pd.Period(value.to_timestamp(), freq=index.freq)
         return pd.Period(value, freq=index.freq)
     # DatetimeIndex (or anything else – fall back to Timestamp)
     if isinstance(value, pd.Timestamp):

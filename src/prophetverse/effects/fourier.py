@@ -18,8 +18,8 @@ __all__ = ["LinearFourierSeasonality"]
 def _coerce_period(value, index: pd.Index):
     """Coerce *value* to a type that is comparable with *index*.
 
-    Works for both :class: pandas.DatetimeIndex and
-    :class: pandas.PeriodIndex.
+    Works for both :class:`pandas.DatetimeIndex` and
+    :class:`pandas.PeriodIndex`.
 
     Parameters
     ----------

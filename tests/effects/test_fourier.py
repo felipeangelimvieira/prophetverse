@@ -5,6 +5,7 @@ import pytest
 from sktime.transformations.series.fourier import FourierFeatures
 
 from prophetverse.effects import LinearEffect, LinearFourierSeasonality
+from prophetverse.effects.fourier import _coerce_period
 
 
 @pytest.fixture
@@ -31,6 +32,22 @@ def fourier_effect_instance():
 def exog_data_10days():
     idx = pd.date_range("2021-01-01", periods=10, freq="D")
     return pd.DataFrame(index=idx)
+
+
+class _FailAsfreqPeriod(pd.Period):
+    """pd.Period subclass that raises ValueError from the external asfreq call.
+
+    pd.Period.to_timestamp() internally calls asfreq('D', 'S') with an
+    explicit how='S'.  The external call from _coerce_period uses only the
+    default how='E'.  We raise only in the latter case so that the fallback
+    branch ``pd.Period(value.to_timestamp(), freq=index.freq)`` can still
+    complete successfully.
+    """
+
+    def asfreq(self, freq, how="E"):
+        if how == "E":
+            raise ValueError("forced incompatible frequency")
+        return super().asfreq(freq, how)
 
 
 def _fit_predict(effect, exog_data):
@@ -240,14 +257,35 @@ def test_full_range_mask_equivalent_to_no_mask(  exog_data_10days):
     assert jnp.allclose(data_windowed["mask"], 1.0)
 
 
+def test_predict_panel_mask_reshape(exog_data_10days):
+    effect = LinearFourierSeasonality(
+        sp_list=[7], fourier_terms_list=[1], freq="D",
+        start_period="2021-01-04",
+        end_period="2021-01-07",
+    )
+    fh = exog_data_10days.index
+    effect.fit(X=exog_data_10days, y=None)
+    data = effect.transform(X=exog_data_10days, fh=fh)
+
+    # Promote the (T, F) data array to (1, T, F) to simulate one panel series
+    arr_3d = data["data"][jnp.newaxis]          # (1, T, F)
+    data_3d = {"data": arr_3d, "mask": data["mask"]}
+
+    trend = jnp.ones((1, len(fh), 1))          # (N=1, T, 1)
+    with numpyro.handlers.seed(numpyro.handlers.seed, 0):
+        pred = effect.predict(data_3d, predicted_effects={"trend": trend})
+
+    # Result should be 3-D and zeros must appear outside the window
+    assert pred.ndim == 3
+    assert jnp.allclose(pred[:, :3, :], 0.0), "Expected zeros before start_period"
+    assert jnp.allclose(pred[:, 7:, :], 0.0), "Expected zeros after end_period"
+
+
 # ---------------------------------------------------------------------------
 # Tests for _coerce_period branches (coverage)
 # ---------------------------------------------------------------------------
 
 def test_coerce_period_same_freq_period():
-    """PeriodIndex + Period with matching freq → fast-path return value."""
-    from prophetverse.effects.fourier import _coerce_period
-
     idx = pd.period_range("2021-01", periods=6, freq="M")
     val = pd.Period("2021-03", freq="M")
     result = _coerce_period(val, idx)
@@ -255,9 +293,6 @@ def test_coerce_period_same_freq_period():
 
 
 def test_coerce_period_different_freq_period():
-    """PeriodIndex + Period with a different but convertible freq → asfreq path."""
-    from prophetverse.effects.fourier import _coerce_period
-
     idx = pd.period_range("2021-01", periods=6, freq="M")
     # Quarterly period; asfreq("M") should succeed
     val = pd.Period("2021Q1", freq="Q-DEC")
@@ -265,10 +300,15 @@ def test_coerce_period_different_freq_period():
     assert result.freqstr == "M"
 
 
-def test_coerce_period_timestamp_passthrough():
-    """DatetimeIndex + pd.Timestamp → return the Timestamp unchanged."""
-    from prophetverse.effects.fourier import _coerce_period
+def test_coerce_period_asfreq_fallback():
+    idx = pd.period_range("2021-01", periods=6, freq="M")
+    val = _FailAsfreqPeriod("2021Q1", freq="Q-DEC")
+    result = _coerce_period(val, idx)
+    assert isinstance(result, pd.Period)
+    assert result.freqstr == "M"
 
+
+def test_coerce_period_timestamp_passthrough():
     idx = pd.date_range("2021-01-01", periods=10, freq="D")
     ts = pd.Timestamp("2021-01-05")
     result = _coerce_period(ts, idx)

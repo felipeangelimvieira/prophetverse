@@ -257,6 +257,19 @@ def test_full_range_mask_equivalent_to_no_mask(  exog_data_10days):
     assert jnp.allclose(data_windowed["mask"], 1.0)
 
 
+def test_start_after_end_raises(exog_data_10days):
+    """start_period > end_period should raise ValueError, not silently zero mask."""
+    effect = LinearFourierSeasonality(
+        sp_list=[7], fourier_terms_list=[1], freq="D",
+        start_period="2021-01-08",
+        end_period="2021-01-04",
+    )
+    fh = exog_data_10days.index
+    effect.fit(X=exog_data_10days, y=None)
+    with pytest.raises(ValueError, match="start_period.*end_period"):
+        effect.transform(X=exog_data_10days, fh=fh)
+
+
 def test_predict_panel_mask_reshape(exog_data_10days):
     effect = LinearFourierSeasonality(
         sp_list=[7], fourier_terms_list=[1], freq="D",
@@ -313,4 +326,12 @@ def test_coerce_period_timestamp_passthrough():
     ts = pd.Timestamp("2021-01-05")
     result = _coerce_period(ts, idx)
     assert result == ts
+
+
+def test_coerce_period_period_with_datetime_index():
+    idx = pd.date_range("2021-01-01", periods=10, freq="D")
+    val = pd.Period("2021-01-05", freq="D")
+    result = _coerce_period(val, idx)
+    assert isinstance(result, pd.Timestamp)
+    assert result == pd.Timestamp("2021-01-05")
 

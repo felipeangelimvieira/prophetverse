@@ -49,6 +49,8 @@ def _coerce_period(value, index: pd.Index):
     # DatetimeIndex (or anything else – fall back to Timestamp)
     if isinstance(value, pd.Timestamp):
         return value
+    if isinstance(value, pd.Period):
+        return value.to_timestamp()
     return pd.Timestamp(value)
 
 
@@ -198,6 +200,12 @@ class LinearFourierSeasonality(BaseEffect):
         start = _coerce_period(self.start_period, time_index)
         end = _coerce_period(self.end_period, time_index)
 
+        if start is not None and end is not None and start > end:
+            raise ValueError(
+                f"start_period ({self.start_period!r}) must be earlier than or "
+                f"equal to end_period ({self.end_period!r})."
+            )
+
         mask = np.ones(len(time_index), dtype=np.float32)
         if start is not None:
             mask *= (time_index >= start).astype(np.float32)
@@ -206,7 +214,7 @@ class LinearFourierSeasonality(BaseEffect):
 
         return jnp.array(mask)
 
-    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> jnp.ndarray:
+    def _transform(self, X: pd.DataFrame, fh: pd.Index) -> dict:
         """Prepare input data to be passed to numpyro model.
 
         This method return a jnp.ndarray of sines and cosines of the given

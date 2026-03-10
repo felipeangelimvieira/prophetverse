@@ -22,6 +22,7 @@ class Constant(BaseEffect):
 
     _tags = {
         "requires_X": False,
+        "capability:multivariate_input": True,
     }
 
     def __init__(self, prior: Distribution = None) -> None:

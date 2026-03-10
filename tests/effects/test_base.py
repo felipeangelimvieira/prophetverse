@@ -4,6 +4,7 @@ import pytest
 import numpyro
 import numpyro.distributions as dist
 from prophetverse.effects.base import BaseAdditiveOrMultiplicativeEffect, BaseEffect
+from prophetverse.effects.constant import Constant
 
 
 class ConcreteEffect(BaseAdditiveOrMultiplicativeEffect):
@@ -149,6 +150,27 @@ def test_broadcasting_panel():
             X.loc[i, "exog"].values * factor0 + X.loc[i, "exog2"].values * factor1
         ).reshape((-1, 1))
         assert jnp.allclose(out[i], expected), "Broadcasting effect prediction failed."
+
+
+def test_constant_effect_accepts_multivariate_input_without_broadcasting():
+
+    effect = Constant()
+    y = pd.DataFrame(
+        data={"y": [10, 20, 30, 40, 50, 60]},
+        index=pd.date_range("2021-01-01", periods=6),
+    )
+    X = pd.DataFrame(
+        data={"exog": [1, 2, 3, 4, 5, 6], "exog2": [10, 20, 30, 40, 50, 60]},
+        index=y.index,
+    )
+
+    effect.fit(y=y, X=X, scale=1.0)
+    Xt = effect.transform(X, fh=X.index)
+
+    assert effect.get_tag("capability:multivariate_input")
+    assert effect._broadcasted is None
+    assert isinstance(Xt, jnp.ndarray)
+    assert Xt.shape == (len(X.index), 1)
 
 
 def test_update_data():

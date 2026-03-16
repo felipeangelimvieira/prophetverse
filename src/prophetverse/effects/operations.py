@@ -25,8 +25,6 @@ class _BaseChainOperation(BaseMetaEstimatorMixin, BaseEffect):
     _tags = {
         # Can handle panel data?
         "capability:panel": True,
-        # Can be used with hierarchical Prophet?
-        "capability:panel": True,
         # Can handle multiple input feature columns?
         "capability:multivariate_input": True,
         # If no columns are found, should

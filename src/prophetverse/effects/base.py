@@ -77,8 +77,6 @@ class BaseEffect(BaseObject):
     _tags = {
         # Can handle panel data?
         "capability:panel": False,
-        # Can be used with hierarchical Prophet?
-        "capability:panel": False,
         # Can handle multiple input feature columns?
         "capability:multivariate_input": False,
         # If no columns are found, should

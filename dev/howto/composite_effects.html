@@ -367,7 +367,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example-dataset" class="level3">
 <h3 class="anchored" data-anchor-id="example-dataset">Example dataset</h3>
 <p>The dataset we use is synthetic, and the relation between the exogenous variable and the target is known. However, let’s pretend we don’t know this relation, and analize the data to find some insights that motivate the creation of a custom effect. The dataset has a target variable, which is a time series, and an exogenous variable, which is the investment made for each date.</p>
-<div id="9cf6230f" class="cell" data-execution_count="1">
+<div id="2aabad9a" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro.distributions <span class="im">as</span> dist</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> pyplot <span class="im">as</span> plt</span>
@@ -385,7 +385,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>display(y_train.head())</span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>display(X_train.head())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+<pre><code>/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
   from .autonotebook import tqdm as notebook_tqdm</code></pre>
 </div>
 <div class="cell-output cell-output-display">
@@ -471,7 +471,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="ee225a5a" class="cell" data-execution_count="2">
+<div id="286e8019" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>,<span class="dv">5</span>))</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>plot_series(y_train, y_test, labels<span class="op">=</span>[<span class="st">"Train"</span>, <span class="st">"Test"</span>], title<span class="op">=</span><span class="st">"Target series"</span>, ax<span class="op">=</span>ax)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -483,7 +483,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<div id="16de447b" class="cell" data-execution_count="3">
+<div id="ac551af3" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>plot_series(X[<span class="st">"investment"</span>], labels<span class="op">=</span>[<span class="st">"investment"</span>], title<span class="op">=</span><span class="st">"Features"</span>, ax<span class="op">=</span>ax)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -496,7 +496,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>The timeseries has a yearly seasonality, and it seems that some oscillations are proportional to the investment. Below, we model the timeseries with a simple linear effect between the investment and the target, and a yearly seasonality based on fourier terms. Then, we will analize the residuals to see if there is any pattern that we can capture with a custom effect.</p>
-<div id="3a4f454e" class="cell" data-execution_count="4">
+<div id="e7a5bc20" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects <span class="im">import</span> LinearEffect</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.fourier <span class="im">import</span> LinearFourierSeasonality</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.effects.trend <span class="im">import</span> PiecewiseLinearTrend</span>
@@ -538,10 +538,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>model.fit(y<span class="op">=</span>y_train, X<span class="op">=</span>X_train)</span>
 <span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>model</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>  0%|          | 0/1 [00:00&lt;?, ?it/s]100%|██████████| 1/1 [00:08&lt;00:00,  8.47s/it, init loss: -5352.1071, avg. loss [1-1]: -5352.1071]100%|██████████| 1/1 [00:08&lt;00:00,  8.47s/it, init loss: -5352.1071, avg. loss [1-1]: -5352.1071]</code></pre>
+<pre><code>  0%|          | 0/1 [00:00&lt;?, ?it/s]100%|██████████| 1/1 [00:06&lt;00:00,  6.54s/it, init loss: -5352.1071, avg. loss [1-1]: -5352.1071]100%|██████████| 1/1 [00:06&lt;00:00,  6.54s/it, init loss: -5352.1071, avg. loss [1-1]: -5352.1071]</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="4">
-<style>#sk-36ab5229-4701-49ab-a618-3858c4adde1e {
+<style>#sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc {
     /* Definition of color scheme common for light and dark mode */
     --sklearn-color-text: black;
     --sklearn-color-line: gray;
@@ -566,15 +566,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc {
     color: var(--sklearn-color-text);
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e pre {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc pre {
     padding: 0;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e input.sk-hidden--visually {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc input.sk-hidden--visually {
     border: 0;
     clip: rect(1px 1px 1px 1px);
     clip: rect(1px, 1px, 1px, 1px);
@@ -586,7 +586,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     width: 1px;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-dashed-wrapped {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-dashed-wrapped {
     border: 1px dashed var(--sklearn-color-line);
     margin: 0 0.4em 0.5em 0.4em;
     box-sizing: border-box;
@@ -594,7 +594,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-background);
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-container {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-container {
     /* jupyter's `normalize.less` sets `[hidden] { display: none; }`
        but bootstrap.min.css set `[hidden] { display: none !important; }`
        so we also need the `!important` here to be able to override the
@@ -604,7 +604,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-text-repr-fallback {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-text-repr-fallback {
     display: none;
   }
 
@@ -620,14 +620,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Parallel-specific style estimator block */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-parallel-item::after {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-parallel-item::after {
     content: "";
     width: 100%;
     border-bottom: 2px solid var(--sklearn-color-text-on-default-background);
     flex-grow: 1;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-parallel {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-parallel {
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -635,28 +635,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     position: relative;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-parallel-item {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-parallel-item {
     display: flex;
     flex-direction: column;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-parallel-item:first-child::after {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-parallel-item:first-child::after {
     align-self: flex-end;
     width: 50%;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-parallel-item:last-child::after {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-parallel-item:last-child::after {
     align-self: flex-start;
     width: 50%;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-parallel-item:only-child::after {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-parallel-item:only-child::after {
     width: 0;
   }
 
   /* Serial-specific style estimator block */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-serial {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-serial {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -674,14 +674,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* Pipeline and ColumnTransformer style (default) */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-toggleable {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-toggleable {
     /* Default theme specific background. It is overwritten whether we have a
     specific estimator or a Pipeline/ColumnTransformer */
     background-color: var(--sklearn-color-background);
   }
 
   /* Toggleable label */
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e label.sk-toggleable__label {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc label.sk-toggleable__label {
     cursor: pointer;
     display: block;
     width: 100%;
@@ -691,7 +691,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     text-align: center;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e label.sk-toggleable__label-arrow:before {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc label.sk-toggleable__label-arrow:before {
     /* Arrow on the left of the label */
     content: "▸";
     float: left;
@@ -699,13 +699,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     color: var(--sklearn-color-icon);
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e label.sk-toggleable__label-arrow:hover:before {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc label.sk-toggleable__label-arrow:hover:before {
     color: var(--sklearn-color-text);
   }
 
   /* Toggleable content - dropdown */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-toggleable__content {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-toggleable__content {
     max-height: 0;
     max-width: 0;
     overflow: hidden;
@@ -713,27 +713,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-toggleable__content pre {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-toggleable__content pre {
     margin: 0.2em;
     border-radius: 0.25em;
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-0);
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e input.sk-toggleable__control:checked~div.sk-toggleable__content {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc input.sk-toggleable__control:checked~div.sk-toggleable__content {
     /* Expand drop-down */
     max-height: 200px;
     max-width: 100%;
     overflow: auto;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc input.sk-toggleable__control:checked~label.sk-toggleable__label-arrow:before {
     content: "▾";
   }
 
   /* Pipeline/ColumnTransformer-specific style */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-label input.sk-toggleable__control:checked~label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
@@ -741,38 +741,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   /* Estimator-specific style */
 
   /* Colorize estimator box */
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-estimator input.sk-toggleable__control:checked~label.sk-toggleable__label {
     /* unfitted */
     background-color: var(--sklearn-color-level-2);
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-label label.sk-toggleable__label,
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-label label {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-label label.sk-toggleable__label,
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-label label {
     /* The background is the default theme color */
     color: var(--sklearn-color-text-on-default-background);
   }
 
   /* On hover, darken the color of the background */
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-label:hover label.sk-toggleable__label {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-label:hover label.sk-toggleable__label {
     color: var(--sklearn-color-text);
     background-color: var(--sklearn-color-level-2);
   }
 
   /* Estimator label */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-label label {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-label label {
     font-family: monospace;
     font-weight: bold;
     display: inline-block;
     line-height: 1.2em;
   }
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-label-container {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-label-container {
     text-align: center;
   }
 
   /* Estimator-specific */
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-estimator {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-estimator {
     font-family: monospace;
     border: 1px dotted var(--sklearn-color-border-box);
     border-radius: 0.25em;
@@ -782,7 +782,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* on hover */
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e div.sk-estimator:hover {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc div.sk-estimator:hover {
     background-color: var(--sklearn-color-level-2);
   }
 
@@ -839,7 +839,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
   /* "?"-specific style due to the `<a>` HTML tag */
 
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e a.estimator_doc_link {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc a.estimator_doc_link {
     float: right;
     font-size: 1rem;
     line-height: 1em;
@@ -854,12 +854,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 
   /* On hover */
-  #sk-36ab5229-4701-49ab-a618-3858c4adde1e a.estimator_doc_link:hover {
+  #sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc a.estimator_doc_link:hover {
     background-color: var(--sklearn-color-level-3);
     color: var(--sklearn-color-background);
     text-decoration: none;
   }
-</style><div id="sk-36ab5229-4701-49ab-a618-3858c4adde1e" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
+</style><div id="sk-ddfb5bc2-74ff-40e0-8f67-2837588ebabc" class="sk-top-container"><div class="sk-text-repr-fallback"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -867,14 +867,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                                                           sp_list=[365.25]),
                                  '^$'),
                                 ('investment',
-                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f526ef7ac10 with batch shape () and event shape ()&gt;),
+                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f20a47cf0d0 with batch shape () and event shape ()&gt;),
                                  '^investment$')],
              inference_engine=MAPInferenceEngine(optimizer=LBFGSSolver(max_linesearch_steps=100,
                                                                        memory_size=100),
                                                  progress_bar=True),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('814024a7-4413-4778-a47a-374b48732028')" type="checkbox"><label for="UUID('814024a7-4413-4778-a47a-374b48732028')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
+                                        changepoint_range=-500))</pre><b>Please rerun this cell to show the HTML repr or trust the notebook.</b></div><div class="sk-container" hidden=""><div class="sk-item sk-dashed-wrapped"><div class="sk-label-container"><div class="sk-label sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('818d405c-5869-4768-b48d-eb70867bdd3c')" type="checkbox"><label for="UUID('818d405c-5869-4768-b48d-eb70867bdd3c')" class="sk-toggleable__label sk-toggleable__label-arrow">Prophetverse</label><div class="sk-toggleable__content"><pre>Prophetverse(exogenous_effects=[('seasonality',
                                  LinearFourierSeasonality(effect_mode='multiplicative',
                                                           fourier_terms_list=[5],
                                                           freq='D',
@@ -882,22 +882,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
                                                           sp_list=[365.25]),
                                  '^$'),
                                 ('investment',
-                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f526ef7ac10 with batch shape () and event shape ()&gt;),
+                                 LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f20a47cf0d0 with batch shape () and event shape ()&gt;),
                                  '^investment$')],
              inference_engine=MAPInferenceEngine(optimizer=LBFGSSolver(max_linesearch_steps=100,
                                                                        memory_size=100),
                                                  progress_bar=True),
              trend=PiecewiseLinearTrend(changepoint_interval=500,
                                         changepoint_prior_scale=1e-05,
-                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('298c0cc1-ba0b-4cea-b6de-064cad0b4ed7')" type="checkbox"><label for="UUID('298c0cc1-ba0b-4cea-b6de-064cad0b4ed7')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
-                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('bf5bcb05-fc26-4974-bff9-02a887787d55')" type="checkbox"><label for="UUID('bf5bcb05-fc26-4974-bff9-02a887787d55')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
-                         freq='D', prior_scale=1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('4c482db1-e900-4ad9-abca-5b3faf0a3b62')" type="checkbox"><label for="UUID('4c482db1-e900-4ad9-abca-5b3faf0a3b62')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearEffect</label><div class="sk-toggleable__content"><pre>LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f526ef7ac10 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('a5a372da-4714-4a30-b88f-428a973138f1')" type="checkbox"><label for="UUID('a5a372da-4714-4a30-b88f-428a973138f1')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(optimizer=LBFGSSolver(max_linesearch_steps=100,
+                                        changepoint_range=-500))</pre></div></div></div><div class="sk-parallel"><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>effects</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('df09fa8f-0fb7-43bf-aee6-ea6ce55f06b5')" type="checkbox"><label for="UUID('df09fa8f-0fb7-43bf-aee6-ea6ce55f06b5')" class="sk-toggleable__label sk-toggleable__label-arrow">PiecewiseLinearTrend</label><div class="sk-toggleable__content"><pre>PiecewiseLinearTrend(changepoint_interval=500, changepoint_prior_scale=1e-05,
+                     changepoint_range=-500)</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('b25374e1-d78d-4d84-afc1-f5410b68e89f')" type="checkbox"><label for="UUID('b25374e1-d78d-4d84-afc1-f5410b68e89f')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearFourierSeasonality</label><div class="sk-toggleable__content"><pre>LinearFourierSeasonality(effect_mode='multiplicative', fourier_terms_list=[5],
+                         freq='D', prior_scale=1, sp_list=[365.25])</pre></div></div></div><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('0754fb2c-5ef9-4dd7-8aa8-32882e1ce090')" type="checkbox"><label for="UUID('0754fb2c-5ef9-4dd7-8aa8-32882e1ce090')" class="sk-toggleable__label sk-toggleable__label-arrow">LinearEffect</label><div class="sk-toggleable__content"><pre>LinearEffect(prior=&lt;numpyro.distributions.continuous.Normal object at 0x7f20a47cf0d0 with batch shape () and event shape ()&gt;)</pre></div></div></div></div></div></div></div></div><div class="sk-parallel-item"><div class="sk-item"><div class="sk-label-container"><div class="sk-label sk-toggleable"><label>inference_engine</label></div></div><div class="sk-serial"><div class="sk-item"><div class="sk-estimator sk-toggleable"><input class="sk-toggleable__control sk-hidden--visually" id="UUID('f66d4109-b6e1-46bf-b070-b5a44dc2d186')" type="checkbox"><label for="UUID('f66d4109-b6e1-46bf-b070-b5a44dc2d186')" class="sk-toggleable__label sk-toggleable__label-arrow">MAPInferenceEngine</label><div class="sk-toggleable__content"><pre>MAPInferenceEngine(optimizer=LBFGSSolver(max_linesearch_steps=100,
                                          memory_size=100),
                    progress_bar=True)</pre></div></div></div></div></div></div></div></div></div></div>
 </div>
 </div>
 <p>We plot the predictions on training set to see if the model performs well.</p>
-<div id="4fff3231" class="cell" data-execution_count="5">
+<div id="6b01b04a" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X<span class="op">=</span>X_train, fh<span class="op">=</span>y_train.index)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
@@ -912,7 +912,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We can see that some peaks are not captured by the model. Our hypothesis to explain this phenomenon is that the investment has more impact on the target when it is done during the positive seasonality periods. To test this, we plot the residuals of the model against the investment, and color the points based on the seasonality component. We can see that slopes are different for positive and negative seasonality, which indicates that our hypothesis is possibly correct.</p>
-<div id="49d4413e" class="cell" data-execution_count="6">
+<div id="0365181c" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>components <span class="op">=</span> model.predict_components(X<span class="op">=</span>X_train, fh<span class="op">=</span>y_train.index)</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>residual <span class="op">=</span> y_train[<span class="st">"target"</span>] <span class="op">-</span> components[<span class="st">"mean"</span>]</span>
@@ -933,7 +933,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>ax.<span class="bu">set</span>(xlabel<span class="op">=</span><span class="st">"Investment"</span>, ylabel<span class="op">=</span><span class="st">"Residual"</span>, title<span class="op">=</span><span class="st">"Residuals vs Investment"</span>)</span>
 <span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_3424/182972736.py:14: MatplotlibDeprecationWarning: The get_cmap function was deprecated in Matplotlib 3.7 and will be removed in 3.11. Use ``matplotlib.colormaps[name]`` or ``matplotlib.colormaps.get_cmap()`` or ``pyplot.get_cmap()`` instead.
+<pre><code>/tmp/ipykernel_3455/182972736.py:14: MatplotlibDeprecationWarning: The get_cmap function was deprecated in Matplotlib 3.7 and will be removed in 3.11. Use ``matplotlib.colormaps[name]`` or ``matplotlib.colormaps.get_cmap()`` or ``pyplot.get_cmap()`` instead.
   colors = plt.cm.get_cmap("Accent").colors</code></pre>
 </div>
 <div class="cell-output cell-output-display">
@@ -949,7 +949,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="creating-the-composite-effect" class="level2">
 <h2 class="anchored" data-anchor-id="creating-the-composite-effect">Creating the composite effect</h2>
 <p>To model this behaviour with Prophetverse, we will create a custom effect, that scales a new effect by the output of a previous component. The _fit and _transform methods call the inner effect’s methods, and the predict method multiplies the inner effect’s predictions by the seasonality, which is passed as base_effect_name.</p>
-<div id="62721035" class="cell" data-execution_count="7">
+<div id="6d9d7f67" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> Any, Dict, List</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> jax.numpy <span class="im">as</span> jnp</span>
@@ -1004,7 +1004,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="instantiating-the-model-with-the-composite-effect" class="level2">
 <h2 class="anchored" data-anchor-id="instantiating-the-model-with-the-composite-effect">Instantiating the model with the composite effect</h2>
 <p>To create the model, we use the model instance we have, and the rshift operator to append the composite effect to the model.</p>
-<div id="67a97c4c" class="cell" data-execution_count="8">
+<div id="2f7ab4cf" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpyro.distributions <span class="im">as</span> dist</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> prophetverse.engine.optimizer <span class="im">import</span> AdamOptimizer</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1026,11 +1026,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output cell-output-stderr">
 <pre><code>/home/runner/work/prophetverse/prophetverse/src/prophetverse/sktime/univariate.py:252: UserWarning: Columns {'investment'} are already set
   self._fit_effects(X, y)
-  0%|          | 0/1 [00:00&lt;?, ?it/s]100%|██████████| 1/1 [00:07&lt;00:00,  7.71s/it, init loss: -6054.6937, avg. loss [1-1]: -6054.6937]100%|██████████| 1/1 [00:07&lt;00:00,  7.71s/it, init loss: -6054.6937, avg. loss [1-1]: -6054.6937]</code></pre>
+  0%|          | 0/1 [00:00&lt;?, ?it/s]100%|██████████| 1/1 [00:09&lt;00:00,  9.25s/it, init loss: -6054.6937, avg. loss [1-1]: -6054.6937]100%|██████████| 1/1 [00:09&lt;00:00,  9.25s/it, init loss: -6054.6937, avg. loss [1-1]: -6054.6937]</code></pre>
 </div>
 </div>
 <p>We can see below how these oscilations are captured by the model correctly when adding this joint effect.</p>
-<div id="95ef4717" class="cell" data-execution_count="9">
+<div id="f4b7c694" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">5</span>))</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>plot_series(y_train, y_pred_composite, labels<span class="op">=</span>[<span class="st">"Train"</span>, <span class="st">"Pred"</span>], title<span class="op">=</span><span class="st">"Target series"</span>,ax<span class="op">=</span>ax)</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1046,7 +1046,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="evaluating-the-model-on-test-set" class="level2">
 <h2 class="anchored" data-anchor-id="evaluating-the-model-on-test-set">Evaluating the model on test set</h2>
 <p>We compare to the previous model to see if the new effect improved the predictions on test set:</p>
-<div id="5364c67c" class="cell" data-execution_count="10">
+<div id="0c04e271" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>y_pred_composite <span class="op">=</span> model_composite.predict(X<span class="op">=</span>X_test, fh<span class="op">=</span>y_test.index)</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X<span class="op">=</span>X_test, fh<span class="op">=</span>y_test.index)</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1074,7 +1074,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="extracting-the-components" class="level2">
 <h2 class="anchored" data-anchor-id="extracting-the-components">Extracting the components</h2>
 <p>The components can be extracted as usual, with the predict_components method.</p>
-<div id="8f337344" class="cell" data-execution_count="11">
+<div id="bd95e65e" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>components <span class="op">=</span> model_composite.predict_components(fh<span class="op">=</span>y_test.index, X<span class="op">=</span>X_test)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">5</span>))</span>

@@ -77,7 +77,7 @@ Prophetverse is similar to the original Prophet model in many aspects, but it ha
 
 ## 🤝 Contributing to Prophetverse
 
-We welcome contributions! Check out our [contributing guidelines](https://prophetverse.com/development/development-guide//) to get started.
+We welcome contributions! Check out our [contributing guidelines](CONTRIBUTING.md) to get started.
 
 ## 📚 Documentation
 

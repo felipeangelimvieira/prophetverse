@@ -9,7 +9,9 @@ from typing import Optional, Union, Callable
 import jax.numpy as jnp
 import jax.random
 import numpyro
-from numpyro.infer import SVI, Trace_ELBO
+from numpyro.infer import SVI
+
+from prophetverse.engine.elbo import DeterministicTraceELBO
 from numpyro.infer.autoguide import (
     AutoGuide,
     AutoDiagonalNormal,
@@ -164,7 +166,7 @@ class VIInferenceEngine(BaseInferenceEngine):
                 model,
                 guide,
                 optimizer,
-                loss=Trace_ELBO(),
+                loss=DeterministicTraceELBO(),
             )
             return svi_.run(
                 rng_key=rng_key,

@@ -7,6 +7,7 @@ from operator import attrgetter
 from typing import Callable, Dict, List, Tuple, Union
 
 import jax.numpy as jnp
+import jax.random
 from jax.random import PRNGKey
 from numpyro.diagnostics import summary
 from numpyro.infer import MCMC, NUTS, Predictive
@@ -152,8 +153,12 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             return flattened_samples, summary_
 
         kernel_ = self.build_kernel(self.model_)
+        
+        # Split RNG key for MCMC sampling to ensure reproducibility
+        self._rng_key, mcmc_key = jax.random.split(self._rng_key)
+        
         self.posterior_samples_, self.summary_ = get_posterior_samples(
-            self._rng_key,
+            mcmc_key,
             kernel_,
             num_samples=self.num_samples,
             num_warmup=self.num_warmup,
@@ -187,5 +192,8 @@ class MCMCInferenceEngine(BaseInferenceEngine):
             self.model_, self.posterior_samples_, num_samples=num_samples
         )
 
-        self.samples_predictive_ = predictive(self._rng_key, **kwargs)
+        # Split RNG key for prediction to ensure reproducibility
+        self._rng_key, predict_key = jax.random.split(self._rng_key)
+        
+        self.samples_predictive_ = predictive(predict_key, **kwargs)
         return self.samples_predictive_

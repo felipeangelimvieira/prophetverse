@@ -16,7 +16,7 @@ class BaseInferenceEngine(BaseObject):
     model : Callable
         The model to be used for inference.
     rng_key : Optional[jax.random.PRNGKey]
-        The random number generator key. If not provided, a default key with value 42
+        The random number generator key. If not provided, a default key with value 0
         will be used.
 
     Attributes
@@ -33,7 +33,7 @@ class BaseInferenceEngine(BaseObject):
 
     def __init__(self, rng_key=None):
         if rng_key is None:
-            rng_key = jax.random.PRNGKey(42)
+            rng_key = jax.random.PRNGKey(0)
         self.rng_key = rng_key
         self._rng_key = rng_key
 

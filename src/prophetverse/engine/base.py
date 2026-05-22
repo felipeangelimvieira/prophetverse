@@ -32,10 +32,9 @@ class BaseInferenceEngine(BaseObject):
     }
 
     def __init__(self, rng_key=None):
-        self.rng_key = rng_key
-
         if rng_key is None:
             rng_key = jax.random.PRNGKey(0)
+        self.rng_key = rng_key
         self._rng_key = rng_key
 
     # pragma: no cover
